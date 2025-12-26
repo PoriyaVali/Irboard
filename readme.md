@@ -1,50 +1,89 @@
-<img src="https://avatars.githubusercontent.com/u/56885001?s=200&v=4" alt="logo" width="130" height="130" align="right"/>
+<div align="center">
 
-[![](https://img.shields.io/badge/TgChat-@UnOfficialV2board讨论-blue.svg)](https://t.me/unofficialV2board)
+<img src="https://avatars.githubusercontent.com/u/56885001?s=200&v=4" alt="Irboard Logo" width="150" height="150"/>
 
-## 本分支支持的后端
- - [修改版V2bX](https://github.com/Ahmad10611/V2bX)
+# 🚀 Irboard
 
+**پنل مدیریت پروکسی قدرتمند و حرفه‌ای**
 
-## 原版迁移步骤
+[![PHP](https://img.shields.io/badge/PHP-7.3+-777BB4?style=for-the-badge&logo=php&logoColor=white)](https://php.net)
+[![Laravel](https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)](https://laravel.com)
+[![MySQL](https://img.shields.io/badge/MySQL-5.5+-4479A1?style=for-the-badge&logo=mysql&logoColor=white)](https://mysql.com)
+[![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io)
 
-按以下步骤进行面板代码文件迁移：
+</div>
 
-    git remote set-url origin https://github.com/Ahmad10611/v2board  
-    git checkout master  
-    ./update.sh  
+---
 
+## 📋 پیش‌نیازها
 
-按以下步骤配置缓存驱动为redis，然后刷新设置缓存，重启队列:
+| نرم‌افزار | نسخه |
+|:---------:|:----:|
+| PHP | 7.3+ |
+| Composer | آخرین نسخه |
+| MySQL | 5.5+ |
+| Redis | آخرین نسخه |
+| Laravel | آخرین نسخه |
 
-    sed -i 's/^CACHE_DRIVER=.*/CACHE_DRIVER=redis/' .env
-    php artisan config:clear
-    php artisan config:cache
-    php artisan horizon:terminate
+---
 
-最后进入后台重新保存主题： 主题配置-选择default主题-主题设置-确定保存
+## 🔧 بک‌اند پشتیبانی شده
 
-# **V2Board**
+- [V2bX اصلاح شده](https://github.com/PoriyaVali/V2bX)
 
-- PHP7.3+
-- Composer
-- MySQL5.5+
-- Redis
-- Laravel
+---
 
-## Demo
-[Demo_user](https://v2bdemo.v-50.me/)
-[Demo_admin](https://v2bdemo.v-50.me/admindashboard)
-邮箱和密码可随意输入
+## 📦 مراحل مهاجرت از نسخه اصلی
 
-## Document
-[Click](https://v2board.com)
+### مرحله ۱: مهاجرت فایل‌های پنل
 
-## Sponsors
-Thanks to the open source project license provided by [Jetbrains](https://www.jetbrains.com/)
+```bash
+git remote set-url origin https://github.com/PoriyaVali/Irboard
+git checkout master
+./update.sh
+```
 
-## Community
-🔔Telegram Group: [@unofficialV2board](https://t.me/unofficialV2board)  
+### مرحله ۲: پیکربندی کش Redis
 
-## How to Feedback
-Follow the template in the issue to submit your question correctly, and we will have someone follow up with you.
+```bash
+sed -i 's/^CACHE_DRIVER=.*/CACHE_DRIVER=redis/' .env
+php artisan config:clear
+php artisan config:cache
+php artisan horizon:terminate
+```
+
+### مرحله ۳: ذخیره مجدد تنظیمات قالب
+
+> وارد پنل مدیریت شوید:
+> 
+> **تنظیمات قالب** ← **انتخاب قالب default** ← **تنظیمات قالب** ← **ذخیره**
+
+---
+
+## 📖 مستندات
+
+📚 [مشاهده مستندات کامل](https://v2board.com)
+
+---
+
+## 💖 حامیان
+
+تشکر ویژه از [Jetbrains](https://www.jetbrains.com/) برای ارائه لایسنس رایگان پروژه‌های متن‌باز.
+
+<a href="https://www.jetbrains.com/">
+  <img src="https://resources.jetbrains.com/storage/products/company/brand/logos/jb_beam.png" alt="JetBrains" width="100"/>
+</a>
+
+---
+
+## 🐛 گزارش مشکلات
+
+برای گزارش مشکلات، لطفاً از بخش [Issues](https://github.com/PoriyaVali/Irboard/issues) استفاده کنید و قالب مشخص شده را رعایت نمایید.
+
+---
+
+<div align="center">
+
+**ساخته شده با ❤️ توسط [PoriyaVali](https://github.com/PoriyaVali)**
+
+</div>
