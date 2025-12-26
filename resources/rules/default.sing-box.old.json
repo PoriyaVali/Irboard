@@ -1,0 +1,318 @@
+{
+    "dns": {
+        "servers": [
+            {
+                "tag": "local",
+                "address": "local"
+            },
+            {
+                "tag": "remote",
+                "address": "https://1.1.1.1/dns-query",
+                "address_resolver": "local"
+            },
+            {
+                "tag": "ir",
+                "address": "8.8.8.8",
+                "detour": "direct"
+            },
+            {
+                "tag": "block",
+                "address": "rcode://refused"
+            }
+        ],
+        "rules": [
+            {
+                "outbound": "any",
+                "server": "local"
+            },
+            {
+                "clash_mode": "پراکسی سراسری",
+                "server": "remote"
+            },
+            {
+                "clash_mode": "خاموش کردن پروکسی",
+                "server": "ir"
+            },
+            {
+                "rule_set": ["geosite-ir"],
+                "server": "ir"
+            },
+            {
+                "domain_suffix": [".ir"],
+                "server": "ir"
+            },
+            {
+                "rule_set": ["category-ads-all"],
+                "server": "block"
+            }
+        ],
+        "final": "remote",
+        "strategy": "ipv4_only",
+        "disable_cache": false,
+        "independent_cache": true
+    },
+    "experimental": {
+        "cache_file": {
+            "enabled": true
+        },
+        "clash_api": {
+            "default_mode": "پراکسی بین‌المللی",
+            "external_controller": "127.0.0.1:9090",
+            "secret": ""
+        }
+    },
+    "inbounds": [
+        {
+            "type": "tun",
+            "tag": "tun-in",
+            "address": [
+                "172.19.0.1/30",
+                "2001:0470:f9da:fdfa::1/64"
+            ],
+            "auto_route": true,
+            "mtu": 9000,
+            "stack": "gvisor",
+            "strict_route": true,
+            "sniff": true,
+            "sniff_override_destination": true,
+            "domain_strategy": "prefer_ipv4",
+            "endpoint_independent_nat": true
+        },
+        {
+            "type": "socks",
+            "tag": "socks-in",
+            "listen": "127.0.0.1",
+            "listen_port": 2333,
+            "sniff": true,
+            "sniff_override_destination": true,
+            "domain_strategy": "prefer_ipv4",
+            "users": []
+        },
+        {
+            "type": "mixed",
+            "tag": "mixed-in",
+            "listen": "127.0.0.1",
+            "listen_port": 2334,
+            "sniff": true,
+            "sniff_override_destination": true,
+            "domain_strategy": "prefer_ipv4",
+            "users": []
+        }
+    ],
+    "outbounds": [
+        {
+            "type": "selector",
+            "tag": "دکتر‌موبایل‌جایزان",
+            "outbounds": [
+                "انتخاب خودکار"
+            ]
+        },
+        {
+            "type": "urltest",
+            "tag": "انتخاب خودکار",
+            "outbounds": []
+        },
+        {
+            "type": "direct",
+            "tag": "direct"
+        }
+    ],
+    "route": {
+        "auto_detect_interface": true,
+        "rules": [
+            {
+                "action": "sniff"
+            },
+            {
+                "protocol": "dns",
+                "action": "hijack-dns"
+            },
+            {
+                "protocol": "stun",
+                "outbound": "دکتر‌موبایل‌جایزان"
+            },
+            {
+                "network": "udp",
+                "port": [3478, 3479, 3480, 3481, 4244, 5222, 5223, 5228, 5242, 5349, 19302, 19305],
+                "outbound": "دکتر‌موبایل‌جایزان"
+            },
+            {
+                "clash_mode": "خاموش کردن پروکسی",
+                "outbound": "direct"
+            },
+            {
+                "clash_mode": "پراکسی سراسری",
+                "outbound": "دکتر‌موبایل‌جایزان"
+            },
+            {
+                "domain": [
+                    "gitlab.com",
+                    "gitlab.io",
+                    "gitlabusercontent.com",
+                    "shaparak.ir",
+                    "sep.ir",
+                    "pec.ir",
+                    "pecco.com",
+                    "sadadpsp.ir",
+                    "behpardakht.com",
+                    "zarinpal.com",
+                    "pay.ir",
+                    "idpay.ir",
+                    "nextpay.org",
+                    "jibit.ir",
+                    "mydigipay.com",
+                    "digikala.com",
+                    "snapp.ir",
+                    "tap30.org",
+                    "alibaba.ir",
+                    "flightio.com",
+                    "mrbilit.com",
+                    "filmnet.ir",
+                    "namava.ir",
+                    "telewebion.com",
+                    "aparat.com",
+                    "aparatapp.com",
+                    "cafebazaar.ir",
+                    "myket.ir",
+                    "balad.ir",
+                    "neshan.org"
+                ],
+                "outbound": "direct"
+            },
+            {
+                "domain_suffix": [
+                    ".ac.ir",
+                    "medu.ir",
+                    "roshd.ir"
+                ],
+                "outbound": "direct"
+            },
+            {
+                "rule_set": [
+                    "geosite-ir","geoip-ir"
+                ],
+                "outbound": "direct"
+            },
+            {
+                "ip_is_private": true,
+                "outbound": "direct"
+            },
+            {
+                "domain": [
+                    "youtube.com",
+                    "youtubei.googleapis.com",
+                    "googlevideo.com",
+                    "ytimg.com",
+                    "ggpht.com",
+                    "youtu.be",
+                    "instagram.com",
+                    "cdninstagram.com",
+                    "facebook.com",
+                    "facebook.net",
+                    "fbcdn.net",
+                    "fb.com",
+                    "fb.me",
+                    "fbsbx.com",
+                    "messenger.com",
+                    "google.com",
+                    "googleapis.com",
+                    "googleusercontent.com",
+                    "gstatic.com",
+                    "googleadservices.com",
+                    "googlesyndication.com",
+                    "googletagmanager.com",
+                    "google-analytics.com",
+                    "doubleclick.net",
+                    "firebase.com",
+                    "firebaseio.com",
+                    "twitter.com",
+                    "twimg.com",
+                    "t.co",
+                    "x.com",
+                    "telegram.org",
+                    "telegram.me",
+                    "t.me",
+                    "tdesktop.com",
+                    "telegra.ph",
+                    "telesco.pe",
+                    "linkedin.com",
+                    "licdn.com",
+                    "pinterest.com",
+                    "pinimg.com",
+                    "reddit.com",
+                    "redditmedia.com",
+                    "redditstatic.com",
+                    "tiktok.com",
+                    "tiktokcdn.com",
+                    "tiktokv.com",
+                    "snapchat.com",
+                    "sc-cdn.net",
+                    "github.com",
+                    "githubusercontent.com",
+                    "github.io",
+                    "githubassets.com",
+                    "stackoverflow.com",
+                    "stackexchange.com",
+                    "docker.com",
+                    "docker.io",
+                    "npmjs.org",
+                    "npmjs.com",
+                    "pypi.org",
+                    "pythonhosted.org",
+                    "openai.com",
+                    "chatgpt.com",
+                    "claude.ai",
+                    "anthropic.com",
+                    "bard.google.com",
+                    "midjourney.com",
+                    "huggingface.co",
+                    "netflix.com",
+                    "nflxext.com",
+                    "nflximg.com",
+                    "nflxvideo.net",
+                    "spotify.com",
+                    "scdn.co",
+                    "soundcloud.com",
+                    "twitch.tv",
+                    "ttvnw.net",
+                    "vimeo.com",
+                    "vimeocdn.com",
+                    "udemy.com",
+                    "coursera.org",
+                    "edx.org",
+                    "khanacademy.org"
+                ],
+                "outbound": "دکتر‌موبایل‌جایزان"
+            },
+            {
+                "rule_set": [
+                    "category-ads-all"
+                ],
+                "action": "reject"
+            }
+        ],
+        "rule_set": [
+            {
+                "tag": "geosite-ir",
+                "type": "remote",
+                "format": "binary",
+                "url": "https://cdn.jsdelivr.net/gh/Chocolate4U/Iran-sing-box-rules@rule-set/geosite-ir.srs",
+                "download_detour": "direct"
+            },
+            {
+                "tag": "category-ads-all",
+                "type": "remote",
+                "format": "binary",
+                "url": "https://cdn.jsdelivr.net/gh/SagerNet/sing-geosite@rule-set/geosite-category-ads-all.srs",
+                "download_detour": "direct"
+            },
+            {
+                "tag": "geoip-ir",
+                "type": "remote",
+                "format": "binary",
+                "url": "https://cdn.jsdelivr.net/gh/Chocolate4U/Iran-sing-box-rules@rule-set/geoip-ir.srs",
+                "download_detour": "direct"
+            }
+        ]
+    }
+}
