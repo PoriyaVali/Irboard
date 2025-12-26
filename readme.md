@@ -50,6 +50,10 @@ sed -i 's/^CACHE_DRIVER=.*/CACHE_DRIVER=redis/' .env
 php artisan config:clear
 php artisan config:cache
 php artisan horizon:terminate
+php artisan cache:clear
+php artisan view:clear
+php artisan route:clear
+php artisan optimize:clear
 ```
 
 ### مرحله ۳: ذخیره مجدد تنظیمات قالب
