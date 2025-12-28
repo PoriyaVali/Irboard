@@ -174,8 +174,10 @@ class PaymentService
             'timestamp' => now(),
             'method' => $this->method,
             'trade_no' => $order['trade_no'],
+            'id' => $order['id'] ?? null,
             'total_amount' => $order['total_amount'],
             'user_id' => $order['user_id'],
+            'id' => $order['id'] ?? null,
             'memory_usage' => memory_get_usage(),
             'request_ip' => request()->ip(),
             'user_agent' => request()->header('User-Agent')
@@ -194,6 +196,7 @@ class PaymentService
             'trade_no' => $order['trade_no'],
             'total_amount' => $order['total_amount'],
             'user_id' => $order['user_id'],
+            'id' => $order['id'] ?? null,
             'stripe_token' => $order['stripe_token'] ?? null
         ];
         

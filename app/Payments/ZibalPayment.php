@@ -65,12 +65,12 @@ class ZibalPayment
                 
                 try {
                     PaymentTrack::store(
-                        trackId: $trackId,
-                        orderId: $order['id'] ?? 0,
-                        userId: $order['user_id'] ?? 0,
-                        amount: $order['total_amount'] ?? 0,
-                        method: 'zibal',
-                        tradeNo: $order['trade_no'] ?? null
+                        $trackId,
+                        $order['id'] ?? 0,
+                        $order['user_id'] ?? 0,
+                        $order['total_amount'] ?? 0,
+                        'zibal',
+                        $order['trade_no'] ?? null
                     );
                     
                     $trackSaved = true;
