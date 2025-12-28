@@ -24,17 +24,12 @@ class ZibalPayment
                 'description' => '',
                 'type' => 'input',
             ],
-            'zibal_callback' => [
-                'label' => 'آدرس بازگشت',
-                'description' => '',
-                'type' => 'input',
-            ],
         ];
     }
 
     public function pay($order)
     {
-        if (!isset($this->config['zibal_merchant'], $this->config['zibal_callback'])) {
+        if (!isset($this->config['zibal_merchant'])) {
             Log::error('Zibal config is missing required keys');
             throw new \Exception('تنظیمات زیبال ناقص است.');
         }
@@ -42,7 +37,7 @@ class ZibalPayment
         $params = [
             'merchant' => $this->config['zibal_merchant'],
             'amount' => $order['total_amount'] * 10,
-            'callbackUrl' => $this->config['zibal_callback'],
+            'callbackUrl' => $order['notify_url'],
             'orderId' => $order['trade_no'],
             'description' => 'پرداخت سفارش ' . $order['trade_no'],
         ];

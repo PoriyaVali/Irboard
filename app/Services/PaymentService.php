@@ -101,13 +101,13 @@ class PaymentService
 
             // ✅ برای ZibalPayment چک کردن فیلدهای ضروری
             if ($method === 'ZibalPayment') {
-                if (!isset($configData['zibal_merchant']) || !isset($configData['zibal_callback'])) {
+                if (!isset($configData['zibal_merchant'])) {
                     Log::channel('payment')->error('ZibalPayment config is incomplete', [
                         'method' => $method,
                         'has_merchant' => isset($configData['zibal_merchant']),
-                        'has_callback' => isset($configData['zibal_callback'])
+                        
                     ]);
-                    abort(500, 'ZibalPayment configuration is incomplete. Please set merchant and callback in admin panel.');
+                    abort(500, 'ZibalPayment configuration is incomplete. Please set merchant in admin panel.');
                 }
             }
 
