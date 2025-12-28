@@ -25,8 +25,8 @@ class Aghayehpardakht
                 'type' => 'input',
             ],
             'aghayeh_callback' => [
-                'label' => 'Callback URL',
-                'description' => 'Empty = default | Or full URL like: https://example.com/pay/{trade_no}',
+                'label' => 'آدرس بازگشت (Callback URL)',
+                'description' => 'خالی = پیش‌فرض | یا آدرس کامل مثل: https://example.com/pay/{trade_no}',
                 'type' => 'input',
             ],
         ];
@@ -264,6 +264,17 @@ class Aghayehpardakht
         }
     }
 
+    private function getCallbackUrl($order)
+    {
+        // If custom callback is set, use it with {trade_no} replacement
+        if (!empty($this->config['aghayeh_callback'])) {
+            return str_replace('{trade_no}', $order['trade_no'], $this->config['aghayeh_callback']);
+        }
+        
+        // Default: use system notify_url
+        return $order['notify_url'];
+    }
+
     private function filterLogData($data)
     {
         if (!is_array($data)) {
@@ -301,15 +312,5 @@ class Aghayehpardakht
         }
 
         return substr($cardNumber, 0, 6) . str_repeat('*', max(6, strlen($cardNumber) - 10)) . substr($cardNumber, -4);
-    }
-    private function getCallbackUrl($order)
-    {
-        // If custom callback is set, use it with {trade_no} replacement
-        if (!empty($this->config['aghayeh_callback'])) {
-            return str_replace('{trade_no}', $order['trade_no'], $this->config['aghayeh_callback']);
-        }
-        
-        // Default: use system notify_url
-        return $order['notify_url'];
     }
 }

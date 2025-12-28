@@ -20,13 +20,13 @@ class ZibalPayment
     {
         return [
             'zibal_merchant' => [
-                'label' => 'Ú©Ø¯ Ù…Ø±Ú†Ù†Øª Ø²ÛŒØ¨Ø§Ù„',
+                'label' => 'کد مرچنت زیبال',
                 'description' => '',
                 'type' => 'input',
             ],
             'zibal_callback' => [
                 'label' => 'آدرس بازگشت (Callback URL)',
-                'description' => 'Empty = default | Or full URL like: https://example.com/pay/{trade_no}',
+                'description' => 'خالی = پیش‌فرض | یا آدرس کامل مثل: https://example.com/pay/{trade_no}',
                 'type' => 'input',
             ],
         ];
@@ -35,8 +35,8 @@ class ZibalPayment
     public function pay($order)
     {
         if (!isset($this->config['zibal_merchant'])) {
-            Log::error('Zibal config is missing required keys');
-            throw new \Exception('ØªÙ†Ø¸ÛŒÙ…Ø§Øª Ø²ÛŒØ¨Ø§Ù„ Ù†Ø§Ù‚Øµ Ø§Ø³Øª.');
+            Log::channel('payment')->error('Zibal config is missing required keys');
+            throw new \Exception('تنظیمات زیبال ناقص است.');
         }
 
         $params = [
@@ -44,14 +44,14 @@ class ZibalPayment
             'amount' => $order['total_amount'] * 10,
             'callbackUrl' => $this->getCallbackUrl($order),
             'orderId' => $order['trade_no'],
-            'description' => 'Ù¾Ø±Ø¯Ø§Ø®Øª Ø³ÙØ§Ø±Ø´ ' . $order['trade_no'],
+            'description' => 'پرداخت سفارش ' . $order['trade_no'],
         ];
 
         try {
             $response = Http::retry(3, 100)
                 ->timeout(20)
                 ->post('https://gateway.zibal.ir/v1/request', $params);
-            
+
             $result = $response->json();
 
             Log::channel('payment')->info('Zibal payment request:', $this->filterLogData($params));
@@ -59,10 +59,10 @@ class ZibalPayment
 
             if ($response->successful() && ($result['result'] ?? 0) === 100) {
                 $trackId = $result['trackId'];
-                
-                // Store trackId in payment_tracks table (critical for payment recovery)
+
+                // Store trackId in payment_tracks table
                 $trackSaved = false;
-                
+
                 try {
                     PaymentTrack::store(
                         $trackId,
@@ -72,17 +72,17 @@ class ZibalPayment
                         'zibal',
                         $order['trade_no'] ?? null
                     );
-                    
+
                     $trackSaved = true;
-                    
-                    Log::channel('payment')->info('âœ“ TrackId stored successfully', [
+
+                    Log::channel('payment')->info('✓ TrackId stored successfully', [
                         'track_id' => $trackId,
                         'order_id' => $order['id'] ?? 0,
                         'trade_no' => $order['trade_no'],
                         'user_id' => $order['user_id'] ?? 0,
                         'amount' => $order['total_amount'] ?? 0
                     ]);
-                    
+
                 } catch (\Exception $e) {
                     Log::channel('payment')->critical('CRITICAL: Failed to store trackId in database', [
                         'track_id' => $trackId,
@@ -91,17 +91,14 @@ class ZibalPayment
                         'user_id' => $order['user_id'] ?? 0,
                         'amount' => $order['total_amount'] ?? 0,
                         'error' => $e->getMessage(),
-                        'exception_class' => get_class($e),
-                        'file' => $e->getFile(),
-                        'line' => $e->getLine(),
                         'warning' => 'This payment may be lost if callback fails'
                     ]);
                 }
-                
+
                 // Store in cache as backup (3 days TTL)
                 try {
                     cache()->put("zibal_track_{$order['trade_no']}", $trackId, 259200);
-                    
+
                     if (!$trackSaved) {
                         Log::channel('payment')->warning('TrackId saved in cache only (DB failed)', [
                             'track_id' => $trackId,
@@ -109,13 +106,12 @@ class ZibalPayment
                         ]);
                     }
                 } catch (\Exception $e) {
-                    Log::channel('payment')->critical('CRITICAL: Failed to store trackId in both DB and cache', [
+                    Log::channel('payment')->critical('CRITICAL: Failed to store trackId in cache', [
                         'track_id' => $trackId,
-                        'trade_no' => $order['trade_no'],
                         'error' => $e->getMessage()
                     ]);
                 }
-                
+
                 return [
                     'type' => 1,
                     'data' => 'https://gateway.zibal.ir/start/' . $trackId,
@@ -123,7 +119,7 @@ class ZibalPayment
             }
 
             Log::channel('payment')->error('Zibal payment request failed', $result);
-            throw new \Exception($result['message'] ?? 'Ø®Ø·Ø§ÛŒ Ù†Ø§Ù…Ø´Ø®Øµ Ø§Ø² Ø²ÛŒØ¨Ø§Ù„');
+            throw new \Exception($result['message'] ?? 'خطای نامشخص از زیبال');
 
         } catch (\Exception $e) {
             Log::channel('payment')->error('Zibal payment exception', [
@@ -156,10 +152,10 @@ class ZibalPayment
 
         // Validate trackId with payment_tracks table
         $trackId = $params['trackId'];
-        
+
         if (!PaymentTrack::isValid($trackId)) {
             $track = PaymentTrack::getByTrackId($trackId);
-            
+
             if ($track) {
                 if ($track->is_used) {
                     Log::channel('payment')->error('TrackId already used', [
@@ -174,13 +170,13 @@ class ZibalPayment
                     'track_id' => $trackId,
                     'order_id' => $params['orderId']
                 ]);
-                
+
                 // Check cache as fallback
                 $cachedTrackId = cache()->get("zibal_track_{$params['orderId']}");
                 if (!$cachedTrackId || $cachedTrackId !== $trackId) {
                     return false;
                 }
-                
+
                 Log::channel('payment')->warning('TrackId found in cache but not in DB, continuing', [
                     'track_id' => $trackId
                 ]);
@@ -243,7 +239,7 @@ class ZibalPayment
             $track = PaymentTrack::getByTrackId($trackId);
             if ($track && !$track->is_used) {
                 $track->markAsUsed();
-                Log::channel('payment')->info('âœ“ TrackId marked as used');
+                Log::channel('payment')->info('✓ TrackId marked as used');
             }
 
             // Cache the result
@@ -259,7 +255,7 @@ class ZibalPayment
             ]);
 
             return $successResult;
-            
+
         } catch (\Exception $e) {
             Log::channel('payment')->error('Verify exception', [
                 'track_id' => $trackId,
@@ -270,9 +266,6 @@ class ZibalPayment
         }
     }
 
-    /**
-     * Inquiry payment status from Zibal
-     */
     public function inquiry($trackId)
     {
         try {
@@ -300,7 +293,7 @@ class ZibalPayment
 
             Log::channel('payment')->error('Zibal inquiry failed', $result);
             return false;
-            
+
         } catch (\Exception $e) {
             Log::channel('payment')->error('Zibal inquiry exception', [
                 'track_id' => $trackId,
@@ -308,6 +301,17 @@ class ZibalPayment
             ]);
             return false;
         }
+    }
+
+    private function getCallbackUrl($order)
+    {
+        // If custom callback is set, use it with {trade_no} replacement
+        if (!empty($this->config['zibal_callback'])) {
+            return str_replace('{trade_no}', $order['trade_no'], $this->config['zibal_callback']);
+        }
+        
+        // Default: use system notify_url
+        return $order['notify_url'];
     }
 
     private function filterLogData($data)
@@ -318,19 +322,19 @@ class ZibalPayment
 
         $filtered = $data;
         $sensitiveFields = ['merchant', 'cardNumber', 'token'];
-        
+
         foreach ($sensitiveFields as $field) {
             if (isset($filtered[$field])) {
                 $filtered[$field] = '***' . substr($filtered[$field], -4);
             }
         }
-        
+
         array_walk_recursive($filtered, function (&$value, $key) use ($sensitiveFields) {
             if (in_array($key, $sensitiveFields) && is_string($value)) {
                 $value = '***' . substr($value, -4);
             }
         });
-        
+
         return $filtered;
     }
 
@@ -339,23 +343,13 @@ class ZibalPayment
         if (empty($cardNumber) || !is_string($cardNumber)) {
             return 'N/A';
         }
-        
+
         $cardNumber = preg_replace('/\D/', '', $cardNumber);
-        
+
         if (strlen($cardNumber) < 10) {
             return 'N/A';
         }
-        
+
         return substr($cardNumber, 0, 6) . str_repeat('*', max(6, strlen($cardNumber) - 10)) . substr($cardNumber, -4);
-    }
-    private function getCallbackUrl($order)
-    {
-        // If custom callback is set, use it with {trade_no} replacement
-        if (!empty($this->config['zibal_callback'])) {
-            return str_replace('{trade_no}', $order['trade_no'], $this->config['zibal_callback']);
-        }
-        
-        // Default: use system notify_url
-        return $order['notify_url'];
     }
 }
