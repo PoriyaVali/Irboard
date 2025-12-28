@@ -24,6 +24,11 @@ class Aghayehpardakht
                 'description' => 'پین دریافتی از پنل آقای پرداخت',
                 'type' => 'input',
             ],
+            'aghayeh_callback' => [
+                'label' => 'Callback URL',
+                'description' => 'Empty = default | Or full URL like: https://example.com/pay/{trade_no}',
+                'type' => 'input',
+            ],
         ];
     }
 
@@ -37,7 +42,7 @@ class Aghayehpardakht
         $params = [
             'pin' => $this->config['aghayeh_pin'],
             'amount' => $order['total_amount'],
-            'callback' => $order['notify_url'],
+            'callback' => $this->getCallbackUrl($order),
             'invoice_id' => $order['trade_no'],
             'description' => 'پرداخت سفارش ' . $order['trade_no'],
         ];
@@ -296,5 +301,15 @@ class Aghayehpardakht
         }
 
         return substr($cardNumber, 0, 6) . str_repeat('*', max(6, strlen($cardNumber) - 10)) . substr($cardNumber, -4);
+    }
+    private function getCallbackUrl($order)
+    {
+        // If custom callback is set, use it with {trade_no} replacement
+        if (!empty($this->config['aghayeh_callback'])) {
+            return str_replace('{trade_no}', $order['trade_no'], $this->config['aghayeh_callback']);
+        }
+        
+        // Default: use system notify_url
+        return $order['notify_url'];
     }
 }
