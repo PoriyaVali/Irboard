@@ -39,6 +39,8 @@
 
 <br/>
 
+<div dir="rtl">
+
 ## ⚡ ویژگی‌های کلیدی
 
 <table>
@@ -70,13 +72,13 @@
 
 <div align="center">
 
-| 📦 نرم‌افزار | 🔢 نسخه | 📝 توضیحات |
+| توضیحات 📝 | نسخه 🔢 | نرم‌افزار 📦 |
 |:---:|:---:|:---:|
-| <img src="https://skillicons.dev/icons?i=php" width="20"/> PHP | `7.3+` | با extensionهای لازم |
-| <img src="https://skillicons.dev/icons?i=laravel" width="20"/> Laravel | `10.x` | آخرین نسخه پایدار |
-| <img src="https://skillicons.dev/icons?i=mysql" width="20"/> MySQL | `5.5+` | یا MariaDB 10+ |
-| <img src="https://skillicons.dev/icons?i=redis" width="20"/> Redis | `Latest` | برای Cache و Queue |
-| 📦 Composer | `Latest` | مدیریت پکیج‌ها |
+| با extensionهای لازم | `7.3+` | <img src="https://skillicons.dev/icons?i=php" width="20"/> PHP |
+| آخرین نسخه پایدار | `10.x` | <img src="https://skillicons.dev/icons?i=laravel" width="20"/> Laravel |
+| یا MariaDB 10+ | `5.5+` | <img src="https://skillicons.dev/icons?i=mysql" width="20"/> MySQL |
+| برای Cache و Queue | `Latest` | <img src="https://skillicons.dev/icons?i=redis" width="20"/> Redis |
+| مدیریت پکیج‌ها | `Latest` | 📦 Composer |
 
 </div>
 
@@ -99,6 +101,8 @@
 
 <br/>
 
+<div dir="ltr">
+
 ```bash
 # تغییر منبع ریپازیتوری
 git remote set-url origin https://github.com/PoriyaVali/Irboard
@@ -110,12 +114,16 @@ git checkout master
 ./update.sh
 ```
 
+</div>
+
 </details>
 
 <details>
 <summary><b>🔹 مرحله ۲: پیکربندی کش Redis</b></summary>
 
 <br/>
+
+<div dir="ltr">
 
 ```bash
 # تنظیم درایور کش
@@ -130,6 +138,8 @@ php artisan view:clear
 php artisan route:clear
 php artisan optimize:clear
 ```
+
+</div>
 
 </details>
 
@@ -238,7 +248,7 @@ timeline
 
 </div>
 
-<br/>
+</div>
 
 <!-- Footer Wave -->
 <img width="100%" src="https://capsule-render.vercel.app/api?type=waving&color=0:667eea,100:764ba2&height=120&section=footer"/>
