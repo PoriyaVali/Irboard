@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers\V1\Guest;
 
@@ -18,6 +18,7 @@ class PaymentController extends Controller
     public function notify($method, $uuid, Request $request)
     {
         $requestData = $request->all();
+        $requestData['trade_no'] = $uuid;
     
         $this->logInfo('Payment notification received', [
             'method' => $method,
@@ -326,3 +327,4 @@ class PaymentController extends Controller
         return substr($cardNumber, -4) . '......' . substr($cardNumber, 0, 6);
     }
 }
+
