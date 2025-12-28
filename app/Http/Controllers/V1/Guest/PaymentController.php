@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace App\Http\Controllers\V1\Guest;
 
@@ -18,6 +18,7 @@ class PaymentController extends Controller
     public function notify($method, $uuid, Request $request)
     {
         $requestData = $request->all();
+        $requestData['trade_no'] = $uuid;
         $requestData['trade_no'] = $uuid;
     
         $this->logInfo('Payment notification received', [
