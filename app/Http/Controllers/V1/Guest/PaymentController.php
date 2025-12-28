@@ -19,7 +19,6 @@ class PaymentController extends Controller
     {
         $requestData = $request->all();
         $requestData['trade_no'] = $uuid;
-        $requestData['trade_no'] = $uuid;
     
         $this->logInfo('Payment notification received', [
             'method' => $method,
@@ -328,4 +327,3 @@ class PaymentController extends Controller
         return substr($cardNumber, -4) . '......' . substr($cardNumber, 0, 6);
     }
 }
-
