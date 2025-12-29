@@ -62,14 +62,17 @@ if (!empty(config('v2board.subscribe_path'))) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 // مسیر اصلی notify (پشتیبانی از Payment Tracking)
-Route::post('api/v1/guest/payment/notify/{method}/{uuid}', [PaymentController::class, 'notify'])
+Route::post('payment/notify/{method}/{uuid}', [PaymentController::class, 'notify'])
     ->name('payment.notify')
     ->middleware('throttle:60,1');
 
 // مسیرهای legacy (سازگاری با نسخه‌های قدیم)
-// Legacy route removed - use main notify route
-// Legacy route removed - use main notify route
-// Legacy route removed - use main notify route
+Route::post('/api/v1/guest/payment/callback/aghayehpardakht', [PaymentController::class, 'aghayehpardakhtCallback']);
+Route::post('/api/v1/guest/payment/callback/zibal', [PaymentController::class, 'zibalCallback']);
+
+// نرخ دلار API
+Route::get("/api/v1/guest/exchange-rate", [\App\Http\Controllers\V1\Guest\ExchangeRateController::class, "fetch"]);
+Route::post('payment/notify/zibal/{uuid}', [PaymentController::class, 'notify'])->name('payment.notify.zibal');
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📊 Payment Tracking API (اختیاری - برای مانیتورینگ)
