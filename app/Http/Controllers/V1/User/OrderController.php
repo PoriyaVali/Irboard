@@ -114,6 +114,7 @@ class OrderController extends Controller
             
             $orderService->setOrderType($user);
             $orderService->setInvite($user);
+            $order->exchange_rate = \App\Services\ExchangeService::getCurrentRate();
 
             if (!$order->save()) {
                 DB::rollback();
@@ -205,6 +206,7 @@ class OrderController extends Controller
             }
         }
 
+        $order->exchange_rate = \App\Services\ExchangeService::getCurrentRate();
         $orderService->setInvite($user);
 
         if (!$order->save()) {
@@ -250,7 +252,6 @@ class OrderController extends Controller
         if (!$order->save()) abort(500, __('Request failed, please try again later'));
         $result = $paymentService->pay([
             'trade_no' => $tradeNo,
-            'id' => $order->id,
             'total_amount' => isset($order->handling_amount) ? ($order->total_amount + $order->handling_amount) : $order->total_amount,
             'user_id' => $order->user_id,
             'stripe_token' => $request->input('token')
