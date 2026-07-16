@@ -352,15 +352,18 @@ jobs:
           [ "$EMAIL" = "ci-webman@example.com" ] || wfail "webman user/info did not return our user :: $(printf '%s' "$INFO" | head -c 300)"
           echo "  ✓ auth flow works on webman (user: $EMAIL)"
 
-          # A long-lived worker must stay correct across requests, not just on the
-          # first one. Reuse the same connection so we land on a warm worker.
-          SEQ=$(curl -s -H "Authorization: $AUTH" \
-                  http://127.0.0.1:6600/api/v1/user/info \
-                  http://127.0.0.1:6600/api/v1/user/info \
-                  http://127.0.0.1:6600/api/v1/user/info \
-                | grep -c 'ci-webman@example.com' || true)
-          [ "$SEQ" = "3" ] && echo "  ✓ repeated requests on a warm worker stay correct (3/3)" \
-                           || wfail "warm-worker requests degraded: only $SEQ/3 returned the right user (leaked state between requests?)"
+          # A long-lived worker has to stay correct on request 50 the same way it was
+          # on request 1. Fire enough of them to land on every worker in the pool.
+          OK=0
+          for i in $(seq 1 8); do
+            R=$(curl -s -H "Authorization: $AUTH" http://127.0.0.1:6600/api/v1/user/info)
+            case "$R" in
+              *'ci-webman@example.com'*) OK=$((OK + 1)) ;;
+              *) echo "  request $i returned: $(printf '%s' "$R" | tr '\n' ' ' | head -c 200)" ;;
+            esac
+          done
+          [ "$OK" = "8" ] || wfail "warm workers degraded: only $OK/8 returned the right user (state leaking between requests?)"
+          echo "  ✓ repeated requests across the worker pool stay correct (8/8)"
 
           # An authenticated identity must not survive into the next request on the
           # same worker: without an Authorization header this has to come back 401/403.
