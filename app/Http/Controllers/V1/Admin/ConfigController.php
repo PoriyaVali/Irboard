@@ -216,24 +216,43 @@ class ConfigController extends Controller
                 unset($data[$key]);
             }
         }
-        $config = config('v2board');
+        $configFile = base_path() . '/config/v2board.php';
+        // Start from what is on disk, not from config('v2board').
+        //
+        // This method rewrites the WHOLE file from $config, but $data only carries the
+        // fields the admin just submitted. config() returns the snapshot this worker
+        // loaded when it booted, and webman workers live for hours — so every setting
+        // saved since that boot is missing from the snapshot and gets written back at
+        // its old value. Saving setting B silently reverts setting A. Under php-fpm the
+        // bug is invisible: each request re-reads config from disk.
+        if (function_exists('opcache_invalidate')) {
+            opcache_invalidate($configFile, true);
+        }
+        $onDisk = File::exists($configFile) ? include $configFile : null;
+        $config = is_array($onDisk) ? $onDisk : config('v2board');
+
         foreach (ConfigSave::RULES as $k => $v) {
-            if (!in_array($k, array_keys(ConfigSave::RULES))) {
-                unset($config[$k]);
-                continue;
-            }
             if (array_key_exists($k, $data)) {
                 $config[$k] = $data[$k];
             }
         }
         $data = var_export($config, 1);
-        if (!File::put(base_path() . '/config/v2board.php', "<?php\n return $data ;")) {
+        if (!File::put($configFile, "<?php\n return $data ;")) {
             abort(500, '修改失败');
         }
-        if (function_exists('opcache_reset')) {
-            if (opcache_reset() === false) {
-                abort(500, '缓存清除失败，请卸载或检查opcache配置状态');
-            }
+        if (function_exists('opcache_invalidate')) {
+            opcache_invalidate($configFile, true);
+        }
+        // Symfony's DumpCompletionCommand::configure() reads $_SERVER['PHP_SELF'] with no
+        // guard, and Artisan::call() configures every registered command before running
+        // one. AdapterMan rebuilds $_SERVER per HTTP request out of the request itself,
+        // so a webman worker has no PHP_SELF and this call throws "Undefined array key".
+        // The file above is already written by then, so the save half-completes: disk has
+        // the new value, config:cache never regenerates bootstrap/cache/config.php, and
+        // every worker keeps booting the old settings forever. That is the whole reason a
+        // setting appears to save and never takes effect.
+        if (!isset($_SERVER['PHP_SELF'])) {
+            $_SERVER['PHP_SELF'] = 'artisan';
         }
         Artisan::call('config:cache');
         if(Cache::has('WEBMANPID')) {

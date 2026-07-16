@@ -15,6 +15,9 @@ class Kernel extends HttpKernel
      * @var array
      */
     protected $middleware = [
+        // First: AdapterMan hands each request a $_SERVER with no PHP_SELF and friends,
+        // which makes any Artisan::call() from a controller throw. See the class docblock.
+        \App\Http\Middleware\AdapterManServerVars::class,
         \App\Http\Middleware\CORS::class,
         \App\Http\Middleware\UAfilter::class,
         \App\Http\Middleware\TrustProxies::class,
