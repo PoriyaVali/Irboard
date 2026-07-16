@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build & Test (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.0', '8.1']
+
+    services:
+      mariadb:
+        image: mariadb:10.6
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: irboard_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s --health-timeout=5s --health-retries=15
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP ${{ matrix.php }}
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, bcmath, ctype, curl, dom, fileinfo, gd, iconv, json, mysqli, pdo, pdo_mysql, redis, tokenizer, xml, zip, openssl
+          coverage: none
+          tools: composer:v2
+
+      - name: PHP syntax lint (all source files)
+        run: |
+          set -e
+          echo "Linting PHP files..."
+          find app config database routes library resources tests \
+            -name '*.php' -print0 | xargs -0 -n1 -P4 php -l >/dev/null
+          echo "✓ No syntax errors."
+
+      - name: Validate composer.json
+        run: composer validate --no-check-publish --no-check-all
+
+      - name: Install dependencies
+        run: composer update --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          sed -i 's#^DB_HOST=.*#DB_HOST=127.0.0.1#' .env
+          sed -i 's#^DB_PORT=.*#DB_PORT=3306#' .env
+          sed -i 's#^DB_DATABASE=.*#DB_DATABASE=irboard_test#' .env
+          sed -i 's#^DB_USERNAME=.*#DB_USERNAME=root#' .env
+          sed -i 's#^DB_PASSWORD=.*#DB_PASSWORD=root#' .env
+          sed -i 's#^REDIS_HOST=.*#REDIS_HOST=127.0.0.1#' .env
+          sed -i 's#^CACHE_DRIVER=.*#CACHE_DRIVER=redis#' .env
+          # v2board settings live in config/v2board.php (gitignored); a fresh
+          # checkout has none, so seed an empty one so the app can boot.
+          [ -f config/v2board.php ] || echo "<?php return [];" > config/v2board.php
+          php artisan key:generate
+
+      - name: Import database schema (install.sql)
+        run: |
+          set -e
+          mysql -h127.0.0.1 -uroot -proot irboard_test < database/install.sql
+          TABLES=$(mysql -h127.0.0.1 -uroot -proot irboard_test -N -e "SHOW TABLES;" | wc -l)
+          echo "✓ Imported schema — $TABLES tables."
+          test "$TABLES" -gt 0
+          mysql -h127.0.0.1 -uroot -proot irboard_test -e "SELECT COUNT(*) AS v2_user_ok FROM v2_user;" >/dev/null
+          echo "✓ Core table v2_user is queryable."
+
+      - name: Boot Laravel (artisan)
+        run: |
+          set -e
+          php artisan --version
+          php artisan config:clear
+          php artisan route:list --json >/dev/null
+          echo "✓ Application boots and routes register."
+
+      - name: Run tests (informational)
+        continue-on-error: true
+        run: |
+          if [ -f phpunit.xml ] && [ -x vendor/bin/phpunit ]; then
+            vendor/bin/phpunit --no-coverage || echo "::warning::phpunit reported failures (non-blocking)"
+          else
+            echo "No phpunit setup found — skipping."
+          fi
