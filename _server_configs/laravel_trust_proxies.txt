@@ -1,0 +1,3 @@
+     * The trusted proxies for this application.
+    protected $proxies = '*';
+     * The headers that should be used to detect proxies.

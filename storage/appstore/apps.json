@@ -1,0 +1,67 @@
+{
+    "banners": [
+        {
+            "id": 1,
+            "title": "🍎 خرید اپل آیدی آمریکا",
+            "description": "اپل آیدی آماده با ایمیل اختصاصی شما",
+            "badge": "پیشنهاد ویژه",
+            "gradient": "linear-gradient(135deg,#667eea,#764ba2)",
+            "link": "\/dashboard\/ticket",
+            "enabled": true
+        },
+        {
+            "id": 2,
+            "title": "🎁 گیفت کارت اپل و گوگل",
+            "description": "تحویل آنی با بهترین نرخ روز",
+            "badge": "تخفیف دار",
+            "gradient": "linear-gradient(135deg,#f093fb,#f5576c)",
+            "link": "\/dashboard\/ticket",
+            "enabled": true
+        },
+        {
+            "id": 3,
+            "title": "💎 اشتراک ویژه",
+            "description": "بسته‌های حرفه‌ای با سرعت نامحدود",
+            "badge": "جدید",
+            "gradient": "linear-gradient(135deg,#4facfe,#00f2fe)",
+            "link": "\/dashboard\/store",
+            "enabled": true
+        }
+    ],
+    "categories": [
+        {
+            "id": "android",
+            "title": "اندروید",
+            "icon": "🤖",
+            "apps": [
+                {
+                    "id": "Copy Code",
+                    "name": "کپی رمز پیامک",
+                    "description": "کپی رمز پیامک ارسال شده از سرویس های ارسال کد",
+                    "icon": "https:\/\/YOUR_FRONTEND_DOMAIN\/apk\/appstore\/Pic\/42790.jpg",
+                    "version": "1.20.4",
+                    "size": "3 مگابایت",
+                    "downloadUrl": "Https:\/\/YOUR_FRONTEND_DOMAIN\/apk\/appstore\/copy_code.apk",
+                    "order": 3
+                }
+            ]
+        },
+        {
+            "id": "windows",
+            "title": "ویندوز",
+            "icon": "💻",
+            "apps": [
+                {
+                    "id": "v2rayn",
+                    "name": "V2RayN",
+                    "description": "بهترین کلاینت V2Ray برای ویندوز با پشتیبانی کامل",
+                    "icon": "\/assets\/appstore-icons\/v2rayn.png",
+                    "version": "6.42",
+                    "size": "45 MB",
+                    "downloadUrl": "https:\/\/github.com\/2dust\/v2rayN\/releases",
+                    "order": 1
+                }
+            ]
+        }
+    ]
+}

@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{CSRF_TOKEN}}">
+    <title>مدیریت قیمت‌های دلاری</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Tahoma, Arial, sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #e0e0e0;
+        }
+        h2 {
+            color: #333;
+            font-size: 28px;
+        }
+        .rate-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            flex-wrap: wrap;
+        }
+        .rate-info {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .rate-main {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .rate-box strong {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .rate-time {
+            font-size: 11px;
+            opacity: 0.85;
+            font-weight: normal;
+        }
+        
+        /* Toggle Switch */
+        .toggle-switch {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .toggle-switch input[type="checkbox"] {
+            display: none;
+        }
+        .toggle-slider {
+            width: 50px;
+            height: 26px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 13px;
+            position: relative;
+            transition: all 0.3s;
+            border: 2px solid rgba(255,255,255,0.4);
+        }
+        .toggle-slider:before {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            top: 2px;
+            left: 2px;
+            transition: all 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .toggle-switch input:checked + .toggle-slider {
+            background: #4CAF50;
+            border-color: #4CAF50;
+        }
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+        .toggle-label {
+            font-size: 13px;
+            font-weight: normal;
+            white-space: nowrap;
+        }
+        
+        .btn-round-all {
+            background: #FF9800;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+        }
+        .btn-round-all:hover {
+            background: #F57C00;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4);
+        }
+        .btn-update-all {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+        }
+        .btn-update-all:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        th, td {
+            padding: 15px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .plan-name {
+            background: #f5f5f5;
+            font-weight: 600;
+            text-align: right;
+            color: #333;
+        }
+        .price-cell {
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            transition: background 0.3s;
+        }
+        .round-btn {
+            background: #FF9800;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.3s;
+            align-self: flex-start;
+        }
+        .round-btn:hover {
+            background: #F57C00;
+            transform: scale(1.1);
+        }
+        input[type="number"] {
+            width: 100px;
+            padding: 10px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        input[type="number"]:focus {
+            outline: none;
+            border-color: #764ba2;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+        .currency {
+            color: #667eea;
+            font-weight: bold;
+            margin-right: 5px;
+            font-size: 16px;
+        }
+        .irr-value {
+            font-size: 12px;
+            color: #666;
+            margin-top: 8px;
+            background: #E3F2FD;
+            padding: 5px 10px;
+            border-radius: 6px;
+            display: inline-block;
+            white-space: nowrap;
+        }
+        .no-price {
+            color: #ccc;
+            font-size: 20px;
+        }
+        .update-time {
+            font-size: 11px;
+            color: #999;
+        }
+        .btn-save {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+        .loading.active {
+            display: flex;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .alert {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 30px;
+            border-radius: 8px;
+            color: white;
+            font-weight: bold;
+            z-index: 10000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            animation: slideDown 0.3s ease;
+        }
+        .alert.success { background: #4CAF50; }
+        .alert.error { background: #f44336; }
+        @keyframes slideDown {
+            from { transform: translate(-50%, -100px); opacity: 0; }
+            to { transform: translate(-50%, 0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h2>💰 مدیریت قیمت‌های دلاری</h2>
+            <div class="rate-box">
+                <div class="rate-info">
+                    <div class="rate-main">
+                        <span>نرخ فعلی دلار:</span>
+                        <strong id="currentRate">{{RATE_FORMATTED}} تومان</strong>
+                    </div>
+                    <small id="rateUpdateTime" class="rate-time" data-timestamp="{{RATE_UPDATED_AT}}">
+                        🕐 در حال محاسبه...
+                    </small>
+                </div>
+                
+                <!-- Toggle Auto-Round -->
+                <label class="toggle-switch" title="گرد کردن خودکار هنگام بروزرسانی">
+                    <input type="checkbox" id="autoRoundToggle" {{AUTO_ROUND_CHECKED}} onchange="toggleAutoRound()">
+                    <span class="toggle-slider"></span>
+                    <span class="toggle-label">گرد کردن خودکار</span>
+                </label>
+                
+                <button class="btn-round-all" onclick="roundAllPrices()" title="گرد کردن همه قیمت‌ها در دیتابیس">
+                    ⬇️ گرد کردن همه
+                </button>
+                <button class="btn-update-all" onclick="updateAllPrices()">
+                    🔄 بروزرسانی همه
+                </button>
+            </div>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="min-width: 150px;">نام پلن</th>
+                        <th>ماهانه</th>
+                        <th>سه‌ماهه</th>
+                        <th>شش‌ماهه</th>
+                        <th>سالانه</th>
+                        <th>دو‌ساله</th>
+                        <th>سه‌ساله</th>
+                        <th>یکباره</th>
+                        <th>ریست</th>
+                        <th>آخرین بروزرسانی</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{PLANS_HTML}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const currentRate = {{CURRENT_RATE}};
+        
+        function showLoading() {
+            document.getElementById('loading').classList.add('active');
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading').classList.remove('active');
+        }
+        
+        function showAlert(message, type = 'success') {
+            const alert = document.createElement('div');
+            alert.className = 'alert ' + type;
+            alert.textContent = message;
+            document.body.appendChild(alert);
+            
+            setTimeout(() => {
+                alert.remove();
+            }, 3000);
+        }
+        
+        function calculateIRR(input, rate) {
+            const usdValue = parseFloat(input.value) || 0;
+            const irrValue = Math.round(usdValue * rate);
+            
+            const irrDiv = input.closest('.price-cell').querySelector('.irr-value');
+            if (irrDiv) {
+                irrDiv.textContent = '≈ ' + irrValue.toLocaleString('fa-IR') + ' تومان';
+            }
+        }
+        
+        // نمایش زمان آخرین بروزرسانی نرخ
+        function updateRateTime() {
+            const timeEl = document.getElementById('rateUpdateTime');
+            const timestamp = parseInt(timeEl.dataset.timestamp);
+            
+            if (!timestamp) {
+                timeEl.textContent = '🕐 نامشخص';
+                return;
+            }
+            
+            const now = Math.floor(Date.now() / 1000);
+            const diff = now - timestamp;
+            
+            let timeText = '';
+            
+            if (diff < 60) {
+                timeText = 'چند لحظه پیش';
+            } else if (diff < 3600) {
+                const minutes = Math.floor(diff / 60);
+                timeText = minutes + ' دقیقه پیش';
+            } else if (diff < 86400) {
+                const hours = Math.floor(diff / 3600);
+                timeText = hours + ' ساعت پیش';
+            } else {
+                const days = Math.floor(diff / 86400);
+                timeText = days + ' روز پیش';
+            }
+            
+            timeEl.textContent = '🕐 آخرین بروزرسانی: ' + timeText;
+        }
+        
+        // اولین بار
+        updateRateTime();
+        
+        // هر 30 ثانیه یکبار آپدیت کن
+        setInterval(updateRateTime, 30000);
+        
+        // گرد کردن یک قیمت به سمت پایین (فقط نمایشی)
+        function roundPrice(btn, rate) {
+            const cell = btn.closest('.price-cell');
+            const input = cell.querySelector('input[type="number"]');
+            const irrDiv = cell.querySelector('.irr-value');
+            
+            const currentUsd = parseFloat(input.value) || 0;
+            let currentIrr = Math.round(currentUsd * rate);
+            
+            // گرد کردن به هزار پایین
+            let roundedIrr = Math.floor(currentIrr / 1000) * 1000;
+            
+            // اگه خیلی کوچیک شد، به 100 گرد کن
+            if (roundedIrr === 0 && currentIrr > 0) {
+                roundedIrr = Math.floor(currentIrr / 100) * 100;
+            }
+            
+            // محاسبه USD جدید
+            const newUsd = (roundedIrr / rate).toFixed(2);
+            
+            // بروزرسانی
+            input.value = newUsd;
+            irrDiv.textContent = '≈ ' + roundedIrr.toLocaleString('fa-IR') + ' تومان';
+            
+            // افکت بصری
+            cell.style.background = '#FFF3E0';
+            setTimeout(() => cell.style.background = '', 500);
+            
+            showAlert('✓ گرد شد (فقط نمایشی - برای ذخیره دکمه "ذخیره" را بزنید)', 'success');
+        }
+        
+        // گرد کردن همه قیمت‌ها در دیتابیس
+        async function roundAllPrices() {
+            if (!confirm('⚠️ آیا می‌خواهید همه قیمت‌ها در دیتابیس به سمت پایین گرد شوند?\n\nمثال: 99,969 تومان → 99,000 تومان\n\n⚠️ این تغییرات مستقیماً در دیتابیس ذخیره می‌شود!')) {
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const key = params.get('key');
+                const url = key ? '/admin-prices/round-all?key=' + key : '/admin-prices/round-all';
+                
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{CSRF_TOKEN}}'
+                    }
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    if (data.count > 0) {
+                        showAlert('✓ ' + data.count + ' پلن در دیتابیس گرد شد', 'success');
+                    } else {
+                        showAlert('ℹ️ همه قیمت‌ها قبلاً گرد بودند', 'success');
+                    }
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showAlert('✗ خطا: ' + (data.error || 'خطا در گرد کردن'), 'error');
+                }
+            } catch (e) {
+                console.error(e);
+                showAlert('✗ خطای شبکه', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        // Toggle گرد کردن خودکار
+        async function toggleAutoRound() {
+            const checkbox = document.getElementById('autoRoundToggle');
+            const isEnabled = checkbox.checked;
+            
+            showLoading();
+            
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const key = params.get('key');
+                const url = key ? '/admin-prices/toggle-auto-round?key=' + key : '/admin-prices/toggle-auto-round';
+                
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{CSRF_TOKEN}}'
+                    }
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    const icon = data.enabled ? '✓' : '✗';
+                    const message = data.message + ' ' + icon;
+                    showAlert(message, 'success');
+                    
+                    // نمایش توضیح برای کاربر
+                    if (data.enabled) {
+                        setTimeout(() => {
+                            showAlert('💡 از این به بعد، هنگام "بروزرسانی همه"، قیمت‌ها خودکار گرد می‌شوند', 'success');
+                        }, 3200);
+                    }
+                } else {
+                    checkbox.checked = !isEnabled;
+                    showAlert('✗ خطا در تغییر تنظیمات', 'error');
+                }
+            } catch (e) {
+                console.error(e);
+                checkbox.checked = !isEnabled;
+                showAlert('✗ خطای شبکه', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function savePlan(planId) {
+            const row = document.querySelector('tr[data-plan-id="' + planId + '"]');
+            const inputs = row.querySelectorAll('input[type="number"]');
+            
+            const prices = {};
+            inputs.forEach(input => {
+                const field = input.dataset.field;
+                const value = parseFloat(input.value) || 0;
+                prices[field] = value;
+            });
+            
+            showLoading();
+            
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const key = params.get('key');
+                const url = key ? '/admin-prices/update?key=' + key : '/admin-prices/update';
+                
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{CSRF_TOKEN}}'
+                    },
+                    body: JSON.stringify({
+                        plan_id: planId,
+                        prices: prices
+                    })
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    showAlert('✓ قیمت‌ها با موفقیت ذخیره شدند', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showAlert('✗ خطا: ' + (data.error || data.message), 'error');
+                }
+            } catch (e) {
+                console.error(e);
+                showAlert('✗ خطای شبکه: ' + e.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function updateAllPrices() {
+            const autoRound = document.getElementById('autoRoundToggle').checked;
+            const roundText = autoRound ? '\n\n✓ گرد کردن خودکار فعال است - قیمت‌ها پس از بروزرسانی گرد خواهند شد' : '';
+            
+            if (!confirm('⚠️ آیا می‌خواهید همه قیمت‌ها با نرخ فعلی دلار بروزرسانی شوند?' + roundText)) {
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const params = new URLSearchParams(window.location.search);
+                const key = params.get('key');
+                const url = key ? '/admin-prices/update-all?key=' + key : '/admin-prices/update-all';
+                
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': '{{CSRF_TOKEN}}'
+                    }
+                });
+                
+                const data = await res.json();
+                
+                if (res.ok) {
+                    const message = autoRound ? '✓ همه قیمت‌ها بروزرسانی و گرد شدند' : '✓ همه قیمت‌ها بروزرسانی شدند';
+                    showAlert(message, 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showAlert('✗ خطا در بروزرسانی', 'error');
+                }
+            } catch (e) {
+                console.error(e);
+                showAlert('✗ خطای شبکه', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+    </script>
+</body>
+</html>

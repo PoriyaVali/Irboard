@@ -1,0 +1,324 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
+
+class PaymentTrack extends Model
+{
+    protected $table = 'payment_tracks';
+
+    protected $fillable = [
+        'track_id',
+        'trade_no',
+        'order_id',
+        'user_id',
+        'amount',
+        'payment_method',
+        'is_used',
+        'used_at',
+    ];
+
+    protected $casts = [
+        'amount' => 'integer',
+        'order_id' => 'integer',
+        'user_id' => 'integer',
+        'is_used' => 'boolean',
+        'used_at' => 'datetime',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 📝 CRUD Operations
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    /**
+     * Store a new payment track
+     * 
+     * @param string $trackId Track ID from payment gateway
+     * @param int $orderId Order ID (can be 0 if order not yet created)
+     * @param int $userId User ID
+     * @param int $amount Amount in Toman
+     * @param string $method Payment method (zibal, stripe, etc)
+     * @param string|null $tradeNo Trade number (order trade_no)
+     * @return self
+     * @throws \Exception
+     */
+    public static function store(
+        string $trackId, 
+        int $orderId, 
+        int $userId, 
+        int $amount, 
+        string $method = 'zibal',
+        ?string $tradeNo = null
+    ): self
+    {
+        try {
+            $track = self::create([
+                'track_id' => $trackId,
+                'trade_no' => $tradeNo,
+                'order_id' => $orderId,
+                'user_id' => $userId,
+                'amount' => $amount,
+                'payment_method' => $method,
+                'is_used' => false,
+            ]);
+
+            Log::channel('payment')->info('Payment track stored', [
+                'track_id' => $trackId,
+                'trade_no' => $tradeNo,
+                'order_id' => $orderId,
+                'user_id' => $userId,
+                'amount' => $amount,
+            ]);
+
+            return $track;
+            
+        } catch (\Exception $e) {
+            Log::channel('payment')->error('Failed to store payment track', [
+                'track_id' => $trackId,
+                'trade_no' => $tradeNo,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Mark track as used
+     * 
+     * @return bool
+     */
+    public function markAsUsed(): bool
+    {
+        try {
+            return $this->update([
+                'is_used' => true,
+                'used_at' => now(),
+            ]);
+        } catch (\Exception $e) {
+            Log::channel('payment')->error('Failed to mark track as used', [
+                'track_id' => $this->track_id,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 🔍 Validation & Lookup
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    /**
+     * Check if trackId is valid (exists and not used)
+     * 
+     * @param string $trackId
+     * @return bool
+     */
+    public static function isValid(string $trackId): bool
+    {
+        return self::where('track_id', $trackId)
+            ->where('is_used', false)
+            ->exists();
+    }
+
+    /**
+     * Check if trackId is already used
+     * 
+     * @param string $trackId
+     * @return bool
+     */
+    public static function isUsed(string $trackId): bool
+    {
+        return self::where('track_id', $trackId)
+            ->where('is_used', true)
+            ->exists();
+    }
+
+    /**
+     * Get track by trackId
+     * 
+     * @param string $trackId
+     * @return self|null
+     */
+    public static function getByTrackId(string $trackId): ?self
+    {
+        return self::where('track_id', $trackId)->first();
+    }
+
+    /**
+     * Get track by trade_no
+     * 
+     * @param string $tradeNo
+     * @return self|null
+     */
+    public static function getByTradeNo(string $tradeNo): ?self
+    {
+        return self::where('trade_no', $tradeNo)->first();
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 🧹 Cleanup Methods
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    /**
+     * Cleanup old payment tracks
+     * 
+     * SAFE MODE (default): Only deletes used tracks to prevent data loss
+     * FORCE MODE: Deletes all tracks (use with extreme caution!)
+     * 
+     * @param int $hoursOld Minimum age in hours (default: 48)
+     * @param bool $onlyUsed Only delete used tracks (default: true, recommended)
+     * @return int Number of deleted records
+     */
+    public static function cleanup(int $hoursOld = 48, bool $onlyUsed = true): int
+    {
+        try {
+            $cutoffTime = now()->subHours($hoursOld);
+            
+            $query = self::where('created_at', '<', $cutoffTime);
+            
+            // SAFETY: Only delete used tracks by default
+            if ($onlyUsed) {
+                $query->where('is_used', true);
+            }
+            
+            $count = $query->count();
+            
+            if ($count > 0) {
+                $deleted = $query->delete();
+                
+                Log::channel('payment')->info('✓ Payment tracks cleanup completed', [
+                    'deleted' => $deleted,
+                    'hours_old' => $hoursOld,
+                    'only_used' => $onlyUsed,
+                    'cutoff_time' => $cutoffTime->format('Y-m-d H:i:s'),
+                ]);
+                
+                return $deleted;
+            }
+            
+            return 0;
+            
+        } catch (\Exception $e) {
+            Log::channel('payment')->error('✗ Cleanup failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return 0;
+        }
+    }
+
+    /**
+     * Cleanup only used tracks (safe method - recommended)
+     * 
+     * @param int $hoursOld Minimum age in hours
+     * @return int Number of deleted records
+     */
+    public static function cleanupUsedTracks(int $hoursOld = 48): int
+    {
+        return self::cleanup($hoursOld, true);
+    }
+
+    /**
+     * Force cleanup all tracks (DANGEROUS - use with extreme caution!)
+     * Only use this if you're absolutely sure no pending payments exist
+     * 
+     * @param int $hoursOld Minimum age in hours
+     * @return int Number of deleted records
+     */
+    public static function forceCleanupAll(int $hoursOld = 48): int
+    {
+        Log::channel('payment')->warning('⚠️ FORCE CLEANUP initiated - deleting ALL tracks', [
+            'hours_old' => $hoursOld,
+        ]);
+        
+        return self::cleanup($hoursOld, false);
+    }
+
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // 📊 Statistics & Monitoring
+    // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+    /**
+     * Get comprehensive statistics
+     * 
+     * @return array
+     */
+    public static function getStatistics(): array
+    {
+        $stats = [
+            'total' => self::count(),
+            'used' => self::where('is_used', true)->count(),
+            'unused' => self::where('is_used', false)->count(),
+            'today' => self::whereDate('created_at', today())->count(),
+            'last_24h' => self::where('created_at', '>=', now()->subHours(24))->count(),
+        ];
+        
+        // Add unused tracks older than 48h (potentially stuck payments)
+        $stats['unused_old_48h'] = self::where('is_used', false)
+            ->where('created_at', '<', now()->subHours(48))
+            ->count();
+        
+        // Add unused tracks older than 72h (critical - needs attention)
+        $stats['unused_old_72h'] = self::where('is_used', false)
+            ->where('created_at', '<', now()->subHours(72))
+            ->count();
+            
+        return $stats;
+    }
+
+    /**
+     * Get stuck tracks (unused and older than specified hours)
+     * These might indicate payment recovery issues
+     * 
+     * @param int $hoursOld Minimum age in hours
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public static function getStuckTracks(int $hoursOld = 48): \Illuminate\Database\Eloquent\Collection
+    {
+        return self::where('is_used', false)
+            ->where('created_at', '<', now()->subHours($hoursOld))
+            ->orderBy('created_at', 'asc')
+            ->get();
+    }
+
+    /**
+     * Count tracks by status in time range
+     * 
+     * @param int $hours Time range in hours
+     * @return array
+     */
+    public static function countByTimeRange(int $hours = 24): array
+    {
+        $cutoff = now()->subHours($hours);
+        
+        return [
+            'total' => self::where('created_at', '>=', $cutoff)->count(),
+            'used' => self::where('created_at', '>=', $cutoff)
+                ->where('is_used', true)
+                ->count(),
+            'unused' => self::where('created_at', '>=', $cutoff)
+                ->where('is_used', false)
+                ->count(),
+        ];
+    }
+
+    /**
+     * Get tracks that need attention (old + unused)
+     * 
+     * @param int $hoursOld Minimum age in hours
+     * @param int $limit Maximum number of records to return
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public static function getTracksNeedingAttention(int $hoursOld = 48, int $limit = 10): \Illuminate\Database\Eloquent\Collection
+    {
+        return self::where('is_used', false)
+            ->where('created_at', '<', now()->subHours($hoursOld))
+            ->orderBy('created_at', 'asc')
+            ->limit($limit)
+            ->get(['id', 'track_id', 'trade_no', 'user_id', 'amount', 'created_at']);
+    }
+}
