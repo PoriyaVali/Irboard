@@ -243,18 +243,20 @@ class ConfigController extends Controller
         if (function_exists('opcache_invalidate')) {
             opcache_invalidate($configFile, true);
         }
-        // Symfony's DumpCompletionCommand::configure() reads $_SERVER['PHP_SELF'] with no
-        // guard, and Artisan::call() configures every registered command before running
-        // one. AdapterMan rebuilds $_SERVER per HTTP request out of the request itself,
-        // so a webman worker has no PHP_SELF and this call throws "Undefined array key".
-        // The file above is already written by then, so the save half-completes: disk has
-        // the new value, config:cache never regenerates bootstrap/cache/config.php, and
-        // every worker keeps booting the old settings forever. That is the whole reason a
-        // setting appears to save and never takes effect.
-        if (!isset($_SERVER['PHP_SELF'])) {
-            $_SERVER['PHP_SELF'] = 'artisan';
-        }
-        Artisan::call('config:cache');
+        // Drop the config cache; do NOT rebuild it here.
+        //
+        // config:cache boots a fresh app to re-read the config, but LoadConfiguration
+        // short-circuits on an existing cache file: if bootstrap/cache/config.php is
+        // still present it is require()d and returned as-is, so config:cache writes the
+        // OLD settings straight back over the save that just happened. Measured on a live
+        // panel: disk held the new value, a plain include of the same file in the same
+        // request returned the new value, and config:cache still produced the previous one.
+        //
+        // Clearing cannot go stale. With no cache file the workers read config/*.php
+        // directly when the file watcher reloads them a moment later — which is what
+        // php-fpm does on every request anyway. Run `php artisan config:cache` from the
+        // CLI to put the cache back.
+        Artisan::call('config:clear');
         if(Cache::has('WEBMANPID')) {
             $pid = Cache::get('WEBMANPID');
             Cache::forget('WEBMANPID');
