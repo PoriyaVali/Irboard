@@ -63,6 +63,10 @@ jobs:
       - name: Install dependencies
         run: composer update --no-interaction --prefer-dist --no-progress
 
+      - name: Security audit (informational)
+        continue-on-error: true
+        run: composer audit --no-interaction || echo "::warning::composer audit reported advisories — review recommended."
+
       - name: Prepare environment
         run: |
           cp .env.example .env
@@ -95,6 +99,31 @@ jobs:
           php artisan config:clear
           php artisan route:list --json >/dev/null
           echo "✓ Application boots and routes register."
+
+      - name: End-to-end API smoke (register → login → authenticated fetch)
+        run: |
+          set -e
+          php artisan serve --host=127.0.0.1 --port=8000 >/tmp/serve.log 2>&1 &
+          for i in $(seq 1 25); do
+            curl -sf http://127.0.0.1:8000/api/v1/guest/comm/config >/dev/null 2>&1 && break
+            sleep 1
+          done
+          echo "→ GET guest/comm/config"
+          curl -sf http://127.0.0.1:8000/api/v1/guest/comm/config \
+            | python3 -c "import sys,json; assert 'data' in json.load(sys.stdin); print('  ✓ public config endpoint OK')"
+          echo "→ POST passport/auth/register"
+          curl -s -X POST http://127.0.0.1:8000/api/v1/passport/auth/register \
+            -d 'email=ci@example.com&password=password123' -o /tmp/reg.json -w '  HTTP %{http_code}\n'
+          echo "→ POST passport/auth/login"
+          curl -s -X POST http://127.0.0.1:8000/api/v1/passport/auth/login \
+            -d 'email=ci@example.com&password=password123' -o /tmp/login.json
+          AUTH=$(python3 -c "import json; print(json.load(open('/tmp/login.json'))['data']['auth_data'])")
+          test -n "$AUTH"
+          echo "  ✓ login returned auth_data"
+          echo "→ GET user/info (authenticated)"
+          curl -sf http://127.0.0.1:8000/api/v1/user/info -H "Authorization: $AUTH" \
+            | python3 -c "import sys,json; d=json.load(sys.stdin)['data']; assert d['email']=='ci@example.com'; print('  ✓ authenticated user/info OK for', d['email'])"
+          echo "✓ Full request → auth → DB → response cycle works."
 
       - name: Run tests (informational)
         continue-on-error: true
