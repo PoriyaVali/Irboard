@@ -19,7 +19,7 @@
 <!-- Animated Badges -->
 <p>
   <img src="https://img.shields.io/badge/PHP-7.3+-777BB4?style=for-the-badge&logo=php&logoColor=white&labelColor=1a1b27" alt="PHP"/>
-  <img src="https://img.shields.io/badge/Laravel-10.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white&labelColor=1a1b27" alt="Laravel"/>
+  <img src="https://img.shields.io/badge/Laravel-8.x-FF2D20?style=for-the-badge&logo=laravel&logoColor=white&labelColor=1a1b27" alt="Laravel"/>
   <img src="https://img.shields.io/badge/MySQL-5.5+-4479A1?style=for-the-badge&logo=mysql&logoColor=white&labelColor=1a1b27" alt="MySQL"/>
   <img src="https://img.shields.io/badge/Redis-Latest-DC382D?style=for-the-badge&logo=redis&logoColor=white&labelColor=1a1b27" alt="Redis"/>
 </p>
@@ -74,8 +74,8 @@
 
 | توضیحات 📝 | نسخه 🔢 | نرم‌افزار 📦 |
 |:---:|:---:|:---:|
-| با extensionهای لازم | `7.3+` | <img src="https://skillicons.dev/icons?i=php" width="20"/> PHP |
-| آخرین نسخه پایدار | `10.x` | <img src="https://skillicons.dev/icons?i=laravel" width="20"/> Laravel |
+| با extensionهای لازم | `7.3+` \| `8.x` | <img src="https://skillicons.dev/icons?i=php" width="20"/> PHP |
+| فریم‌ورک اصلی | `8.x` | <img src="https://skillicons.dev/icons?i=laravel" width="20"/> Laravel |
 | یا MariaDB 10+ | `5.5+` | <img src="https://skillicons.dev/icons?i=mysql" width="20"/> MySQL |
 | برای Cache و Queue | `Latest` | <img src="https://skillicons.dev/icons?i=redis" width="20"/> Redis |
 | مدیریت پکیج‌ها | `Latest` | 📦 Composer |
@@ -107,8 +107,10 @@
 # تغییر منبع ریپازیتوری
 git remote set-url origin https://github.com/PoriyaVali/Irboard
 
-# سوئیچ به شاخه اصلی
-git checkout master
+# دریافت آخرین تغییرات و سوئیچ به شاخه اصلی
+git fetch origin
+git checkout main
+git pull origin main
 
 # اجرای اسکریپت آپدیت
 ./update.sh
@@ -164,13 +166,13 @@ php artisan optimize:clear
 %%{init: {'theme': 'dark', 'themeVariables': { 'primaryColor': '#667eea', 'secondaryColor': '#764ba2'}}}%%
 timeline
     title نقشه راه توسعه Irboard
-    section 2024 Q1
+    section 2026 Q3
         نسخه 1.0 : پنل پایه
                   : مدیریت کاربران
-    section 2024 Q2
+    section 2026 Q4
         نسخه 1.5 : پشتیبانی Multi-server
                   : API پیشرفته
-    section 2024 Q3
+    section 2027 Q1
         نسخه 2.0 : داشبورد جدید
                   : گزارش‌گیری پیشرفته
 ```
@@ -183,7 +185,7 @@ timeline
 
 <div align="center">
 
-[![Docs](https://img.shields.io/badge/📚_مستندات_کامل-667eea?style=for-the-badge)](https://v2board.com)
+[![Docs](https://img.shields.io/badge/📚_مستندات_کامل-667eea?style=for-the-badge)](https://github.com/PoriyaVali/Irboard#readme)
 [![Wiki](https://img.shields.io/badge/📖_ویکی-764ba2?style=for-the-badge)](https://github.com/PoriyaVali/Irboard/wiki)
 [![FAQ](https://img.shields.io/badge/❓_سوالات_متداول-9b59b6?style=for-the-badge)](https://github.com/PoriyaVali/Irboard/discussions)
 
@@ -260,7 +262,6 @@ timeline
 <br/>
 
 [![GitHub](https://img.shields.io/badge/GitHub-PoriyaVali-181717?style=flat-square&logo=github)](https://github.com/PoriyaVali)
-[![Telegram](https://img.shields.io/badge/Telegram-Contact-26A5E4?style=flat-square&logo=telegram)](https://t.me/)
 
 <br/>
 
