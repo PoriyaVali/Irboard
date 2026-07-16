@@ -285,6 +285,9 @@ jobs:
           php /tmp/schedule-integrity.php
 
       - name: Queue workers start in every environment a panel is run in
+        id: audit_queue_envs
+        # Run every audit before failing, so one finding never hides the rest.
+        continue-on-error: true
         run: |
           set -e
           # Horizon only starts workers for environments named in horizon.environments:
@@ -317,6 +320,9 @@ jobs:
           php /tmp/horizon-envs.php
 
       - name: The Horizon dashboard is not left open to the public
+        id: audit_horizon_auth
+        # Run every audit before failing, so one finding never hides the rest.
+        continue-on-error: true
         run: |
           set -e
           # Horizon's own auth is `app()->environment('local') || Gate::check(...)`, and
@@ -342,6 +348,9 @@ jobs:
           php /tmp/horizon-auth.php
 
       - name: Every model maps to a table and columns the schema really has
+        id: audit_model_schema
+        # Run every audit before failing, so one finding never hides the rest.
+        continue-on-error: true
         run: |
           set -e
           # The schema is applied from install.sql, not migrations, so nothing keeps it
@@ -390,6 +399,9 @@ jobs:
           php /tmp/model-schema.php
 
       - name: cli-php.ini is safe for a public runtime
+        id: audit_php_ini
+        # Run every audit before failing, so one finding never hides the rest.
+        continue-on-error: true
         run: |
           set -e
           # This ini is what serves production through webman. APP_DEBUG=false keeps
@@ -507,6 +519,27 @@ jobs:
 
           php -c cli-php.ini webman.php stop >/dev/null 2>&1 || true
           echo "✓ The production runtime (webman + AdapterMan) serves the app correctly."
+
+      - name: Audit result
+        if: always()
+        run: |
+          # The audits above each run to completion so a single finding cannot mask
+          # the others; this is where they are added up and the build goes red.
+          fail=0
+          check() {
+            if [ "$2" = "failure" ]; then echo "  ✗ $1"; fail=1; else echo "  ✓ $1"; fi
+          }
+          echo "Audit findings:"
+          check "queue workers provisioned for every APP_ENV" "${{ steps.audit_queue_envs.outcome }}"
+          check "Horizon dashboard is authenticated"          "${{ steps.audit_horizon_auth.outcome }}"
+          check "models match the schema"                     "${{ steps.audit_model_schema.outcome }}"
+          check "cli-php.ini safe for a public runtime"       "${{ steps.audit_php_ini.outcome }}"
+          echo
+          if [ "$fail" = "1" ]; then
+            echo "::error::One or more audits failed — see the annotations above for the specific defect."
+            exit 1
+          fi
+          echo "All audits pass."
 
       - name: Run tests (informational)
         continue-on-error: true
