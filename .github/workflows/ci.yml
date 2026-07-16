@@ -174,6 +174,78 @@ jobs:
             echo "No phpunit setup found — skipping."
           fi
 
+  installer:
+    name: Installer (php artisan v2board:install)
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:10.6
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: irboard_install
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s --health-timeout=5s --health-retries=15
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.1
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.1'
+          extensions: mbstring, bcmath, ctype, curl, dom, fileinfo, gd, iconv, json, mysqli, pdo, pdo_mysql, redis, tokenizer, xml, zip, openssl
+          coverage: none
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer update --no-interaction --prefer-dist --no-progress
+
+      - name: Run the real installer (the path ./init.sh takes)
+        run: |
+          set -e
+          # v2board:install refuses to run when .env exists; a clean checkout has none.
+          test ! -f .env || { echo "::error::.env should not be committed"; exit 1; }
+          # Prompts, in order: db host, db name, db user, db password, admin email.
+          printf '127.0.0.1\nirboard_install\nroot\nroot\nci-admin@example.com\n' \
+            | php artisan v2board:install
+
+      - name: Verify what the installer produced
+        run: |
+          set -e
+          MYSQL="mysql -h127.0.0.1 -uroot -proot"
+          # The installer catches its own exceptions and still exits 0, so the
+          # result is what we must assert — never the exit code.
+          [ -f .env ] || { echo "::error::installer did not create .env"; exit 1; }
+          grep -q '^APP_KEY=base64:' .env || { echo "::error::installer did not set APP_KEY"; exit 1; }
+          T=$($MYSQL irboard_install -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='irboard_install';")
+          echo "tables created by the installer: $T"
+          # Also proves install.sql survives the installer's strip-newline/split-on-';'
+          # parsing — a stray comment or a ';' inside a string would drop statements.
+          [ "$T" -ge 47 ] || { echo "::error::installer only created $T tables (expected >= 47)"; exit 1; }
+          A=$($MYSQL irboard_install -N -e "SELECT COUNT(*) FROM v2_user WHERE is_admin=1;")
+          [ "$A" -eq 1 ] || { echo "::error::installer did not create exactly one admin (got $A)"; exit 1; }
+          echo "✓ v2board:install produced a complete schema ($T tables) and an admin account."
+
+      - name: Installer refuses to re-run over an existing .env
+        run: |
+          set -e
+          OUT="$(php artisan v2board:install 2>&1 || true)"
+          if $(echo "$OUT" | grep -q '.env'); then
+            echo "✓ Re-running the installer is refused while .env exists (expected)."
+          else
+            echo "::warning::Installer did not clearly refuse a re-run."
+          fi
+
   database:
     name: Database schema (install.sql)
     runs-on: ubuntu-latest

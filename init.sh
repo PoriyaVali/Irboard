@@ -47,25 +47,24 @@ if [ "$PHP_MAJOR" -ge 8 ] && [ -f webman.php ] && [ ! -d vendor/joanhey/adapterm
     $COMPOSER require joanhey/adapterman --no-interaction || warn "Could not add adapterman."
 fi
 
-# ── 3. Environment ──────────────────────────────────────────────────────────
-if [ ! -f .env ]; then
-    [ -f .env.example ] || die ".env.example is missing — cannot create .env."
-    say "Creating .env from .env.example"
-    cp .env.example .env
-    warn "Edit .env now and set DB_* / REDIS_* before continuing."
-fi
-if ! grep -qE '^APP_KEY=.+' .env; then
-    say "Generating APP_KEY"
-    php artisan key:generate --force || die "Could not generate APP_KEY."
-fi
-
-# ── 4. Writable paths ───────────────────────────────────────────────────────
+# ── 3. Writable paths ───────────────────────────────────────────────────────
 mkdir -p storage/logs storage/framework/{cache,sessions,views} bootstrap/cache
 chmod -R 775 storage bootstrap/cache 2>/dev/null
 
-# ── 5. Install the database schema ──────────────────────────────────────────
-say "Installing database schema"
-php artisan v2board:install || die "v2board:install failed. Check the DB settings in .env."
+# ── 4. Install ──────────────────────────────────────────────────────────────
+# NOTE: do NOT create .env here. `v2board:install` refuses to run when .env
+# already exists ("delete .env to reinstall") — it creates .env itself from
+# .env.example, generates APP_KEY, asks for the database credentials, imports
+# database/install.sql and creates the admin account.
+if [ -f .env ]; then
+    warn ".env already exists, so v2board:install will not run (that is by design)."
+    warn "If this panel is already installed, you are done — use ./update.sh from now on."
+    die "To force a fresh install, back up and remove .env, then re-run ./init.sh"
+fi
+
+[ -f .env.example ] || die ".env.example is missing — cannot install."
+say "Running the installer (it will ask for your database details)"
+php artisan v2board:install || die "v2board:install failed."
 
 # ── 6. Ownership (aaPanel) ──────────────────────────────────────────────────
 [ -f /etc/init.d/bt ] && chown -R www "$APP_DIR" 2>/dev/null
