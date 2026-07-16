@@ -173,17 +173,26 @@ jobs:
           $MYSQL irboard < database/install.sql
           echo "✓ install.sql imported with no errors."
 
-      - name: All 28 core tables exist
+      - name: All expected tables exist (core + custom features)
         run: |
           set -e
-          EXPECTED="failed_jobs v2_commission_log v2_coupon v2_giftcard v2_invite_code v2_knowledge v2_log v2_mail_log v2_notice v2_order v2_payment v2_plan v2_server_anytls v2_server_group v2_server_hysteria v2_server_route v2_server_shadowsocks v2_server_trojan v2_server_tuic v2_server_v2node v2_server_vless v2_server_vmess v2_stat v2_stat_server v2_stat_user v2_ticket v2_ticket_message v2_user"
+          EXPECTED="failed_jobs migrations payment_tracks settings sms_logs \
+            v2_bot_channels v2_bot_panels v2_bot_settings v2_bot_texts \
+            v2_card_payment_config v2_card_payments v2_commission_log v2_coupon \
+            v2_giftcard v2_invite_code v2_knowledge v2_log v2_mail_log v2_notice \
+            v2_order v2_payment v2_plan v2_plan_prices v2_reseller_log v2_reserved_plans \
+            v2_server_anytls v2_server_group v2_server_hysteria v2_server_mdns \
+            v2_server_route v2_server_shadowsocks v2_server_trojan v2_server_tuic \
+            v2_server_v2node v2_server_v2ray v2_server_vless v2_server_vmess v2_sms_log \
+            v2_stat v2_stat_server v2_stat_user v2_ticket v2_ticket_message v2_tunnel_map \
+            v2_tutorial v2_user v2_user_banned_backup"
           for t in $EXPECTED; do
             $MYSQL irboard -N -e "SELECT 1 FROM \`$t\` LIMIT 0" >/dev/null \
               || { echo "::error::missing or broken table: $t"; exit 1; }
           done
           CNT=$($MYSQL irboard -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='irboard';")
-          echo "✓ $CNT tables present; all 28 core tables verified."
-          test "$CNT" -ge 28
+          echo "✓ $CNT tables present; all core + custom-feature tables verified."
+          test "$CNT" -ge 47
 
       - name: Key columns present (schema correctness)
         run: |
@@ -219,12 +228,20 @@ jobs:
           test "$CNT" -eq 0
           echo "✓ Re-import succeeded and reset the schema cleanly."
 
-      - name: update.sql legacy upgrade path (informational)
-        continue-on-error: true
+      - name: update.sql builds the full schema (idempotent upgrade path)
         run: |
-          if $MYSQL irboard < database/update.sql 2>err.log; then
-            echo "✓ update.sql applied cleanly."
-          else
-            echo "::warning::update.sql is the LEGACY upgrade script (it ALTERs the old single 'v2_server' table, absent from the current schema). Not applicable to a fresh install.sql — expected. Use install.sql for new deployments."
-            head -3 err.log || true
-          fi
+          set -e
+          # update.sql uses CREATE TABLE IF NOT EXISTS + ADD COLUMN, and is applied by
+          # the V2boardUpdate command which runs each statement and SWALLOWS errors
+          # (an ADD COLUMN for a column that already exists on the full schema is a
+          # no-op there). Emulate that error-tolerant apply with `mysql --force`.
+          $MYSQL -e "DROP DATABASE IF EXISTS irboard_upgrade; CREATE DATABASE irboard_upgrade;"
+          $MYSQL --force irboard_upgrade < database/update.sql 2>/dev/null || true
+          CNT=$($MYSQL irboard_upgrade -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='irboard_upgrade';")
+          echo "✓ update.sql produced $CNT tables on a fresh database."
+          test "$CNT" -ge 47
+          # Re-apply on the SAME db: CREATE IF NOT EXISTS makes the table set stable.
+          $MYSQL --force irboard_upgrade < database/update.sql 2>/dev/null || true
+          CNT2=$($MYSQL irboard_upgrade -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='irboard_upgrade';")
+          test "$CNT2" -eq "$CNT"
+          echo "✓ Re-apply kept the schema stable ($CNT2 tables) — idempotent."
