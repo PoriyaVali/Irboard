@@ -65,12 +65,14 @@ jobs:
           echo "✓ init.sh / update.sh syntax OK"
           # Regression guard: the old updater ran `git reset --hard origin/master`,
           # which wipes a deployment that runs from a modified working tree.
-          if grep -qE 'git[[:space:]]+reset[[:space:]]+--hard' update.sh init.sh; then
-            echo "::error::A deploy script contains 'git reset --hard' — it would destroy local changes on live panels."
+          # Anchored to the start of a line so rollback hints printed inside
+          # strings/comments don't trip it — only a real command counts.
+          if grep -nE '^[[:space:]]*git[[:space:]]+reset[[:space:]]+--hard' update.sh init.sh; then
+            echo "::error::A deploy script RUNS 'git reset --hard' — it would destroy local changes on live panels."
             exit 1
           fi
-          # It must also not leave the web server stopped.
-          if grep -qE 'webman\.php[[:space:]]+stop' update.sh; then
+          # It must also never leave the web server stopped.
+          if grep -nE '^[[:space:]]*(php|\./).*webman\.php[[:space:]]+stop' update.sh; then
             echo "::error::update.sh stops webman without restarting it."
             exit 1
           fi
