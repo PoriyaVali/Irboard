@@ -104,3 +104,92 @@ jobs:
           else
             echo "No phpunit setup found — skipping."
           fi
+
+  database:
+    name: Database schema (install.sql)
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:10.6
+        env:
+          MARIADB_ROOT_PASSWORD: root
+          MARIADB_DATABASE: irboard
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s --health-timeout=5s --health-retries=15
+    env:
+      MYSQL: mysql -h127.0.0.1 -uroot -proot
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Wait for MariaDB
+        run: |
+          for i in $(seq 1 30); do
+            mysqladmin ping -h127.0.0.1 -uroot -proot --silent && break
+            sleep 2
+          done
+
+      - name: Import install.sql into a fresh database
+        run: |
+          set -e
+          $MYSQL irboard < database/install.sql
+          echo "✓ install.sql imported with no errors."
+
+      - name: All 28 core tables exist
+        run: |
+          set -e
+          EXPECTED="failed_jobs v2_commission_log v2_coupon v2_giftcard v2_invite_code v2_knowledge v2_log v2_mail_log v2_notice v2_order v2_payment v2_plan v2_server_anytls v2_server_group v2_server_hysteria v2_server_route v2_server_shadowsocks v2_server_trojan v2_server_tuic v2_server_v2node v2_server_vless v2_server_vmess v2_stat v2_stat_server v2_stat_user v2_ticket v2_ticket_message v2_user"
+          for t in $EXPECTED; do
+            $MYSQL irboard -N -e "SELECT 1 FROM \`$t\` LIMIT 0" >/dev/null \
+              || { echo "::error::missing or broken table: $t"; exit 1; }
+          done
+          CNT=$($MYSQL irboard -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='irboard';")
+          echo "✓ $CNT tables present; all 28 core tables verified."
+          test "$CNT" -ge 28
+
+      - name: Key columns present (schema correctness)
+        run: |
+          set -e
+          col() { $MYSQL irboard -N -e "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='irboard' AND table_name='$1' AND column_name='$2';" | grep -qx 1 || { echo "::error::$1.$2 missing"; exit 1; }; }
+          for c in email password token uuid transfer_enable u d expired_at banned group_id plan_id; do col v2_user "$c"; done
+          for c in name group_id transfer_enable month_price device_limit show; do col v2_plan "$c"; done
+          for c in user_id plan_id type period trade_no total_amount status; do col v2_order "$c"; done
+          col v2_ticket subject
+          col v2_server_anytls host
+          echo "✓ All key columns present on core tables."
+
+      - name: Storage engine check
+        run: |
+          set -e
+          BAD=$($MYSQL irboard -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='irboard' AND engine<>'InnoDB';")
+          test "$BAD" -eq 0
+          echo "✓ Every table uses the InnoDB engine."
+
+      - name: Functional smoke — insert & read
+        run: |
+          set -e
+          $MYSQL irboard -e "INSERT INTO v2_plan (group_id, transfer_enable, name, created_at, updated_at) VALUES (1, 107374182400, 'CI Plan', UNIX_TIMESTAMP(), UNIX_TIMESTAMP()); INSERT INTO v2_user (email, password, uuid, token, created_at, updated_at) VALUES ('ci@example.com', 'hash', UUID(), REPLACE(UUID(),'-',''), UNIX_TIMESTAMP(), UNIX_TIMESTAMP()); INSERT INTO v2_order (user_id, plan_id, type, period, trade_no, total_amount, created_at, updated_at) VALUES (1, 1, 1, 'month_price', 'CI-TRADE-1', 1000, UNIX_TIMESTAMP(), UNIX_TIMESTAMP());"
+          N=$($MYSQL irboard -N -e "SELECT (SELECT COUNT(*) FROM v2_user)+(SELECT COUNT(*) FROM v2_plan)+(SELECT COUNT(*) FROM v2_order);")
+          test "$N" -eq 3
+          echo "✓ Inserted user + plan + order and read them back — schema is functional."
+
+      - name: install.sql is safe to re-run (idempotent DROP+CREATE)
+        run: |
+          set -e
+          $MYSQL irboard < database/install.sql
+          CNT=$($MYSQL irboard -N -e "SELECT COUNT(*) FROM v2_user;")
+          test "$CNT" -eq 0
+          echo "✓ Re-import succeeded and reset the schema cleanly."
+
+      - name: update.sql legacy upgrade path (informational)
+        continue-on-error: true
+        run: |
+          if $MYSQL irboard < database/update.sql 2>err.log; then
+            echo "✓ update.sql applied cleanly."
+          else
+            echo "::warning::update.sql is the LEGACY upgrade script (it ALTERs the old single 'v2_server' table, absent from the current schema). Not applicable to a fresh install.sql — expected. Use install.sql for new deployments."
+            head -3 err.log || true
+          fi
