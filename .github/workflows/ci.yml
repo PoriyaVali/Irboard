@@ -77,6 +77,19 @@ jobs:
             exit 1
           fi
           echo "✓ No destructive git reset, no stop-without-restart."
+          # A fresh clone must be able to run them, so git has to carry the +x bit.
+          for f in update.sh init.sh; do
+            mode="$(git ls-files -s "$f" | awk '{print $1}')"
+            if [ "$mode" != "100755" ]; then
+              echo "::error::$f is not executable in git (mode $mode). Fix: git update-index --chmod=+x $f"
+              exit 1
+            fi
+          done
+          echo "✓ Deploy scripts are executable in a fresh clone."
+          # The updater must keep re-execing the newest copy of itself.
+          grep -q 'IRBOARD_UPDATER_RESPAWNED' update.sh \
+            || { echo "::error::update.sh lost its self-update guard."; exit 1; }
+          echo "✓ update.sh self-updates before running."
 
       - name: Validate composer.json
         run: composer validate --no-check-publish --no-check-all

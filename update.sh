@@ -1,8 +1,12 @@
 #!/bin/bash
 #
-# Safe updater for Irboard.
+# Safe, self-updating updater for Irboard.
 #
-# Rules this script follows (each one is a bug the old updater had):
+# It always runs the newest version of itself: before touching anything it reads
+# update.sh from the remote branch and, if that is newer, re-executes it. So a
+# panel carrying a stale copy still gets today's logic and safety checks.
+#
+# Rules this script follows (each one is a bug the original updater had):
 #   1. NEVER destroy local work. Many panels run from a modified working tree;
 #      the old script ran `git reset --hard` and silently wiped it. We refuse.
 #   2. Never hardcode a branch name — follow whatever this checkout tracks
@@ -16,12 +20,52 @@
 #
 set -uo pipefail
 
-APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# When we re-exec a newer copy from a temp path, it must still know where the
+# panel lives — $0 would point at the temp file.
+APP_DIR="${IRBOARD_UPDATER_APP_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
 cd "$APP_DIR" || exit 1
 
 say()  { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
 warn() { printf '\033[1;33m[!]\033[0m %s\n' "$*"; }
 die()  { printf '\033[1;31m[x]\033[0m %s\n' "$*" >&2; exit 1; }
+
+# ── 0. Always run the newest updater ────────────────────────────────────────
+# The new copy is staged OUTSIDE the repo and exec'd from there: overwriting a
+# running script would make bash read garbage (it reads the file lazily), and
+# writing into the repo would dirty the tree and break the fast-forward below.
+# The repo's own update.sh is refreshed by the normal merge further down.
+self_update() {
+    [ "${IRBOARD_UPDATER_RESPAWNED:-0}" = "1" ] && return 0
+    [ -d .git ] || return 0
+    command -v git >/dev/null 2>&1 || return 0
+
+    local branch remote tmp
+    branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)" || return 0
+    [ "$branch" != "HEAD" ] || return 0
+    remote="$(git config "branch.$branch.remote" 2>/dev/null || echo origin)"
+    git remote get-url "$remote" >/dev/null 2>&1 || return 0
+
+    git fetch --quiet --prune "$remote" 2>/dev/null \
+        || { warn "Cannot reach '$remote' — continuing with the on-disk updater."; return 0; }
+    git rev-parse --verify --quiet "$remote/$branch" >/dev/null || return 0
+
+    tmp="$(mktemp)" || return 0
+    if ! git show "$remote/$branch:update.sh" >"$tmp" 2>/dev/null || [ ! -s "$tmp" ]; then
+        rm -f "$tmp"; return 0
+    fi
+    if cmp -s "$tmp" "${BASH_SOURCE[0]}"; then
+        rm -f "$tmp"; return 0            # already the newest
+    fi
+    if ! bash -n "$tmp" 2>/dev/null; then
+        warn "update.sh from $remote/$branch is not valid bash — keeping the current one."
+        rm -f "$tmp"; return 0
+    fi
+
+    say "A newer update.sh exists on $remote/$branch — switching to it."
+    chmod +x "$tmp"
+    IRBOARD_UPDATER_RESPAWNED=1 IRBOARD_UPDATER_APP_DIR="$APP_DIR" exec "$tmp" "$@"
+}
+self_update "$@"
 
 [ -d .git ] || die "Not a git deployment (no .git directory)."
 command -v git >/dev/null 2>&1 || die "git is not installed."
@@ -63,6 +107,9 @@ Nothing was changed. Resolve manually, then re-run."
     say "Code updated to $(git rev-parse --short HEAD)."
 fi
 
+# Keep the deploy scripts runnable after every update.
+chmod +x update.sh init.sh 2>/dev/null
+
 # ── 4. Dependencies (reproducible) ───────────────────────────────────────────
 if command -v composer >/dev/null 2>&1; then
     COMPOSER="composer"
@@ -83,7 +130,6 @@ else
     $COMPOSER update --no-interaction --optimize-autoloader || die "composer update failed."
 fi
 
-# AdapterMan is only needed for the PHP 8 webman runtime, and only if missing.
 PHP_MAJOR="$(php -r 'echo PHP_MAJOR_VERSION;')"
 if [ "$PHP_MAJOR" -ge 8 ] && [ -f webman.php ] && [ ! -d vendor/joanhey/adapterman ]; then
     say "Adding joanhey/adapterman"
