@@ -70,6 +70,7 @@ jobs:
       - name: Prepare environment
         run: |
           cp .env.example .env
+          sed -i 's#^APP_DEBUG=.*#APP_DEBUG=true#' .env
           sed -i 's#^DB_HOST=.*#DB_HOST=127.0.0.1#' .env
           sed -i 's#^DB_PORT=.*#DB_PORT=3306#' .env
           sed -i 's#^DB_DATABASE=.*#DB_DATABASE=irboard_test#' .env
@@ -102,27 +103,30 @@ jobs:
 
       - name: End-to-end API smoke (register → login → authenticated fetch)
         run: |
-          set -e
-          php artisan serve --host=127.0.0.1 --port=8000 >/tmp/serve.log 2>&1 &
+          php artisan serve --host=127.0.0.1 --port=8000 >serve.log 2>&1 &
           for i in $(seq 1 25); do
-            curl -sf http://127.0.0.1:8000/api/v1/guest/comm/config >/dev/null 2>&1 && break
+            curl -s -o /dev/null http://127.0.0.1:8000/api/v1/guest/comm/config && break
             sleep 1
           done
-          echo "→ GET guest/comm/config"
-          curl -sf http://127.0.0.1:8000/api/v1/guest/comm/config \
-            | python3 -c "import sys,json; assert 'data' in json.load(sys.stdin); print('  ✓ public config endpoint OK')"
-          echo "→ POST passport/auth/register"
-          curl -s -X POST http://127.0.0.1:8000/api/v1/passport/auth/register \
-            -d 'email=ci@example.com&password=password123' -o /tmp/reg.json -w '  HTTP %{http_code}\n'
-          echo "→ POST passport/auth/login"
-          curl -s -X POST http://127.0.0.1:8000/api/v1/passport/auth/login \
-            -d 'email=ci@example.com&password=password123' -o /tmp/login.json
-          AUTH=$(python3 -c "import json; print(json.load(open('/tmp/login.json'))['data']['auth_data'])")
-          test -n "$AUTH"
+          # On any failure, surface the reason as an annotation (readable without log access).
+          fail() { echo "::error::E2E: $1"; echo "--- serve.log (tail) ---"; tail -25 serve.log; exit 1; }
+
+          B=$(curl -s -w '\n%{http_code}' http://127.0.0.1:8000/api/v1/guest/comm/config)
+          echo "config -> $B"
+          [ "$(echo "$B" | tail -1)" = "200" ] || fail "comm/config not 200 :: $(echo "$B" | tr '\n' ' ' | head -c 250)"
+
+          REG=$(curl -s -w '|%{http_code}' -X POST http://127.0.0.1:8000/api/v1/passport/auth/register -d 'email=ci@example.com&password=password123')
+          echo "register -> $REG"
+
+          LOGIN=$(curl -s -X POST http://127.0.0.1:8000/api/v1/passport/auth/login -d 'email=ci@example.com&password=password123')
+          echo "login -> $LOGIN"
+          AUTH=$(printf '%s' "$LOGIN" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('auth_data',''))" 2>/dev/null || true)
+          [ -n "$AUTH" ] || fail "no auth_data. register=[$(printf '%s' "$REG" | head -c 200)] login=[$(printf '%s' "$LOGIN" | head -c 200)]"
           echo "  ✓ login returned auth_data"
-          echo "→ GET user/info (authenticated)"
-          curl -sf http://127.0.0.1:8000/api/v1/user/info -H "Authorization: $AUTH" \
-            | python3 -c "import sys,json; d=json.load(sys.stdin)['data']; assert d['email']=='ci@example.com'; print('  ✓ authenticated user/info OK for', d['email'])"
+
+          INFO=$(curl -s -w '|%{http_code}' http://127.0.0.1:8000/api/v1/user/info -H "Authorization: $AUTH")
+          echo "user/info -> $INFO"
+          printf '%s' "$INFO" | grep -q '"email":"ci@example.com"' || fail "user/info bad :: $(printf '%s' "$INFO" | head -c 250)"
           echo "✓ Full request → auth → DB → response cycle works."
 
       - name: Run tests (informational)
