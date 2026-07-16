@@ -894,3 +894,14 @@ ALTER TABLE `v2_notice` ADD COLUMN `tags` varchar(255) COLLATE utf8mb4_unicode_c
 ALTER TABLE `v2_notice` ADD COLUMN `target_email` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL;
 ALTER TABLE `v2_notice` ADD COLUMN `img_url` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL;
 SET FOREIGN_KEY_CHECKS=1;
+ALTER TABLE `v2_server_anytls` ADD COLUMN `tunnel_host` varchar(255) DEFAULT NULL;
+ALTER TABLE `v2_server_hysteria` ADD COLUMN `tunnel_host` varchar(255) DEFAULT NULL;
+ALTER TABLE `v2_server_tuic` ADD COLUMN `tunnel_host` varchar(255) DEFAULT NULL;
+ALTER TABLE `v2_user` ADD COLUMN `bot_step` varchar(100) DEFAULT NULL COMMENT 'مرحله فعلی در ربات';
+ALTER TABLE `v2_user` ADD COLUMN `bot_data` text COMMENT 'داده موقت ربات JSON';
+ALTER TABLE `v2_user` ADD COLUMN `bot_test_count` int(11) NOT NULL DEFAULT '0' COMMENT 'تعداد تست گرفته';
+ALTER TABLE `v2_user` ADD COLUMN `bot_ref_code` varchar(32) DEFAULT NULL COMMENT 'کد معرف';
+ALTER TABLE `v2_user` ADD COLUMN `bot_referrer_id` bigint(20) unsigned DEFAULT NULL COMMENT 'معرف کاربر';
+ALTER TABLE `v2_user` ADD COLUMN `phone` varchar(15) DEFAULT NULL;
+ALTER TABLE `v2_user` ADD COLUMN `phone_verified` tinyint(1) NOT NULL DEFAULT '0';
+ALTER TABLE `v2_user` ADD COLUMN `phone_verified_at` int(11) DEFAULT NULL;

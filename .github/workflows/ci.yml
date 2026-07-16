@@ -266,3 +266,27 @@ jobs:
           CNT2=$($MYSQL irboard_upgrade -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='irboard_upgrade';")
           test "$CNT2" -eq "$CNT"
           echo "✓ Re-apply kept the schema stable ($CNT2 tables) — idempotent."
+
+      - name: Migrating an upstream v2board (wyx2685) install leaves nothing missing
+        run: |
+          set -e
+          # Irboard is a fork of wyx2685/v2board, so users migrate from it with an
+          # existing database. Recreate a real upstream install, apply our upgrade
+          # path exactly as V2boardUpdate does (error-tolerant), and assert the
+          # result has every table/column a fresh install.sql produces. This is what
+          # catches a forgotten ADD COLUMN — CREATE TABLE IF NOT EXISTS silently
+          # leaves an existing table's columns untouched.
+          curl -sfL https://raw.githubusercontent.com/wyx2685/v2board/master/database/install.sql -o upstream.sql
+          echo "upstream tables: $(grep -ciE 'CREATE TABLE' upstream.sql)"
+          $MYSQL -e "DROP DATABASE IF EXISTS irboard_migrate; CREATE DATABASE irboard_migrate;"
+          $MYSQL irboard_migrate < upstream.sql
+          $MYSQL --force irboard_migrate < database/update.sql 2>/dev/null || true
+          MISSING=$($MYSQL -N -e "
+            SELECT CONCAT(table_name,'.',column_name) FROM information_schema.columns WHERE table_schema='irboard'
+            EXCEPT
+            SELECT CONCAT(table_name,'.',column_name) FROM information_schema.columns WHERE table_schema='irboard_migrate';")
+          if [ -n "$MISSING" ]; then
+            echo "::error::update.sql does not migrate an upstream install completely. Missing: $(echo $MISSING | tr '\n' ' ' | head -c 400)"
+            exit 1
+          fi
+          echo "✓ Upstream v2board migrates cleanly — every table and column present."
