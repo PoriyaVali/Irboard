@@ -108,8 +108,9 @@ jobs:
             curl -s -o /dev/null http://127.0.0.1:8000/api/v1/guest/comm/config && break
             sleep 1
           done
-          # On any failure, surface the reason as an annotation (readable without log access).
-          fail() { echo "::error::E2E: $1"; echo "--- serve.log (tail) ---"; tail -25 serve.log; exit 1; }
+          # On any failure, surface the reason as a single-line annotation (readable
+          # without log access — annotations truncate at the first newline).
+          fail() { echo "::error::E2E: $(printf '%s' "$1" | tr '\n\r\t' '   ' | head -c 500)"; echo "--- serve.log (tail) ---"; tail -25 serve.log; exit 1; }
 
           B=$(curl -s -w '\n%{http_code}' http://127.0.0.1:8000/api/v1/guest/comm/config)
           echo "config -> $B"
@@ -124,10 +125,11 @@ jobs:
           [ -n "$AUTH" ] || fail "no auth_data. register=[$(printf '%s' "$REG" | head -c 200)] login=[$(printf '%s' "$LOGIN" | head -c 200)]"
           echo "  ✓ login returned auth_data"
 
-          INFO=$(curl -s -w '|%{http_code}' http://127.0.0.1:8000/api/v1/user/info -H "Authorization: $AUTH")
-          echo "user/info -> $INFO"
-          printf '%s' "$INFO" | grep -q '"email":"ci@example.com"' || fail "user/info bad :: $(printf '%s' "$INFO" | head -c 250)"
-          echo "✓ Full request → auth → DB → response cycle works."
+          INFO=$(curl -s http://127.0.0.1:8000/api/v1/user/info -H "Authorization: $AUTH")
+          echo "user/info -> $(printf '%s' "$INFO" | tr '\n' ' ')"
+          EMAIL=$(printf '%s' "$INFO" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('email',''))" 2>/dev/null || true)
+          [ "$EMAIL" = "ci@example.com" ] || fail "user/info did not return our user :: $INFO"
+          echo "✓ Full request → auth → DB → response cycle works (user: $EMAIL)."
 
       - name: Run tests (informational)
         continue-on-error: true
