@@ -45,7 +45,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: mbstring, bcmath, ctype, curl, dom, fileinfo, gd, iconv, json, mysqli, pdo, pdo_mysql, redis, tokenizer, xml, zip, openssl
+          extensions: mbstring, bcmath, ctype, curl, dom, fileinfo, gd, iconv, json, mysqli, pdo, pdo_mysql, redis, igbinary, opcache, tokenizer, xml, zip, openssl
           coverage: none
           tools: composer:v2
 
@@ -90,6 +90,28 @@ jobs:
           grep -q 'IRBOARD_UPDATER_RESPAWNED' update.sh \
             || { echo "::error::update.sh lost its self-update guard."; exit 1; }
           echo "✓ update.sh self-updates before running."
+
+      - name: cli-php.ini really enables OPcache + JIT (the webman runtime)
+        run: |
+          set -e
+          # cli-php.ini exists purely for the long-running webman runtime. `php -c`
+          # ignores the default php.ini, so if the opcache module is not loaded from
+          # this file, every opcache.*/jit setting in it is dead config and the panel
+          # runs fully interpreted.
+          php -c cli-php.ini -r '
+            $s = function_exists("opcache_get_status") ? @opcache_get_status(false) : null;
+            if (!is_array($s)) {
+              fwrite(STDERR, "OPcache is NOT loaded via cli-php.ini — its opcache/jit settings do nothing.\n");
+              exit(1);
+            }
+            printf("opcache on | jit=%s | validate_timestamps=%s\n",
+                   ini_get("opcache.jit"), ini_get("opcache.validate_timestamps"));
+            if (ini_get("opcache.validate_timestamps") !== "1") {
+              fwrite(STDERR, "validate_timestamps must be 1: webman workers would serve stale code after an update.\n");
+              exit(1);
+            }
+          '
+          echo "✓ cli-php.ini loads OPcache with settings that are safe for a long-running runtime."
 
       - name: Validate composer.json
         run: composer validate --no-check-publish --no-check-all
@@ -203,7 +225,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.1'
-          extensions: mbstring, bcmath, ctype, curl, dom, fileinfo, gd, iconv, json, mysqli, pdo, pdo_mysql, redis, tokenizer, xml, zip, openssl
+          extensions: mbstring, bcmath, ctype, curl, dom, fileinfo, gd, iconv, json, mysqli, pdo, pdo_mysql, redis, igbinary, opcache, tokenizer, xml, zip, openssl
           coverage: none
           tools: composer:v2
 
