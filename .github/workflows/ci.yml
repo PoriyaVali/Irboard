@@ -113,6 +113,24 @@ jobs:
           '
           echo "✓ cli-php.ini loads OPcache with settings that are safe for a long-running runtime."
 
+      - name: Tests cannot reach a real database
+        run: |
+          set -e
+          # RefreshDatabase runs `migrate:fresh`, which DROPS EVERY TABLE. This panel's
+          # schema comes from install.sql rather than migrations, so nothing would put
+          # it back. If phpunit.xml does not pin the connection, phpunit falls through
+          # to .env — and `vendor/bin/phpunit` in a panel directory then destroys the
+          # live database. phpunit ships in the vendor dir of every install, so this is
+          # one command away for anyone.
+          conn=$(php -r '$x=simplexml_load_file("phpunit.xml"); foreach($x->php->server as $s){ if((string)$s["name"]==="DB_CONNECTION") echo (string)$s["value"]; }')
+          db=$(php -r   '$x=simplexml_load_file("phpunit.xml"); foreach($x->php->server as $s){ if((string)$s["name"]==="DB_DATABASE")   echo (string)$s["value"]; }')
+          echo "phpunit.xml pins DB_CONNECTION=[${conn}] DB_DATABASE=[${db}]"
+          if [ "$conn" != "sqlite" ] || [ "$db" != ":memory:" ]; then
+            echo "::error::phpunit.xml must pin DB_CONNECTION=sqlite and DB_DATABASE=:memory:. Without it phpunit uses the .env database and RefreshDatabase drops every table in it."
+            exit 1
+          fi
+          echo "✓ tests are sandboxed to in-memory SQLite and cannot touch a panel."
+
       - name: Validate composer.json
         run: composer validate --no-check-publish --no-check-all
 
@@ -122,9 +140,31 @@ jobs:
         # composer.lock has drifted from composer.json.
         run: composer install --no-interaction --prefer-dist --no-progress
 
-      - name: Security audit (informational)
+      - name: Dependency security advisories
         continue-on-error: true
-        run: composer audit --no-interaction || echo "::warning::composer audit reported advisories — review recommended."
+        run: |
+          # "advisories were reported" is useless on its own — name them, so they can
+          # actually be judged. Now that composer.lock is committed, any vulnerable
+          # version is pinned and ships to every new install.
+          composer audit --no-interaction --format=json > /tmp/audit.json 2>/dev/null || true
+          php -r '
+            $j = @json_decode(@file_get_contents("/tmp/audit.json"), true);
+            $adv = is_array($j) ? ($j["advisories"] ?? []) : [];
+            if (!$adv) { echo "✓ no known advisories against the locked versions\n"; exit(0); }
+            $n = 0;
+            foreach ($adv as $pkg => $list) {
+              foreach ($list as $a) {
+                $n++;
+                $msg = sprintf("%s (installed affected: %s) %s — %s",
+                  $pkg,
+                  $a["affectedVersions"] ?? "?",
+                  $a["cve"] ?? ($a["advisoryId"] ?? ""),
+                  $a["title"] ?? "");
+                fwrite(STDERR, "::warning::advisory: " . preg_replace("/\s+/", " ", $msg) . "\n");
+              }
+            }
+            fwrite(STDERR, "\n{$n} advisories — see the annotations.\n");
+          '
 
       - name: Prepare environment
         run: |
@@ -566,11 +606,22 @@ jobs:
       - name: Run tests (informational)
         continue-on-error: true
         run: |
-          if [ -f phpunit.xml ] && [ -x vendor/bin/phpunit ]; then
-            vendor/bin/phpunit --no-coverage || echo "::warning::phpunit reported failures (non-blocking)"
-          else
+          if [ ! -f phpunit.xml ] || [ ! -x vendor/bin/phpunit ]; then
             echo "No phpunit setup found — skipping."
+            exit 0
           fi
+          # Report WHICH tests fail instead of just that some do — "reported failures"
+          # told us nothing and hid this for the whole life of the workflow.
+          vendor/bin/phpunit --no-coverage > /tmp/phpunit.log 2>&1 || true
+          tail -60 /tmp/phpunit.log
+          grep -E '^(Tests:|OK|OK \()' /tmp/phpunit.log | while read -r l; do
+            echo "::warning::phpunit summary: ${l}"
+          done
+          # Each failure block starts with "1) Tests\Feature\FooTest::bar".
+          grep -A2 -E '^[0-9]+\) ' /tmp/phpunit.log | head -60 | tr '\n' '\v' \
+            | sed 's/\v\v/\n/g' | head -20 | while read -r blk; do
+              [ -n "$blk" ] && echo "::warning::phpunit failure: $(printf '%s' "$blk" | tr '\v' ' ' | head -c 220)"
+            done
 
   installer:
     name: Installer (php artisan v2board:install)

@@ -26,6 +26,22 @@
         <extension class="Tests\Bootstrap"/>
     </extensions>
     <php>
+        <!--
+            The database MUST be pinned here.
+
+            Without these two lines phpunit falls back to .env, i.e. the live
+            database, and tests using RefreshDatabase run `migrate:fresh` against
+            it — which DROPS EVERY TABLE. The schema of this panel comes from
+            database/install.sql and not from migrations, so nothing would rebuild
+            it: running `vendor/bin/phpunit` inside a panel directory would destroy
+            the installation for good.
+
+            An in-memory SQLite database cannot reach MySQL at all, so no test can
+            touch a real panel no matter which .env happens to be present. Do not
+            remove these; a CI check enforces them.
+        -->
+        <server name="DB_CONNECTION" value="sqlite"/>
+        <server name="DB_DATABASE" value=":memory:"/>
         <server name="APP_ENV" value="testing"/>
         <server name="BCRYPT_ROUNDS" value="4"/>
         <server name="CACHE_DRIVER" value="array"/>
