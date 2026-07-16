@@ -81,9 +81,17 @@ class V2boardInstall extends Command
             }
             $this->info('正在导入数据库请稍等...');
             foreach ($sql as $item) {
+                $item = trim($item);
+                // preg_split leaves an empty tail after the final ';'. An empty query
+                // makes PDO::prepare() throw a ValueError, which on PHP 8 is an Error
+                // and NOT an \Exception — it escaped the catch below and crashed the
+                // whole installer, so a fresh install could never finish.
+                if ($item === '') {
+                    continue;
+                }
                 try {
                     DB::select(DB::raw($item));
-                } catch (\Exception $e) {
+                } catch (\Throwable $e) {
                 }
             }
             $this->info('数据库导入完成');
