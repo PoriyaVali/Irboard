@@ -57,6 +57,25 @@ jobs:
             -name '*.php' -print0 | xargs -0 -n1 -P4 php -l >/dev/null
           echo "✓ No syntax errors."
 
+      - name: Deploy scripts are safe (syntax + no destructive git)
+        run: |
+          set -e
+          bash -n init.sh
+          bash -n update.sh
+          echo "✓ init.sh / update.sh syntax OK"
+          # Regression guard: the old updater ran `git reset --hard origin/master`,
+          # which wipes a deployment that runs from a modified working tree.
+          if grep -qE 'git[[:space:]]+reset[[:space:]]+--hard' update.sh init.sh; then
+            echo "::error::A deploy script contains 'git reset --hard' — it would destroy local changes on live panels."
+            exit 1
+          fi
+          # It must also not leave the web server stopped.
+          if grep -qE 'webman\.php[[:space:]]+stop' update.sh; then
+            echo "::error::update.sh stops webman without restarting it."
+            exit 1
+          fi
+          echo "✓ No destructive git reset, no stop-without-restart."
+
       - name: Validate composer.json
         run: composer validate --no-check-publish --no-check-all
 
