@@ -26,6 +26,9 @@
 
 <!-- Stats Badges -->
 <p>
+  <a href="https://github.com/PoriyaVali/Irboard/actions/workflows/ci.yml"><img src="https://github.com/PoriyaVali/Irboard/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"/></a>
+</p>
+<p>
   <img src="https://img.shields.io/github/stars/PoriyaVali/Irboard?style=for-the-badge&logo=github&color=f4d03f&labelColor=1a1b27" alt="Stars"/>
   <img src="https://img.shields.io/github/forks/PoriyaVali/Irboard?style=for-the-badge&logo=github&color=58d68d&labelColor=1a1b27" alt="Forks"/>
   <img src="https://img.shields.io/github/issues/PoriyaVali/Irboard?style=for-the-badge&logo=github&color=e74c3c&labelColor=1a1b27" alt="Issues"/>
