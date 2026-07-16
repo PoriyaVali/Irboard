@@ -171,7 +171,7 @@ jobs:
       - name: Functional smoke — insert & read
         run: |
           set -e
-          $MYSQL irboard -e "INSERT INTO v2_plan (group_id, transfer_enable, name, created_at, updated_at) VALUES (1, 107374182400, 'CI Plan', UNIX_TIMESTAMP(), UNIX_TIMESTAMP()); INSERT INTO v2_user (email, password, uuid, token, created_at, updated_at) VALUES ('ci@example.com', 'hash', UUID(), REPLACE(UUID(),'-',''), UNIX_TIMESTAMP(), UNIX_TIMESTAMP()); INSERT INTO v2_order (user_id, plan_id, type, period, trade_no, total_amount, created_at, updated_at) VALUES (1, 1, 1, 'month_price', 'CI-TRADE-1', 1000, UNIX_TIMESTAMP(), UNIX_TIMESTAMP());"
+          $MYSQL irboard -e "INSERT INTO v2_plan (group_id, transfer_enable, name, created_at, updated_at) VALUES (1, 100, 'CI Plan', UNIX_TIMESTAMP(), UNIX_TIMESTAMP()); INSERT INTO v2_user (email, password, uuid, token, created_at, updated_at) VALUES ('ci@example.com', 'hash', UUID(), REPLACE(UUID(),'-',''), UNIX_TIMESTAMP(), UNIX_TIMESTAMP()); INSERT INTO v2_order (user_id, plan_id, type, period, trade_no, total_amount, created_at, updated_at) VALUES (1, 1, 1, 'month_price', 'CI-TRADE-1', 1000, UNIX_TIMESTAMP(), UNIX_TIMESTAMP());"
           N=$($MYSQL irboard -N -e "SELECT (SELECT COUNT(*) FROM v2_user)+(SELECT COUNT(*) FROM v2_plan)+(SELECT COUNT(*) FROM v2_order);")
           test "$N" -eq 3
           echo "✓ Inserted user + plan + order and read them back — schema is functional."
