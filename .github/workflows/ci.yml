@@ -45,7 +45,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php }}
-          extensions: mbstring, bcmath, ctype, curl, dom, fileinfo, gd, iconv, json, mysqli, pdo, pdo_mysql, redis, igbinary, opcache, tokenizer, xml, zip, openssl
+          extensions: mbstring, bcmath, ctype, curl, dom, fileinfo, gd, iconv, json, mysqli, pdo, pdo_mysql, redis, igbinary, opcache, pcntl, posix, tokenizer, xml, zip, openssl
           coverage: none
           tools: composer:v2
 
@@ -157,6 +157,101 @@ jobs:
           php artisan route:list --json >/dev/null
           echo "✓ Application boots and routes register."
 
+      - name: Every route resolves to a real controller method (signature check)
+        run: |
+          set -e
+          # A route pointing at a method that does not exist looks completely fine
+          # until someone hits that URL, and then it is a 500 ("Method ...::x() does
+          # not exist"). Same for a URI that cannot supply the arguments the method
+          # requires. Neither is caught by lint, by booting, or by the smoke test,
+          # because nothing calls those URLs — so check every route up front.
+          cat > /tmp/route-integrity.php <<'PHP'
+          <?php
+          $base = getcwd();
+          require $base . '/vendor/autoload.php';
+          $app = require $base . '/bootstrap/app.php';
+          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+          $bad = [];
+          foreach (app('router')->getRoutes() as $route) {
+              $uses = $route->getAction()['uses'] ?? null;
+              if (!is_string($uses) || strpos($uses, '@') === false) {
+                  continue; // closure route — nothing to resolve
+              }
+              [$class, $method] = explode('@', $uses, 2);
+              $where = strtoupper(implode('|', $route->methods())) . ' /' . $route->uri();
+
+              if (!class_exists($class)) {
+                  $bad[] = "missing class {$class}  <-  {$where}";
+                  continue;
+              }
+              if (!method_exists($class, $method)) {
+                  $bad[] = "missing method {$class}::{$method}()  <-  {$where}";
+                  continue;
+              }
+              // Anything the container cannot inject and that has no default must be
+              // named in the URI, or the call dies with ArgumentCountError.
+              $given = $route->parameterNames();
+              foreach ((new ReflectionMethod($class, $method))->getParameters() as $p) {
+                  $type = $p->getType();
+                  if ($type && !$type->isBuiltin()) continue;              // injected
+                  if ($p->isDefaultValueAvailable() || $p->isVariadic()) continue; // optional
+                  if (!in_array($p->getName(), $given, true)) {
+                      $bad[] = sprintf(
+                          'URI supplies {%s} but %s::%s() requires $%s  <-  %s',
+                          implode('},{', $given) ?: '', $class, $method, $p->getName(), $where
+                      );
+                  }
+              }
+          }
+
+          if ($bad) {
+              foreach ($bad as $b) {
+                  fwrite(STDERR, "::error::route integrity: {$b}\n");
+              }
+              fwrite(STDERR, "\n" . count($bad) . " broken route(s) — these are 500s waiting to happen.\n");
+              exit(1);
+          }
+          $n = count(app('router')->getRoutes());
+          echo "✓ all {$n} routes resolve to a real method whose signature the URI can satisfy\n";
+          PHP
+          php /tmp/route-integrity.php
+
+      - name: Scheduled tasks point at commands that exist
+        run: |
+          set -e
+          # A schedule entry naming a command that isn't registered fails silently
+          # every single minute in production — cron swallows it and nobody notices
+          # until traffic stops being counted or orders stop being checked.
+          cat > /tmp/schedule-integrity.php <<'PHP'
+          <?php
+          $base = getcwd();
+          require $base . '/vendor/autoload.php';
+          $app = require $base . '/bootstrap/app.php';
+          $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+          $kernel->bootstrap();
+
+          $registered = array_keys($kernel->all());
+          $schedule = $app->make(Illuminate\Console\Scheduling\Schedule::class);
+          $bad = [];
+          $seen = 0;
+          foreach ($schedule->events() as $event) {
+              if (!preg_match('/artisan["\']?\s+["\']?([a-zA-Z0-9:_-]+)/', (string) $event->command, $m)) {
+                  continue; // shell callback, not an artisan command
+              }
+              $seen++;
+              if (!in_array($m[1], $registered, true)) {
+                  $bad[] = $m[1];
+              }
+          }
+          foreach ($bad as $name) {
+              fwrite(STDERR, "::error::scheduler: '{$name}' is scheduled but is not a registered artisan command\n");
+          }
+          if ($bad) { exit(1); }
+          echo "✓ all {$seen} scheduled artisan commands are registered\n";
+          PHP
+          php /tmp/schedule-integrity.php
+
       - name: End-to-end API smoke (register → login → authenticated fetch)
         run: |
           php artisan serve --host=127.0.0.1 --port=8000 >serve.log 2>&1 &
@@ -186,6 +281,63 @@ jobs:
           EMAIL=$(printf '%s' "$INFO" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('email',''))" 2>/dev/null || true)
           [ "$EMAIL" = "ci@example.com" ] || fail "user/info did not return our user :: $INFO"
           echo "✓ Full request → auth → DB → response cycle works (user: $EMAIL)."
+
+      - name: End-to-end on the webman runtime (what production actually serves)
+        run: |
+          # The step above proves the app works under `artisan serve` — a fresh
+          # bootstrap per request. Production serves it through webman + AdapterMan:
+          # long-lived workers that boot once and then handle every request from the
+          # same process. Bugs that only bite there (leaked static/global state,
+          # AdapterMan's header/session shims, a worker that dies on boot) are
+          # invisible to `artisan serve`, so exercise the real runtime too.
+          wfail() {
+            echo "::error::webman E2E: $(printf '%s' "$1" | tr '\n\r\t' '   ' | head -c 500)"
+            echo "--- webman start output ---"; tail -30 webman-start.log 2>/dev/null || true
+            echo "--- workerman.log ---";       tail -30 workerman.log 2>/dev/null || true
+            php -c cli-php.ini webman.php stop >/dev/null 2>&1 || true
+            exit 1
+          }
+
+          php -c cli-php.ini webman.php start -d >webman-start.log 2>&1 || wfail "webman failed to start"
+          for i in $(seq 1 30); do
+            curl -fs -o /dev/null http://127.0.0.1:6600/api/v1/guest/comm/config && break
+            sleep 1
+          done
+
+          B=$(curl -s -w '|%{http_code}' http://127.0.0.1:6600/api/v1/guest/comm/config)
+          echo "webman config -> $(printf '%s' "$B" | head -c 200)"
+          case "$B" in *'|200') ;; *) wfail "comm/config on webman :: $(printf '%s' "$B" | head -c 300)";; esac
+
+          REG=$(curl -s -w '|%{http_code}' -X POST http://127.0.0.1:6600/api/v1/passport/auth/register -d 'email=ci-webman@example.com&password=password123')
+          echo "webman register -> $(printf '%s' "$REG" | head -c 200)"
+
+          LOGIN=$(curl -s -X POST http://127.0.0.1:6600/api/v1/passport/auth/login -d 'email=ci-webman@example.com&password=password123')
+          AUTH=$(printf '%s' "$LOGIN" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('auth_data',''))" 2>/dev/null || true)
+          [ -n "$AUTH" ] || wfail "webman login gave no auth_data. register=[$(printf '%s' "$REG" | head -c 200)] login=[$(printf '%s' "$LOGIN" | head -c 200)]"
+
+          INFO=$(curl -s http://127.0.0.1:6600/api/v1/user/info -H "Authorization: $AUTH")
+          EMAIL=$(printf '%s' "$INFO" | python3 -c "import sys,json; print(json.load(sys.stdin).get('data',{}).get('email',''))" 2>/dev/null || true)
+          [ "$EMAIL" = "ci-webman@example.com" ] || wfail "webman user/info did not return our user :: $(printf '%s' "$INFO" | head -c 300)"
+          echo "  ✓ auth flow works on webman (user: $EMAIL)"
+
+          # A long-lived worker must stay correct across requests, not just on the
+          # first one. Reuse the same connection so we land on a warm worker.
+          SEQ=$(curl -s -H "Authorization: $AUTH" \
+                  http://127.0.0.1:6600/api/v1/user/info \
+                  http://127.0.0.1:6600/api/v1/user/info \
+                  http://127.0.0.1:6600/api/v1/user/info \
+                | grep -c 'ci-webman@example.com' || true)
+          [ "$SEQ" = "3" ] && echo "  ✓ repeated requests on a warm worker stay correct (3/3)" \
+                           || wfail "warm-worker requests degraded: only $SEQ/3 returned the right user (leaked state between requests?)"
+
+          # An authenticated identity must not survive into the next request on the
+          # same worker: without an Authorization header this has to come back 401/403.
+          ANON=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:6600/api/v1/user/info)
+          case "$ANON" in 401|403) echo "  ✓ auth state does not leak between requests (anonymous -> $ANON)";;
+                          *) wfail "SECURITY: unauthenticated /user/info returned $ANON on a warm worker — auth state leaks across requests";; esac
+
+          php -c cli-php.ini webman.php stop >/dev/null 2>&1 || true
+          echo "✓ The production runtime (webman + AdapterMan) serves the app correctly."
 
       - name: Run tests (informational)
         continue-on-error: true
@@ -225,7 +377,7 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.1'
-          extensions: mbstring, bcmath, ctype, curl, dom, fileinfo, gd, iconv, json, mysqli, pdo, pdo_mysql, redis, igbinary, opcache, tokenizer, xml, zip, openssl
+          extensions: mbstring, bcmath, ctype, curl, dom, fileinfo, gd, iconv, json, mysqli, pdo, pdo_mysql, redis, igbinary, opcache, pcntl, posix, tokenizer, xml, zip, openssl
           coverage: none
           tools: composer:v2
 
