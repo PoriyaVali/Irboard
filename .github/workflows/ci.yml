@@ -212,12 +212,21 @@ jobs:
 
       - name: Run the real installer (the path ./init.sh takes)
         run: |
-          set -e
           # v2board:install refuses to run when .env exists; a clean checkout has none.
           test ! -f .env || { echo "::error::.env should not be committed"; exit 1; }
           # Prompts, in order: db host, db name, db user, db password, admin email.
-          printf '127.0.0.1\nirboard_install\nroot\nroot\nci-admin@example.com\n' \
-            | php artisan v2board:install
+          set +e
+          OUT="$(printf '127.0.0.1\nirboard_install\nroot\nroot\nci-admin@example.com\n' \
+                 | php artisan v2board:install 2>&1)"
+          RC=$?
+          set -e
+          echo "----- installer output -----"
+          echo "$OUT"
+          echo "----------------------------"
+          if [ "$RC" -ne 0 ]; then
+            echo "::error::installer exited $RC :: $(printf '%s' "$OUT" | tr '\n\r\t' '   ' | head -c 500)"
+            exit 1
+          fi
 
       - name: Verify what the installer produced
         run: |
