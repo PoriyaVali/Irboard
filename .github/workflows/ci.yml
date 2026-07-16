@@ -284,6 +284,140 @@ jobs:
           PHP
           php /tmp/schedule-integrity.php
 
+      - name: Queue workers start in every environment a panel is run in
+        run: |
+          set -e
+          # Horizon only starts workers for environments named in horizon.environments:
+          # ProvisioningPlan::deploy($env) returns early when the key is absent, so an
+          # unlisted APP_ENV means ZERO workers and not one line of output about it —
+          # orders, mail, traffic and telegram all just stop.
+          #
+          # .env.example ships APP_ENV=local and v2board:install never rewrites it, so
+          # every panel runs as "local". Setting APP_ENV=production — the obvious thing
+          # to do on a live server — must not silently disable the queue.
+          cat > /tmp/horizon-envs.php <<'PHP'
+          <?php
+          $base = getcwd();
+          require $base . '/vendor/autoload.php';
+          $app = require $base . '/bootstrap/app.php';
+          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+          $envs = config('horizon.environments', []);
+          echo "horizon.environments defines: " . (implode(', ', array_keys($envs)) ?: '(nothing)') . "\n";
+          $bad = [];
+          foreach (['local', 'production'] as $e) {
+              if (empty($envs[$e])) {
+                  $bad[] = $e;
+                  fwrite(STDERR, "::error::horizon: APP_ENV={$e} has no supervisor config — every queue worker would silently fail to start\n");
+              }
+          }
+          if ($bad) { exit(1); }
+          echo "✓ queue workers are provisioned for both local and production\n";
+          PHP
+          php /tmp/horizon-envs.php
+
+      - name: The Horizon dashboard is not left open to the public
+        run: |
+          set -e
+          # Horizon's own auth is `app()->environment('local') || Gate::check(...)`, and
+          # the gate here lists no emails. Since every panel runs as APP_ENV=local, that
+          # check passes for ANYONE — the route middleware is the only thing standing
+          # between the internet and the queue dashboard (job payloads, retry, delete).
+          cat > /tmp/horizon-auth.php <<'PHP'
+          <?php
+          $base = getcwd();
+          require $base . '/vendor/autoload.php';
+          $app = require $base . '/bootstrap/app.php';
+          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+          $mw = (array) config('horizon.middleware', ['web']);
+          echo "horizon.path=" . config('horizon.path') . "  horizon.middleware=[" . implode(',', $mw) . "]\n";
+          $auth = array_intersect($mw, ['admin', 'staff', 'auth', 'user']);
+          if (!$auth) {
+              fwrite(STDERR, "::error::horizon: dashboard middleware [" . implode(',', $mw) . "] contains no authentication — with APP_ENV=local Horizon authorises everyone, so /" . config('horizon.path') . " would be world-readable\n");
+              exit(1);
+          }
+          echo "✓ dashboard is gated by [" . implode(',', $auth) . "] on top of Horizon's own (open-in-local) check\n";
+          PHP
+          php /tmp/horizon-auth.php
+
+      - name: Every model maps to a table and columns the schema really has
+        run: |
+          set -e
+          # The schema is applied from install.sql, not migrations, so nothing keeps it
+          # in step with the models. A model pointing at a table (or declaring a column)
+          # that install.sql never creates is a runtime SQL error the moment that code
+          # path is first taken.
+          cat > /tmp/model-schema.php <<'PHP'
+          <?php
+          $base = getcwd();
+          require $base . '/vendor/autoload.php';
+          $app = require $base . '/bootstrap/app.php';
+          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+          $bad = [];
+          $checked = 0;
+          foreach (glob($base . '/app/Models/*.php') as $file) {
+              $class = 'App\Models\\' . basename($file, '.php');
+              if (!class_exists($class)) { continue; }
+              $rc = new ReflectionClass($class);
+              if ($rc->isAbstract() || !$rc->isSubclassOf(Illuminate\Database\Eloquent\Model::class)) { continue; }
+
+              $model = new $class;
+              $table = $model->getTable();
+              $checked++;
+
+              if (!Illuminate\Support\Facades\Schema::hasTable($table)) {
+                  $bad[] = "{$rc->getShortName()} maps to table `{$table}`, which the schema never creates";
+                  continue;
+              }
+              $declared = array_unique(array_merge($model->getFillable(), array_keys($model->getCasts())));
+              foreach ($declared as $col) {
+                  if (!Illuminate\Support\Facades\Schema::hasColumn($table, $col)) {
+                      $bad[] = "{$rc->getShortName()}: `{$table}`.`{$col}` is declared on the model but missing from the schema";
+                  }
+              }
+          }
+          foreach ($bad as $b) {
+              fwrite(STDERR, "::error::model/schema drift: {$b}\n");
+          }
+          if ($bad) {
+              fwrite(STDERR, "\n" . count($bad) . " drift(s) across {$checked} models\n");
+              exit(1);
+          }
+          echo "✓ all {$checked} models map onto tables and columns that exist\n";
+          PHP
+          php /tmp/model-schema.php
+
+      - name: cli-php.ini is safe for a public runtime
+        run: |
+          set -e
+          # This ini is what serves production through webman. APP_DEBUG=false keeps
+          # Laravel quiet, but startup and fatal errors are raised before/outside
+          # Laravel's handler and go straight into the HTTP response with real paths.
+          php -c cli-php.ini -r '
+            $bad = [];
+            foreach (["display_errors", "display_startup_errors", "expose_php"] as $k) {
+              $v = (string) ini_get($k);
+              if ($v !== "" && $v !== "0" && strtolower($v) !== "off") { $bad[] = "{$k}={$v}"; }
+            }
+            if (!ini_get("log_errors")) { $bad[] = "log_errors is off (errors would go nowhere)"; }
+            if ($bad) {
+              fwrite(STDERR, "::error::cli-php.ini leaks internals to clients: " . implode(", ", $bad) . " — a fatal or startup error prints file paths into the HTTP response\n");
+              exit(1);
+            }
+            echo "✓ cli-php.ini keeps errors out of responses and in the log\n";
+          '
+
+      - name: Dependencies are pinned (informational)
+        continue-on-error: true
+        run: |
+          if git ls-files --error-unmatch composer.lock >/dev/null 2>&1; then
+            echo "✓ composer.lock is committed — every install resolves to identical code"
+          else
+            echo "::warning::composer.lock is gitignored, so each install resolves its own dependency versions. Two servers set up a week apart do not run the same code, and an upstream release can break a fresh install with no change on our side."
+          fi
+
       - name: End-to-end API smoke (register → login → authenticated fetch)
         run: |
           php artisan serve --host=127.0.0.1 --port=8000 >serve.log 2>&1 &
