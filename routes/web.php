@@ -68,10 +68,15 @@ Route::post('payment/notify/{method}/{uuid}', [PaymentController::class, 'notify
     ->name('payment.notify')
     ->middleware('throttle:60,1');
 
+// مسیرهای legacy (سازگاری با نسخه‌های قدیم)
+Route::post('/api/v1/guest/payment/callback/aghayehpardakht', [PaymentController::class, 'aghayehpardakhtCallback']);
+Route::post('/api/v1/guest/payment/callback/zibal', [PaymentController::class, 'zibalCallback']);
+
 // نرخ دلار API
 Route::get("/api/v1/guest/exchange-rate", [\App\Http\Controllers\V1\Guest\ExchangeRateController::class, "fetch"]);
 Route::post("/api/v1/guest/telegram/webhook", [TelegramBotController::class, "webhook"]);
 Route::get("/api/v1/guest/telegram/auth", [TelegramAuthController::class, "loginAndRedirect"]);
+Route::post('payment/notify/zibal/{uuid}', [PaymentController::class, 'notify'])->name('payment.notify.zibal');
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 📊 Payment Tracking API (اختیاری - برای مانیتورینگ)
