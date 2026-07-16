@@ -17,7 +17,10 @@ Homestead.yaml
 npm-debug.log
 yarn-error.log
 composer.phar
-composer.lock
+# composer.lock is committed on purpose: this is an application, not a library.
+# Without it every install resolves its own dependency versions, so two panels set
+# up a week apart do not run the same code and an upstream release can break a
+# fresh install with nothing changed here.
 yarn.lock
 docker-compose.yml
 .DS_Store

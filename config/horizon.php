@@ -13,9 +13,33 @@ try {
     $lInfo = new Linfo();
     $parser = $lInfo->getParser();
     $maxProcesses = (int)ceil($parser->getRam()['total'] / 1024 / 1024 / 1024 * 6);
-} catch (\Exception $e) {
-    // در صورت بروز خطا، مقدار پیش‌فرض 10 باقی می‌ماند
+} catch (\Throwable $e) {
+    // در صورت بروز خطا، مقدار پیش‌فرض 10 باقی می‌ماند.
+    // \Throwable و نه \Exception: اگر کلاس Linfo لود نشود یا پارسر روی این سیستم
+    // بشکند، PHP 8 یک \Error پرتاب می‌کند که از \Exception رد می‌شود و کل بوتِ
+    // برنامه را می‌خواباند — نه اینکه فقط به مقدار پیش‌فرض برگردد.
 }
+
+// همان تنظیمات برای هر محیطی که پنل با آن اجرا می‌شود استفاده می‌شود.
+// توضیح در بخش 'environments' پایین.
+$supervisors = [
+    'V2board' => [
+        'connection' => 'redis',
+        'queue' => [
+            'order_handle',
+            'traffic_fetch',
+            'stat',
+            'send_email',
+            'send_email_mass',
+            'send_telegram',
+        ],
+        'balance' => 'auto',
+        'minProcesses' => 1,
+        'maxProcesses' => $maxProcesses,
+        'tries' => 1,
+        'balanceCooldown' => 3,
+    ],
+];
 
 return [
 
@@ -54,24 +78,23 @@ return [
 
     'memory_limit' => 32,
 
+    /*
+    |--------------------------------------------------------------------------
+    | Queue Worker Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Horizon only starts workers for the environment named here. When APP_ENV is
+    | not a key in this list, ProvisioningPlan::deploy() returns early: no worker
+    | starts and nothing is logged — orders, mail, traffic and telegram just stop
+    | being processed. .env.example ships APP_ENV=local and v2board:install never
+    | rewrites it, so panels normally run as "local"; production is listed with the
+    | same supervisors so that setting APP_ENV=production — the natural thing to do
+    | on a live server — cannot silently disable the queue.
+    |
+    */
+
     'environments' => [
-        'local' => [
-            'V2board' => [
-                'connection' => 'redis',
-                'queue' => [
-                    'order_handle',
-                    'traffic_fetch',
-                    'stat',
-                    'send_email',
-                    'send_email_mass',
-                    'send_telegram',
-                ],
-                'balance' => 'auto',
-                'minProcesses' => 1,
-                'maxProcesses' => $maxProcesses,
-                'tries' => 1,
-                'balanceCooldown' => 3,
-            ],
-        ],
+        'local' => $supervisors,
+        'production' => $supervisors,
     ],
 ];
