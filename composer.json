@@ -27,7 +27,7 @@
         "php-curl-class/php-curl-class": "^8.6",
         "rybakit/msgpack": "^0.9.1",
         "stripe/stripe-php": "^v14.9.0",
-        "symfony/yaml": "^4.3"
+        "symfony/yaml": "^5.4.52"
     },
     "require-dev": {
         "facade/ignition": "^2.3.6",
