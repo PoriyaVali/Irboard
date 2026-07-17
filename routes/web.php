@@ -190,3 +190,9 @@ Route::prefix('api/v1/' . config('v2board.secure_path', 'admin') . '/appstore')-
     Route::post('/save-banner', 'V1\\Admin\\AppStoreController@saveBanner');
     Route::post('/delete-banner', 'V1\\Admin\\AppStoreController@deleteBanner');
 });
+
+// Hedioum tunnel toggle (admin) — per-node DIRECT/TUNNEL switch, backed by v2_tunnel_map
+Route::prefix('api/v1/' . config('v2board.secure_path', 'admin') . '/tunnel')->middleware('admin')->group(function () {
+    Route::get('/status', 'V1\\Admin\\TunnelController@status');
+    Route::post('/toggle', 'V1\\Admin\\TunnelController@toggle');
+});
