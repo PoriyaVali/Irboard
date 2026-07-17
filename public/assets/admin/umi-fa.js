@@ -81629,8 +81629,8 @@
                                     t.data.transfer_enable = (t.data.transfer_enable / 1073741824).toFixed(2),
                                     t.data.u = (t.data.u / 1073741824).toFixed(2),
                                     t.data.d = (t.data.d / 1073741824).toFixed(2),
-                                    t.data.commission_balance = (t.data.commission_balance / 100).toFixed(2),
-                                    t.data.balance = (t.data.balance / 100).toFixed(2),
+                                    t.data.commission_balance = t.data.commission_balance,
+                                    t.data.balance = t.data.balance,
                                     t.data.invite_user && (t.data.invite_user_email = t.data.invite_user.email),
                                     e.next = 14,
                                     r({
@@ -81693,8 +81693,8 @@
                                         e.u = (e.u / 1073741824).toFixed(2),
                                         e.d = (e.d / 1073741824).toFixed(2),
                                         e.total_used = (e.total_used / 1073741824).toFixed(2),
-                                        e.commission_balance = (e.commission_balance / 100).toFixed(2),
-                                        e.balance = (e.balance / 100).toFixed(2)
+                                        e.commission_balance = e.commission_balance,
+                                        e.balance = e.balance
                                     }
                                     ),
                                     e.next = 15,
@@ -81805,8 +81805,8 @@
                                     return n.transfer_enable = 1073741824 * n.transfer_enable,
                                     n.u = Math.round(1073741824 * n.u),
                                     n.d = Math.round(1073741824 * n.d),
-                                    n.balance = Math.round(100 * n.balance),
-                                    n.commission_balance = Math.round(100 * n.commission_balance),
+                                    n.balance = Math.round(n.balance),
+                                    n.commission_balance = Math.round(n.commission_balance),
                                     n.invite_user && delete n.invite_user,
                                     e.next = 10,
                                     Object(a["b"])("/" + window.settings.secure_path + "/user/update", n);
