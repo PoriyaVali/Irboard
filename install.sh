@@ -221,11 +221,13 @@ if [ ! -d "$SUP_DIR" ]; then
     warn "supervisor plugin not installed — install it from aaPanel > App Store, then re-run"
 else
     mkdir -p "$SUP_PROFILE" "$SUP_LOG"
+    # Compare the whole desired file, not just the command line: if the install dir
+    # or the log paths changed, a "command is present" check would wrongly skip and
+    # leave a stale program behind.
     write_program() {   # name, command
-        local name="$1" cmd="$2" ini="$SUP_PROFILE/$1.ini"
-        if [ -f "$ini" ] && grep -qF "command=$cmd" "$ini"; then skip "program $name already configured"; return; fi
-        backup "$ini"
-        cat > "$ini" <<INI
+        local name="$1" cmd="$2" ini="$SUP_PROFILE/$1.ini" tmp
+        tmp="$(mktemp)"
+        cat > "$tmp" <<INI
 [program:$name]
 command=$cmd
 directory=$APP_DIR/
@@ -242,7 +244,11 @@ numprocs=1
 stopsignal=QUIT
 process_name=%(program_name)s_%(process_num)02d
 INI
-        ok "program $name"
+        if [ -f "$ini" ] && cmp -s "$tmp" "$ini"; then
+            rm -f "$tmp"; skip "program $name already correct"; return
+        fi
+        [ -f "$ini" ] && backup "$ini"
+        mv "$tmp" "$ini" && chmod 644 "$ini" && ok "program $name written"
     }
     # NOTE: webman must NOT be started with -d here; supervisor owns the process.
     write_program "WebMan"              "php -c cli-php.ini webman.php start"
@@ -266,14 +272,22 @@ try:
         data = []
 except Exception:
     data = []
+before = json.dumps(data, sort_keys=True)
 by_name = {e.get("program"): e for e in data if isinstance(e, dict)}
 for name, cmd in wanted:
-    by_name[name] = {"program": name, "command": cmd, "directory": app_dir + "/",
-                     "user": "root", "priority": "999", "numprocs": "1",
-                     "runStatus": "ERROR", "ps": name}
-with open(path, "w") as fh:
-    json.dump(list(by_name.values()), fh)
-print("  \033[1;32m[ok]\033[0m aaPanel supervisor registry updated")
+    entry = by_name.get(name, {})
+    entry.update({"program": name, "command": cmd, "directory": app_dir + "/",
+                  "user": "root", "priority": "999", "numprocs": "1", "ps": name})
+    # runStatus belongs to the panel UI - keep whatever it already recorded.
+    entry.setdefault("runStatus", "ERROR")
+    by_name[name] = entry
+merged = list(by_name.values())
+if json.dumps(merged, sort_keys=True) == before:
+    print("  \033[1;34m[--]\033[0m aaPanel supervisor registry already correct")
+else:
+    with open(path, "w") as fh:
+        json.dump(merged, fh)
+    print("  \033[1;32m[ok]\033[0m aaPanel supervisor registry updated")
 PY
 
     if [ -x "$SUP_CTL" ]; then
@@ -288,13 +302,18 @@ fi
 # ── 7. cron ─────────────────────────────────────────────────────────────────
 say "7/8  Scheduler cron (every minute)"
 CRON_CMD="php $APP_DIR/artisan schedule:run"
-EXISTING_HASH="$(sqlite3 "$BT_DB" "select echo from crontab where sBody like '%artisan schedule:run%' limit 1;" 2>/dev/null)"
-if [ -n "$EXISTING_HASH" ] && [ -f "$CRON_DIR/$EXISTING_HASH" ]; then
-    skip "scheduler cron already registered ($EXISTING_HASH)"
+# An aaPanel cron is three separate artifacts. Check each one on its own: if only
+# the crontab line went missing, the DB row alone would make this look healthy
+# while the scheduler silently never runs.
+mkdir -p "$CRON_DIR"
+HASH="$(sqlite3 "$BT_DB" "select echo from crontab where sBody like '%artisan schedule:run%' limit 1;" 2>/dev/null)"
+[ -n "$HASH" ] || HASH="$(openssl rand -hex 16 2>/dev/null || head -c16 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+SCRIPT="$CRON_DIR/$HASH"
+
+if [ -f "$SCRIPT" ] && grep -qF "$CRON_CMD" "$SCRIPT"; then
+    skip "cron script already correct ($HASH)"
 else
-    mkdir -p "$CRON_DIR"
-    HASH="$(openssl rand -hex 16 2>/dev/null || head -c16 /dev/urandom | od -An -tx1 | tr -d ' \n')"
-    SCRIPT="$CRON_DIR/$HASH"
+    [ -f "$SCRIPT" ] && backup "$SCRIPT"
     cat > "$SCRIPT" <<CRONEOF
 #!/bin/bash
 PATH=/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:~/bin
@@ -313,12 +332,20 @@ fi
 rm -f $SCRIPT.pl
 CRONEOF
     chmod 700 "$SCRIPT"
-    ok "cron script $HASH"
+    ok "cron script written ($HASH)"
+fi
 
+if [ "$(sqlite3 "$BT_DB" "select count(*) from crontab where echo='$HASH';" 2>/dev/null)" = "1" ]; then
+    skip "already listed in the aaPanel task list"
+else
     sqlite3 "$BT_DB" "insert into crontab (name,type,where1,where_hour,where_minute,echo,addtime,status,save,sName,sBody,sType) \
         values ('IrBoard','minute-n','1',1,1,'$HASH',datetime('now'),1,3,'','$CRON_CMD','toShell');" 2>/dev/null \
         && ok "registered in the aaPanel task list" || warn "could not write the aaPanel cron row"
+fi
 
+if crontab -l 2>/dev/null | grep -qF "$SCRIPT"; then
+    skip "crontab line already present"
+else
     LINE="*/1 * * * *  $SCRIPT >> $SCRIPT.log 2>&1"
     ( crontab -l 2>/dev/null | grep -vF "$SCRIPT"; echo "$LINE" ) | crontab - \
         && ok "crontab line installed" || warn "could not update crontab"
