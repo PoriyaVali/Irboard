@@ -210,9 +210,19 @@ fi
 git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
 cd "$APP_DIR" || die "cannot cd to $APP_DIR"
 
+INSTALL_LOG=""
 if [ "$SKIP_INSTALL" -eq 0 ] && [ ! -f "$APP_DIR/.env" ]; then
     say "     running init.sh (composer + database import + admin user)"
-    bash "$APP_DIR/init.sh" || die "init.sh failed"
+    # Capture the output so the generated admin password can be repeated at the
+    # end - it is printed exactly once and only its hash is stored. `script`
+    # keeps a real tty so init.sh's interactive email prompt still works; plain
+    # piping would swallow it.
+    INSTALL_LOG="$(mktemp)"
+    if command -v script >/dev/null 2>&1; then
+        script -qec "bash '$APP_DIR/init.sh'" "$INSTALL_LOG" || die "init.sh failed"
+    else
+        bash "$APP_DIR/init.sh" 2>&1 | tee "$INSTALL_LOG" || die "init.sh failed"
+    fi
 else
     skip ".env already exists — not re-running init.sh"
 fi
@@ -469,6 +479,36 @@ probe "backend on 127.0.0.1:6600" "http://127.0.0.1:6600/api/v1/guest/comm/confi
 # reported success while the panel rendered as a blank page in the browser.
 [ -n "$SECURE_PATH" ] && probe "admin page via nginx" "https://127.0.0.1/$SECURE_PATH" 200
 probe "admin assets via nginx" "https://127.0.0.1/assets/admin/umi.js" 200
-printf '\n\033[1;32m==> IrBoard is set up.\033[0m\n'
-[ -n "$SECURE_PATH" ] && printf '    Admin panel: https://%s/%s\n' "$DOMAIN" "$SECURE_PATH"
-printf '    Logs:        %s/\n\n' "$SUP_LOG"
+# ── credentials (always the last thing on screen) ───────────────────────────
+ADMIN_EMAIL=""
+ADMIN_PASS=""
+if [ -n "$INSTALL_LOG" ] && [ -f "$INSTALL_LOG" ]; then
+    ADMIN_EMAIL="$(sed -n 's/^[[:space:]]*Admin email:[[:space:]]*//p'    "$INSTALL_LOG" | tr -d '\r' | tail -1)"
+    ADMIN_PASS="$( sed -n 's/^[[:space:]]*Admin password:[[:space:]]*//p' "$INSTALL_LOG" | tr -d '\r' | tail -1)"
+    rm -f "$INSTALL_LOG"   # it holds the plaintext password
+fi
+if [ -z "$ADMIN_EMAIL" ] && [ -f "$APP_DIR/.env" ]; then
+    # Re-run: the address can be read back, the password cannot - only its hash
+    # is stored, and it is shown just once during the first install.
+    envval() { sed -n "s/^$1=//p" "$APP_DIR/.env" | tr -d '"' | head -1; }
+    ADMIN_EMAIL="$(mysql -h"$(envval DB_HOST)" -u"$(envval DB_USERNAME)" -p"$(envval DB_PASSWORD)" \
+        -N -B -e "select email from v2_user where is_admin=1 order by id limit 1;" \
+        "$(envval DB_DATABASE)" 2>/dev/null | head -1)"
+fi
+
+Y='\033[1;33m'; C='\033[0m'
+printf "\n${Y}=====================================================${C}\n"
+printf   "${Y}  IrBoard is ready${C}\n"
+printf   "${Y}=====================================================${C}\n"
+[ -n "$SECURE_PATH" ] && printf "${Y}  Admin panel : https://%s/%s${C}\n" "$DOMAIN" "$SECURE_PATH"
+[ -n "$ADMIN_EMAIL" ] && printf "${Y}  Admin email : %s${C}\n" "$ADMIN_EMAIL"
+if [ -n "$ADMIN_PASS" ]; then
+    printf "${Y}  Password    : %s${C}\n" "$ADMIN_PASS"
+    printf "${Y}                (save it now - it is not shown again)${C}\n"
+else
+    printf "${Y}  Password    : set during the first install; reset it from the user center${C}\n"
+fi
+printf   "${Y}${C}\n"
+printf   "${Y}  User panel  : https://%s/${C}\n" "$DOMAIN"
+printf   "${Y}  Logs        : %s/${C}\n" "$SUP_LOG"
+printf   "${Y}=====================================================${C}\n\n"
