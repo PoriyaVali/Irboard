@@ -22,7 +22,7 @@ class V2boardInstall extends Command
      *
      * @var string
      */
-    protected $description = 'v2board 安装';
+    protected $description = 'IrBoard installer';
 
     /**
      * Create a new command instance.
@@ -42,44 +42,60 @@ class V2boardInstall extends Command
     public function handle()
     {
         try {
-            $this->info("__     ______  ____                      _  ");
-            $this->info("\ \   / /___ \| __ )  ___   __ _ _ __ __| | ");
-            $this->info(" \ \ / /  __) |  _ \ / _ \ / _` | '__/ _` | ");
-            $this->info("  \ V /  / __/| |_) | (_) | (_| | | | (_| | ");
-            $this->info("   \_/  |_____|____/ \___/ \__,_|_|  \__,_| ");
+            $this->info('==============================================');
+            $this->info('               IrBoard  Installer');
+            $this->info('==============================================');
+
             if (\File::exists(base_path() . '/.env')) {
                 $securePath = config('v2board.secure_path', config('v2board.frontend_admin_path', hash('crc32b', config('app.key'))));
-                $this->info("访问 http(s)://你的站点/{$securePath} 进入管理面板，你可以在用户中心修改你的密码。");
-                abort(500, '如需重新安装请删除目录下.env文件');
+                $this->info("Admin panel: http(s)://<your-domain>/{$securePath}");
+                abort(500, 'Already installed. To reinstall, delete the .env file in this directory.');
             }
 
             if (!copy(base_path() . '/.env.example', base_path() . '/.env')) {
-                abort(500, '复制环境文件失败，请检查目录权限');
+                abort(500, 'Failed to copy the environment file — check directory permissions.');
             }
-            $this->saveToEnv([
-                'APP_KEY' => 'base64:' . base64_encode(Encrypter::generateKey('AES-256-CBC')),
-                'DB_HOST' => $this->ask('请输入数据库地址（默认:localhost）', 'localhost'),
-                'DB_DATABASE' => $this->ask('请输入数据库名'),
-                'DB_USERNAME' => $this->ask('请输入数据库用户名'),
-                'DB_PASSWORD' => $this->ask('请输入数据库密码')
-            ]);
+
+            // Database credentials. On aaPanel they are auto-detected from the
+            // panel (it stores each site's MySQL name/user/password), so the only
+            // thing to enter is the admin email. Anywhere else, ask for them.
+            $domain = null;
+            $db = $this->detectAaPanelDb($domain);
+            if ($db) {
+                $this->info('[✓] aaPanel detected — using the database it created for this site: ' . $db['DB_DATABASE']);
+            } else {
+                $this->info('[i] aaPanel not detected — please enter the database details.');
+                $db = [
+                    'DB_HOST' => $this->ask('Database host', 'localhost'),
+                    'DB_DATABASE' => $this->ask('Database name'),
+                    'DB_USERNAME' => $this->ask('Database username'),
+                    'DB_PASSWORD' => $this->ask('Database password'),
+                ];
+            }
+
+            $env = ['APP_KEY' => 'base64:' . base64_encode(Encrypter::generateKey('AES-256-CBC'))] + $db;
+            if ($domain) {
+                $env['APP_URL'] = 'https://' . $domain;
+            }
+            $this->saveToEnv($env);
+
             \Artisan::call('config:clear');
             \Artisan::call('config:cache');
             try {
                 DB::connection()->getPdo();
             } catch (\Exception $e) {
-                abort(500, '数据库连接失败');
+                abort(500, 'Database connection failed. Check the credentials and that MySQL is running.');
             }
             $file = \File::get(base_path() . '/database/install.sql');
             if (!$file) {
-                abort(500, '数据库文件不存在');
+                abort(500, 'database/install.sql not found.');
             }
             $sql = str_replace("\n", "", $file);
             $sql = preg_split("/;/", $sql);
             if (!is_array($sql)) {
-                abort(500, '数据库文件格式有误');
+                abort(500, 'install.sql has an invalid format.');
             }
-            $this->info('正在导入数据库请稍等...');
+            $this->info('Importing the database, please wait...');
             foreach ($sql as $item) {
                 $item = trim($item);
                 // preg_split leaves an empty tail after the final ';'. An empty query
@@ -94,43 +110,94 @@ class V2boardInstall extends Command
                 } catch (\Throwable $e) {
                 }
             }
-            $this->info('数据库导入完成');
+            $this->info('Database import complete.');
             $email = '';
             while (!$email) {
-                $email = $this->ask('请输入管理员邮箱?');
+                $email = $this->ask('Admin email');
             }
             $password = Helper::guid(false);
             if (!$this->registerAdmin($email, $password)) {
-                abort(500, '管理员账号注册失败，请重试');
+                abort(500, 'Failed to create the admin account, please try again.');
             }
 
-            // v2board keeps every panel setting in config/v2board.php, which is
-            // gitignored and therefore ABSENT on a fresh clone — and nothing here
-            // created it. Without it the admin page (routes/web.php) and the admin
-            // API (AdminRoute) fall back to their DEFAULTS, and those defaults are
-            // not the same value, so the panel would not open. Create it now with a
-            // stable, unguessable admin path, then rebuild the config cache in a
-            // fresh app (which re-reads the .env we just wrote) so it takes effect.
+            // IrBoard keeps every panel setting in config/v2board.php, which is
+            // gitignored and absent on a fresh clone. Create it with a stable,
+            // unguessable admin path (and the site URL when known), then rebuild the
+            // config cache in a fresh app (which re-reads the .env we just wrote) so
+            // it takes effect. Without this the admin page and the admin API fall
+            // back to different default paths and the panel would not open.
             $securePath = substr(bin2hex(random_bytes(12)), 0, 16);
             $configFile = base_path() . '/config/v2board.php';
             if (!\File::exists($configFile)) {
-                \File::put(
-                    $configFile,
-                    "<?php\n\nreturn [\n    'app_name' => 'V2Board',\n    'secure_path' => '{$securePath}',\n];\n"
-                );
+                $lines = "    'app_name' => 'IrBoard',\n    'secure_path' => '{$securePath}',\n";
+                if ($domain) {
+                    $lines .= "    'app_url' => 'https://{$domain}',\n";
+                }
+                \File::put($configFile, "<?php\n\nreturn [\n{$lines}];\n");
             } else {
                 $securePath = config('v2board.secure_path', $securePath);
             }
             \Artisan::call('config:clear');
             \Artisan::call('config:cache');
 
-            $this->info('一切就绪');
-            $this->info("管理员邮箱：{$email}");
-            $this->info("管理员密码：{$password}");
+            $this->info('All set.');
+            $this->info("Admin email: {$email}");
+            $this->info("Admin password: {$password}");
 
-            $this->info("访问 http(s)://你的站点/{$securePath} 进入管理面板，你可以在用户中心修改你的密码。");
+            $site = $domain ? ('https://' . $domain) : 'http(s)://<your-domain>';
+            $this->info("Open the admin panel at: {$site}/{$securePath}  (you can change the password in the user center).");
         } catch (\Exception $e) {
             $this->error($e->getMessage());
+        }
+    }
+
+    /**
+     * On aaPanel, read the MySQL credentials the panel created for this site from
+     * its own SQLite database (creds are stored there in plaintext). Returns the
+     * DB_* values ready for .env, or null when this is not an aaPanel box / no
+     * matching site. $domain is filled with the site's domain when found.
+     */
+    private function detectAaPanelDb(&$domain = null)
+    {
+        $sqlite = '/www/server/panel/data/default.db';
+        if (!@is_readable($sqlite) || !extension_loaded('pdo_sqlite')) {
+            return null;
+        }
+        try {
+            $pdo = new \PDO('sqlite:' . $sqlite);
+            $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
+            $path = base_path();
+            // Reliable path: the aaPanel site whose folder IS this install dir,
+            // then the database linked to that site (databases.pid = sites.id).
+            $st = $pdo->prepare(
+                'SELECT d.name, d.username, d.password, s.name AS domain
+                 FROM databases d JOIN sites s ON s.id = d.pid
+                 WHERE s.path = ? LIMIT 1'
+            );
+            $st->execute([$path]);
+            $row = $st->fetch(\PDO::FETCH_ASSOC);
+            if (!$row) {
+                // Fallback: match the database description (ps) to the dir name.
+                $dir = basename($path);
+                $st = $pdo->prepare('SELECT name, username, password, ps AS domain FROM databases WHERE ps = ? LIMIT 1');
+                $st->execute([$dir]);
+                $row = $st->fetch(\PDO::FETCH_ASSOC);
+            }
+            if (!$row || empty($row['name'])) {
+                return null;
+            }
+            $domain = !empty($row['domain']) ? $row['domain'] : basename($path);
+            // aaPanel MySQL listens on both the socket and 127.0.0.1:3306; use TCP
+            // so this is portable (and testable off an aaPanel box).
+            return [
+                'DB_HOST' => '127.0.0.1',
+                'DB_PORT' => '3306',
+                'DB_DATABASE' => $row['name'],
+                'DB_USERNAME' => $row['username'],
+                'DB_PASSWORD' => $row['password'],
+            ];
+        } catch (\Throwable $e) {
+            return null;
         }
     }
 
@@ -139,7 +206,7 @@ class V2boardInstall extends Command
         $user = new User();
         $user->email = $email;
         if (strlen($password) < 8) {
-            abort(500, '管理员密码长度最小为8位字符');
+            abort(500, 'Admin password must be at least 8 characters.');
         }
         $user->password = password_hash($password, PASSWORD_DEFAULT);
         $user->uuid = Helper::guid(true);
