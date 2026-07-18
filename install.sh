@@ -40,6 +40,7 @@ APP_DIR=""
 TUNE_NGINX=0
 SKIP_INSTALL=0
 FORCE=0
+RESET_PASSWORD=0
 
 say()  { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
 ok()   { printf '  \033[1;32m[ok]\033[0m %s\n' "$*"; }
@@ -60,6 +61,9 @@ Usage: install.sh [options]
                     affects every other site on the box.
   --skip-install    Skip clone + init.sh (code is already in place)
   --force           Merge into the directory even if it holds unrecognised files
+  --reset-admin-password
+                    Issue a new admin password and print it. Only needed if you
+                    lost it: a re-run never changes it on its own.
   -h, --help        Show this help
 USAGE
 }
@@ -71,6 +75,7 @@ while [ $# -gt 0 ]; do
         --tune-nginx)   TUNE_NGINX=1; shift ;;
         --skip-install) SKIP_INSTALL=1; shift ;;
         --force)  FORCE=1; shift ;;
+        --reset-admin-password) RESET_PASSWORD=1; shift ;;
         -h|--help) usage; exit 0 ;;
         *) die "Unknown option: $1 (try --help)" ;;
     esac
@@ -523,10 +528,10 @@ if [ -z "$ADMIN_EMAIL" ] && [ -f "$APP_DIR/.env" ]; then
 fi
 
 PASS_RESET=0
-if [ -z "$ADMIN_PASS" ] && [ -n "$ADMIN_EMAIL" ]; then
-    # The stored password is a bcrypt hash, so the existing one can never be read
-    # back. Issue a fresh one instead, so this always ends with credentials that
-    # actually work.
+if [ -z "$ADMIN_PASS" ] && [ -n "$ADMIN_EMAIL" ] && [ "$RESET_PASSWORD" -eq 1 ]; then
+    # Only on request. The stored password is a bcrypt hash and can never be read
+    # back, so the only way to show one is to replace it - and doing that on every
+    # re-run silently locks the operator out of a panel that was working.
     ADMIN_PASS="$(cd "$APP_DIR" && php artisan reset:password "$ADMIN_EMAIL" 2>/dev/null \
         | sed -n 's/^[[:space:]]*New password:[[:space:]]*//p' | tr -d '\r' | tail -1)"
     [ -n "$ADMIN_PASS" ] && PASS_RESET=1
@@ -546,7 +551,7 @@ if [ -n "$ADMIN_PASS" ]; then
         printf "${Y}                (save it now - it is not shown again)${C}\n"
     fi
 else
-    printf "${Y}  Password    : could not be determined - run: php artisan reset:password <email>${C}\n"
+    printf "${Y}  Password    : unchanged (re-run with --reset-admin-password to issue a new one)${C}\n"
 fi
 printf   "${Y}${C}\n"
 printf   "${Y}  User panel  : https://%s/${C}\n" "$DOMAIN"
