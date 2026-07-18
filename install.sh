@@ -2,7 +2,7 @@
 #
 # IrBoard — one-command installer for aaPanel servers.
 #
-#   bash <(curl -fsSL https://raw.githubusercontent.com/PoriyaVali/Irboard/main/install.sh) --domain panel.example.com
+#   bash <(curl -fsSL https://raw.githubusercontent.com/PoriyaVali/Irboard/main/install.sh) --domain your-panel-domain.com
 #
 # It is idempotent: re-running only fixes what is missing, and every file it
 # touches is backed up as <file>.bak_irboard_<timestamp> first.
@@ -108,10 +108,25 @@ if [ -z "$DOMAIN" ]; then
         die "No site found. Create the site in aaPanel first, then re-run with --domain <name>."
     fi
 fi
-[ -n "$APP_DIR" ] || APP_DIR="$(sqlite3 "$BT_DB" "select path from sites where name='$DOMAIN';" 2>/dev/null)"
-[ -n "$APP_DIR" ] || APP_DIR="/www/wwwroot/$DOMAIN"
+if [ -n "$APP_DIR" ]; then
+    mkdir -p "$APP_DIR"          # explicit --dir: the operator picked the layout
+else
+    # The site has to exist in aaPanel already. Guessing /www/wwwroot/<domain> and
+    # creating it means a typo'd or example domain silently gets a full clone plus
+    # a composer install before anything notices there is no database for it.
+    APP_DIR="$(sqlite3 "$BT_DB" "select path from sites where name='$DOMAIN';" 2>/dev/null)"
+    if [ -z "$APP_DIR" ]; then
+        printf '\n'
+        warn "'$DOMAIN' is not a site in aaPanel."
+        printf '    In aaPanel, first add the website (PHP 8.1) and create a database bound to it.\n'
+        printf '    This installer reads the credentials aaPanel stored and imports into that\n'
+        printf '    database - it creates neither the site nor the database.\n'
+        printf '    For a non-aaPanel layout, pass --dir <path> explicitly.\n\n'
+        die "Nothing was changed."
+    fi
+    [ -d "$APP_DIR" ] || die "aaPanel lists '$DOMAIN' at $APP_DIR, but that directory is missing."
+fi
 ok "install dir: $APP_DIR"
-mkdir -p "$APP_DIR"
 
 # ── 3. prerequisites ────────────────────────────────────────────────────────
 say "3/8  Prerequisites"
