@@ -39,6 +39,7 @@ DOMAIN=""
 APP_DIR=""
 TUNE_NGINX=0
 SKIP_INSTALL=0
+FORCE=0
 
 say()  { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
 ok()   { printf '  \033[1;32m[ok]\033[0m %s\n' "$*"; }
@@ -58,6 +59,7 @@ Usage: install.sh [options]
                     because /www/server/nginx/conf/nginx.conf is SERVER-WIDE and
                     affects every other site on the box.
   --skip-install    Skip clone + init.sh (code is already in place)
+  --force           Merge into the directory even if it holds unrecognised files
   -h, --help        Show this help
 USAGE
 }
@@ -68,6 +70,7 @@ while [ $# -gt 0 ]; do
         --dir)    APP_DIR="${2:-}"; shift 2 ;;
         --tune-nginx)   TUNE_NGINX=1; shift ;;
         --skip-install) SKIP_INSTALL=1; shift ;;
+        --force)  FORCE=1; shift ;;
         -h|--help) usage; exit 0 ;;
         *) die "Unknown option: $1 (try --help)" ;;
     esac
@@ -137,11 +140,40 @@ elif [ -f "$APP_DIR/artisan" ]; then
     skip "code already present (artisan found)"
 else
     git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
-    if [ -z "$(ls -A "$APP_DIR" 2>/dev/null)" ]; then
-        git clone -q "$REPO_URL" "$APP_DIR" || die "git clone failed"
-        ok "cloned IrBoard"
+    # A half-finished attempt usually leaves scaffolding like storage/ behind, and
+    # `rm -rf ./*` never removes dotfiles — so "directory is not empty" on its own is
+    # a bad reason to refuse. Only stop when something we do not recognise is there.
+    leftovers=""
+    for entry in $(ls -A "$APP_DIR" 2>/dev/null); do
+        case "$entry" in
+            storage|bootstrap|vendor|.git|.env|.user.ini|404.html|index.html) ;;
+            *) leftovers="$leftovers $entry" ;;
+        esac
+    done
+    if [ -n "$leftovers" ] && [ "$FORCE" -eq 0 ]; then
+        warn "$APP_DIR already contains:$leftovers"
+        die "Refusing to write over it. Clean the directory, or re-run with --force to merge."
+    fi
+    # Clone to a temp dir and copy in, so leftover empty scaffolding cannot block us
+    # (git clone insists on an empty target).
+    tmp="$(mktemp -d)"
+    if git clone -q "$REPO_URL" "$tmp/src"; then
+        cp -a "$tmp/src/." "$APP_DIR"/ && ok "IrBoard code installed"
+        rm -rf "$tmp"
     else
-        die "$APP_DIR is not empty and has no artisan — clean it or pass --skip-install."
+        rm -rf "$tmp"; die "git clone failed"
+    fi
+fi
+
+# A stray worker still holding the app port would make supervisor's WebMan fail to
+# bind. Reclaim it, but only when it is clearly one of ours.
+if ss -lntpH 2>/dev/null | grep -q '127.0.0.1:6600'; then
+    stray="$(ss -lntpH 2>/dev/null | grep '127.0.0.1:6600' | grep -oE 'pid=[0-9]+' | head -1 | cut -d= -f2)"
+    if [ -n "$stray" ] && tr '\0' ' ' < "/proc/$stray/cmdline" 2>/dev/null | grep -qiE 'workerman|webman|adapterman'; then
+        kill "$stray" 2>/dev/null && sleep 2
+        ok "released port 6600 from a stray worker (pid $stray)"
+    else
+        warn "port 6600 is in use by pid ${stray:-?} which is not a webman process — WebMan may fail to start"
     fi
 fi
 git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
