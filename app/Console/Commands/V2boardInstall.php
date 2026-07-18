@@ -104,12 +104,31 @@ class V2boardInstall extends Command
                 abort(500, '管理员账号注册失败，请重试');
             }
 
+            // v2board keeps every panel setting in config/v2board.php, which is
+            // gitignored and therefore ABSENT on a fresh clone — and nothing here
+            // created it. Without it the admin page (routes/web.php) and the admin
+            // API (AdminRoute) fall back to their DEFAULTS, and those defaults are
+            // not the same value, so the panel would not open. Create it now with a
+            // stable, unguessable admin path, then rebuild the config cache in a
+            // fresh app (which re-reads the .env we just wrote) so it takes effect.
+            $securePath = substr(bin2hex(random_bytes(12)), 0, 16);
+            $configFile = base_path() . '/config/v2board.php';
+            if (!\File::exists($configFile)) {
+                \File::put(
+                    $configFile,
+                    "<?php\n\nreturn [\n    'app_name' => 'V2Board',\n    'secure_path' => '{$securePath}',\n];\n"
+                );
+            } else {
+                $securePath = config('v2board.secure_path', $securePath);
+            }
+            \Artisan::call('config:clear');
+            \Artisan::call('config:cache');
+
             $this->info('一切就绪');
             $this->info("管理员邮箱：{$email}");
             $this->info("管理员密码：{$password}");
 
-            $defaultSecurePath = hash('crc32b', config('app.key'));
-            $this->info("访问 http(s)://你的站点/{$defaultSecurePath} 进入管理面板，你可以在用户中心修改你的密码。");
+            $this->info("访问 http(s)://你的站点/{$securePath} 进入管理面板，你可以在用户中心修改你的密码。");
         } catch (\Exception $e) {
             $this->error($e->getMessage());
         }

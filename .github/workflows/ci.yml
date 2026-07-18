@@ -697,6 +697,32 @@ jobs:
           [ "$A" -eq 1 ] || { echo "::error::installer did not create exactly one admin (got $A)"; exit 1; }
           echo "✓ v2board:install produced a complete schema ($T tables) and an admin account."
 
+      - name: Admin panel opens after the installer (config/v2board.php + HTTP 200)
+        run: |
+          set -e
+          # The reported bug: a fresh `git clone && sh init.sh` left NO
+          # config/v2board.php, and the admin panel would not open. v2board keeps
+          # its settings there; without it the admin page and the admin API fall
+          # back to different default paths. Assert the file exists AND the printed
+          # admin path is actually served (200) — not 404/500.
+          [ -f config/v2board.php ] || { echo "::error::installer did not create config/v2board.php"; exit 1; }
+          SP="$(php -r 'require "vendor/autoload.php"; $a=require "bootstrap/app.php"; $a->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap(); echo (string) config("v2board.secure_path");')"
+          [ -n "$SP" ] || { echo "::error::config/v2board.php has no secure_path — the admin path is undefined"; exit 1; }
+          echo "admin secure_path = $SP"
+          php artisan serve --host=127.0.0.1 --port=8000 >/tmp/serve.log 2>&1 &
+          SV=$!
+          for i in $(seq 1 20); do curl -s -o /dev/null --max-time 2 "http://127.0.0.1:8000/" && break; sleep 1; done
+          admin=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8000/${SP}")
+          api=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:8000/api/v1/${SP}/config/fetch")
+          kill "$SV" 2>/dev/null || true
+          echo "GET /${SP} -> ${admin} | GET /api/v1/${SP}/config/fetch -> ${api}"
+          [ "$admin" = "200" ] || { echo "::error::admin panel path returned ${admin} (expected 200)"; sed -n '1,40p' /tmp/serve.log; exit 1; }
+          case "$api" in
+            404) echo "::error::admin API at the panel's secure_path is 404 — the page and the API disagree on the path"; exit 1;;
+            *)   echo "✓ admin API resolves at the same secure_path (HTTP ${api}, auth-gated)";;
+          esac
+          echo "✓ config/v2board.php created and the admin panel opens (HTTP ${admin})."
+
       - name: Installer refuses to re-run over an existing .env
         run: |
           set -e
