@@ -127,9 +127,17 @@ fi
 systemctl enable --now redis-server >/dev/null 2>&1 || systemctl enable --now redis >/dev/null 2>&1 || true
 if redis-cli ping 2>/dev/null | grep -q PONG; then ok "redis responds to PING"; else warn "redis is NOT responding — the panel will fail on cache/session/queue"; fi
 
+# Read the module list once into a variable. `php -m | grep -q <ext>` looks obvious
+# but is a race under `pipefail`: grep exits the moment it matches, php then takes
+# SIGPIPE and reports 141, and the pipeline is judged failed even though the
+# extension is installed - which intermittently reported a present extension as
+# missing.
+PHP_MODS=" $(php -m 2>/dev/null | tr '[:upper:]' '[:lower:]' | tr '\n' ' ') "
 for ext in redis pcntl posix; do
-    if php -m 2>/dev/null | grep -qix "$ext"; then ok "php extension: $ext"
-    else warn "php extension MISSING: $ext  (install it from aaPanel > PHP > Extensions)"; fi
+    case "$PHP_MODS" in
+        *" $ext "*) ok "php extension: $ext" ;;
+        *) warn "php extension MISSING: $ext  (install it from aaPanel > PHP > Extensions)" ;;
+    esac
 done
 
 # ── 4. code + installer ─────────────────────────────────────────────────────
@@ -165,6 +173,24 @@ else
     fi
 fi
 
+# Walk the whole ancestry, not just the immediate parent: the process bound to the
+# port is a workerman WORKER, whose parent is the webman MASTER, whose parent is
+# supervisord. Checking one level up sees "parent is not supervisord" and would
+# kill a perfectly healthy worker.
+is_supervised() {
+    local pid="$1"
+    local depth=0
+    local parent
+    while [ -n "$pid" ] && [ "$pid" != "1" ] && [ "$pid" != "0" ] && [ "$depth" -lt 6 ]; do
+        parent="$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')"
+        [ -n "$parent" ] || return 1
+        if ps -o args= -p "$parent" 2>/dev/null | grep -qi 'supervisord'; then return 0; fi
+        pid="$parent"
+        depth=$((depth + 1))
+    done
+    return 1
+}
+
 # An ORPHANED worker still holding the app port would make supervisor's WebMan fail
 # to bind. Reclaim it - but never touch a worker supervisor is legitimately running,
 # or re-running this installer would kill the live panel.
@@ -174,15 +200,11 @@ if ss -lntpH 2>/dev/null | grep -q '127.0.0.1:6600'; then
         warn "port 6600 is busy but the owning process could not be identified"
     elif ! tr '\0' ' ' < "/proc/$stray/cmdline" 2>/dev/null | grep -qiE 'workerman|webman|adapterman'; then
         warn "port 6600 is held by pid $stray, which is not a webman process — WebMan may fail to start"
+    elif is_supervised "$stray"; then
+        skip "port 6600 held by the supervisor-managed worker — left running"
     else
-        stray_ppid="$(ps -o ppid= -p "$stray" 2>/dev/null | tr -d ' ')"
-        if [ -n "$stray_ppid" ] && [ "$stray_ppid" != "1" ] \
-           && ps -o args= -p "$stray_ppid" 2>/dev/null | grep -qi supervisord; then
-            skip "port 6600 held by the supervisor-managed worker — left running"
-        else
-            kill "$stray" 2>/dev/null && sleep 2
-            ok "released port 6600 from an orphaned worker (pid $stray)"
-        fi
+        kill "$stray" 2>/dev/null && sleep 2
+        ok "released port 6600 from an orphaned worker (pid $stray)"
     fi
 fi
 git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
