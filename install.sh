@@ -231,7 +231,21 @@ git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
 cd "$APP_DIR" || die "cannot cd to $APP_DIR"
 
 INSTALL_LOG=""
-if [ "$SKIP_INSTALL" -eq 0 ] && [ ! -f "$APP_DIR/.env" ]; then
+# A present .env does NOT mean the install finished: init.sh writes it before it
+# even asks for the database, so an aborted attempt leaves one behind - and
+# init.sh then refuses to start *because* .env exists, stranding the install for
+# good. config/v2board.php is only written once the install truly completes, so
+# use that as the marker and clear a leftover .env out of the way.
+if [ "$SKIP_INSTALL" -eq 1 ]; then
+    skip "--skip-install given"
+elif [ -f "$APP_DIR/config/v2board.php" ]; then
+    skip "already installed — not re-running init.sh"
+else
+    if [ -f "$APP_DIR/.env" ]; then
+        backup "$APP_DIR/.env"
+        rm -f "$APP_DIR/.env"
+        ok "cleared the .env from an unfinished attempt so init.sh can run"
+    fi
     say "     running init.sh (composer + database import + admin user)"
     # Capture the output so the generated admin password can be repeated at the
     # end - it is printed exactly once and only its hash is stored. `script`
@@ -243,8 +257,6 @@ if [ "$SKIP_INSTALL" -eq 0 ] && [ ! -f "$APP_DIR/.env" ]; then
     else
         bash "$APP_DIR/init.sh" 2>&1 | tee "$INSTALL_LOG" || die "init.sh failed"
     fi
-else
-    skip ".env already exists — not re-running init.sh"
 fi
 
 # ── 5. nginx URL rewrite ────────────────────────────────────────────────────
