@@ -230,6 +230,21 @@ else
     backup "$DST_REWRITE"
     cp "$SRC_REWRITE" "$DST_REWRITE" && ok "wrote $DST_REWRITE"
 fi
+# Laravel is served out of public/, but aaPanel points a new site at the site
+# directory itself. Left alone that gives 403 on / (no index file there) and 404
+# on every /assets/... file, so the admin panel loads as a blank page.
+if [ -f "$VHOST" ]; then
+    want_root="$APP_DIR/public"
+    cur_root="$(sed -n 's|^[[:space:]]*root[[:space:]]\{1,\}\([^;]*\);.*|\1|p' "$VHOST" | head -1)"
+    if [ "$cur_root" = "$want_root" ]; then
+        skip "document root already points at public/"
+    else
+        backup "$VHOST"
+        sed -i "s|^\([[:space:]]*\)root[[:space:]]\{1,\}[^;]*;|\1root $want_root;|" "$VHOST"
+        ok "document root -> $want_root"
+    fi
+fi
+
 # A site REBUILD in aaPanel regenerates the vhost with every include commented
 # out, which serves the site as pure static files (404 on every panel route).
 if [ -f "$VHOST" ]; then
@@ -440,11 +455,20 @@ fi
 
 printf '\n'
 sleep 3
-CODE="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://127.0.0.1:6600/api/v1/guest/comm/config" -H "Host: $DOMAIN" 2>/dev/null)"
-if [ "$CODE" = "200" ]; then ok "backend answers on 127.0.0.1:6600 (HTTP $CODE)"
-else warn "backend on 127.0.0.1:6600 returned '$CODE' — check: $SUP_LOG/WebMan.err.log"; fi
-
 SECURE_PATH="$(php -r '$c=@include "'"$APP_DIR"'/config/v2board.php"; echo is_array($c)&&isset($c["secure_path"])?$c["secure_path"]:"";' 2>/dev/null)"
+
+probe() {   # label, url, expected
+    local code
+    code="$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 "$2" -H "Host: $DOMAIN" 2>/dev/null)"
+    if [ "$code" = "$3" ]; then ok "$1 (HTTP $code)"; else warn "$1 returned '$code', expected $3"; fi
+}
+
+probe "backend on 127.0.0.1:6600" "http://127.0.0.1:6600/api/v1/guest/comm/config" 200
+# Go through nginx as well: this is the path a browser takes, and it is the only
+# place a wrong document root shows up. Checking the backend port alone once
+# reported success while the panel rendered as a blank page in the browser.
+[ -n "$SECURE_PATH" ] && probe "admin page via nginx" "https://127.0.0.1/$SECURE_PATH" 200
+probe "admin assets via nginx" "https://127.0.0.1/assets/admin/umi.js" 200
 printf '\n\033[1;32m==> IrBoard is set up.\033[0m\n'
 [ -n "$SECURE_PATH" ] && printf '    Admin panel: https://%s/%s\n' "$DOMAIN" "$SECURE_PATH"
 printf '    Logs:        %s/\n\n' "$SUP_LOG"
