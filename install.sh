@@ -250,21 +250,37 @@ INI
         [ -f "$ini" ] && backup "$ini"
         mv "$tmp" "$ini" && chmod 644 "$ini" && ok "program $name written"
     }
+    # Drop a program we previously created whose target has since gone away,
+    # otherwise it sits in supervisor as a permanent FATAL entry.
+    remove_program() {
+        local name="$1" ini="$SUP_PROFILE/$name.ini"
+        [ -f "$ini" ] || return 0
+        [ -x "$SUP_CTL" ] && "$SUP_CTL" -c "$SUP_CONF" stop "$name:*" >/dev/null 2>&1
+        rm -f "$ini" && ok "removed stale program $name"
+    }
+
+    # Only configure a program when the thing it runs actually exists.
     # NOTE: webman must NOT be started with -d here; supervisor owns the process.
-    write_program "WebMan"              "php -c cli-php.ini webman.php start"
-    write_program "V2b"                 "php artisan horizon"
-    write_program "server-config-agent" "/bin/bash $APP_DIR/server_config_agent.sh"
+    PROGRAMS=("WebMan|php -c cli-php.ini webman.php start" "V2b|php artisan horizon")
+    if [ -f "$APP_DIR/server_config_agent.sh" ]; then
+        PROGRAMS+=("server-config-agent|/bin/bash $APP_DIR/server_config_agent.sh")
+    else
+        warn "server_config_agent.sh is not part of this checkout — skipping that program (it is optional)"
+        remove_program "server-config-agent"
+    fi
+    for entry in "${PROGRAMS[@]}"; do
+        write_program "${entry%%|*}" "${entry#*|}"
+    done
 
     # The .ini files make supervisord run them; config.json is what the aaPanel
     # UI reads. Without it the programs work but are invisible in the panel.
-    python3 - "$SUP_REGISTRY" "$APP_DIR" <<'PY'
+    python3 - "$SUP_REGISTRY" "$APP_DIR" "${PROGRAMS[@]}" <<'PY'
 import json, os, sys
 path, app_dir = sys.argv[1], sys.argv[2]
-wanted = [
-    ("WebMan",              "php -c cli-php.ini webman.php start"),
-    ("V2b",                 "php artisan horizon"),
-    ("server-config-agent", "/bin/bash %s/server_config_agent.sh" % app_dir),
-]
+wanted = [tuple(a.split("|", 1)) for a in sys.argv[3:]]
+# Programs this installer owns. Anything else in the file belongs to the user
+# and is left untouched.
+MANAGED = {"WebMan", "V2b", "server-config-agent"}
 try:
     with open(path) as fh:
         data = json.load(fh)
@@ -281,6 +297,11 @@ for name, cmd in wanted:
     # runStatus belongs to the panel UI - keep whatever it already recorded.
     entry.setdefault("runStatus", "ERROR")
     by_name[name] = entry
+# prune a managed program we are no longer configuring (e.g. its script is gone)
+keep = {n for n, _ in wanted}
+for name in list(by_name):
+    if name in MANAGED and name not in keep:
+        del by_name[name]
 merged = list(by_name.values())
 if json.dumps(merged, sort_keys=True) == before:
     print("  \033[1;34m[--]\033[0m aaPanel supervisor registry already correct")
