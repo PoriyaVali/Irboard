@@ -488,12 +488,21 @@ if [ -n "$INSTALL_LOG" ] && [ -f "$INSTALL_LOG" ]; then
     rm -f "$INSTALL_LOG"   # it holds the plaintext password
 fi
 if [ -z "$ADMIN_EMAIL" ] && [ -f "$APP_DIR/.env" ]; then
-    # Re-run: the address can be read back, the password cannot - only its hash
-    # is stored, and it is shown just once during the first install.
+    # Re-run: the address can be read back from the database.
     envval() { sed -n "s/^$1=//p" "$APP_DIR/.env" | tr -d '"' | head -1; }
     ADMIN_EMAIL="$(mysql -h"$(envval DB_HOST)" -u"$(envval DB_USERNAME)" -p"$(envval DB_PASSWORD)" \
         -N -B -e "select email from v2_user where is_admin=1 order by id limit 1;" \
         "$(envval DB_DATABASE)" 2>/dev/null | head -1)"
+fi
+
+PASS_RESET=0
+if [ -z "$ADMIN_PASS" ] && [ -n "$ADMIN_EMAIL" ]; then
+    # The stored password is a bcrypt hash, so the existing one can never be read
+    # back. Issue a fresh one instead, so this always ends with credentials that
+    # actually work.
+    ADMIN_PASS="$(cd "$APP_DIR" && php artisan reset:password "$ADMIN_EMAIL" 2>/dev/null \
+        | sed -n 's/^[[:space:]]*New password:[[:space:]]*//p' | tr -d '\r' | tail -1)"
+    [ -n "$ADMIN_PASS" ] && PASS_RESET=1
 fi
 
 Y='\033[1;33m'; C='\033[0m'
@@ -504,9 +513,13 @@ printf   "${Y}=====================================================${C}\n"
 [ -n "$ADMIN_EMAIL" ] && printf "${Y}  Admin email : %s${C}\n" "$ADMIN_EMAIL"
 if [ -n "$ADMIN_PASS" ]; then
     printf "${Y}  Password    : %s${C}\n" "$ADMIN_PASS"
-    printf "${Y}                (save it now - it is not shown again)${C}\n"
+    if [ "$PASS_RESET" = "1" ]; then
+        printf "${Y}                (newly issued - any earlier password no longer works)${C}\n"
+    else
+        printf "${Y}                (save it now - it is not shown again)${C}\n"
+    fi
 else
-    printf "${Y}  Password    : set during the first install; reset it from the user center${C}\n"
+    printf "${Y}  Password    : could not be determined - run: php artisan reset:password <email>${C}\n"
 fi
 printf   "${Y}${C}\n"
 printf   "${Y}  User panel  : https://%s/${C}\n" "$DOMAIN"

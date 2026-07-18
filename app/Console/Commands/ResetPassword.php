@@ -23,7 +23,7 @@ class ResetPassword extends Command
      *
      * @var string
      */
-    protected $description = '重置用户密码';
+    protected $description = 'Issue a new random password for a user';
 
     /**
      * Create a new command instance.
@@ -43,12 +43,15 @@ class ResetPassword extends Command
     public function handle()
     {
         $user = User::where('email', $this->argument('email'))->first();
-        if (!$user) abort(500, '邮箱不存在');
+        if (!$user) abort(500, 'No user exists with that email address.');
         $password = Helper::guid(false);
         $user->password = password_hash($password, PASSWORD_DEFAULT);
+        // Clear the legacy algo/salt pair, otherwise multiPasswordVerify() would
+        // still check the old scheme and reject the new bcrypt hash.
         $user->password_algo = null;
-        if (!$user->save()) abort(500, '重置失败');
-        $this->info("!!!重置成功!!!");
-        $this->info("新密码为：{$password}，请尽快修改密码。");
+        $user->password_salt = null;
+        if (!$user->save()) abort(500, 'Could not save the new password.');
+        $this->info("Password reset for {$user->email}");
+        $this->info("New password: {$password}");
     }
 }
