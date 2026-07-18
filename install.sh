@@ -380,6 +380,28 @@ PY
         "$SUP_CTL" -c "$SUP_CONF" reread >/dev/null 2>&1
         "$SUP_CTL" -c "$SUP_CONF" update >/dev/null 2>&1
         ok "supervisor reread + update"
+        # `update` only touches programs whose config changed, so a program that is
+        # merely STOPPED stays stopped and the panel never comes up. Make sure each
+        # one is actually running; after a fresh install restart it as well, since a
+        # process started earlier is holding code that has just been replaced.
+        for entry in "${PROGRAMS[@]}"; do
+            pname="${entry%%|*}"
+            state="$("$SUP_CTL" -c "$SUP_CONF" status "$pname:*" 2>/dev/null | awk '{print $2}' | head -1)"
+            if [ -n "$INSTALL_LOG" ] && [ "$state" = "RUNNING" ]; then
+                "$SUP_CTL" -c "$SUP_CONF" restart "$pname:*" >/dev/null 2>&1 \
+                    && ok "$pname restarted onto the new code"
+            elif [ "$state" = "RUNNING" ]; then
+                skip "$pname already running"
+            else
+                "$SUP_CTL" -c "$SUP_CONF" start "$pname:*" >/dev/null 2>&1
+                sleep 1
+                state="$("$SUP_CTL" -c "$SUP_CONF" status "$pname:*" 2>/dev/null | awk '{print $2}' | head -1)"
+                case "$state" in
+                    RUNNING|STARTING) ok "$pname started" ;;
+                    *) warn "$pname is $state — see $SUP_LOG/$pname.err.log" ;;
+                esac
+            fi
+        done
     else
         warn "supervisorctl not found at $SUP_CTL"
     fi
@@ -483,8 +505,13 @@ probe "admin assets via nginx" "https://127.0.0.1/assets/admin/umi.js" 200
 ADMIN_EMAIL=""
 ADMIN_PASS=""
 if [ -n "$INSTALL_LOG" ] && [ -f "$INSTALL_LOG" ]; then
-    ADMIN_EMAIL="$(sed -n 's/^[[:space:]]*Admin email:[[:space:]]*//p'    "$INSTALL_LOG" | tr -d '\r' | tail -1)"
-    ADMIN_PASS="$( sed -n 's/^[[:space:]]*Admin password:[[:space:]]*//p' "$INSTALL_LOG" | tr -d '\r' | tail -1)"
+    # script(1) records the colour codes too, so the line really starts with an
+    # escape sequence rather than "Admin password:". Strip ANSI first or the match
+    # silently fails and a perfectly good password gets thrown away.
+    _log_clean="$(sed 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$INSTALL_LOG" | tr -d '\r')"
+    ADMIN_EMAIL="$(printf '%s\n' "$_log_clean" | sed -n 's/^[[:space:]]*Admin email:[[:space:]]*//p'    | tail -1)"
+    ADMIN_PASS="$( printf '%s\n' "$_log_clean" | sed -n 's/^[[:space:]]*Admin password:[[:space:]]*//p' | tail -1)"
+    unset _log_clean
     rm -f "$INSTALL_LOG"   # it holds the plaintext password
 fi
 if [ -z "$ADMIN_EMAIL" ] && [ -f "$APP_DIR/.env" ]; then
