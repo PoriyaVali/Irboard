@@ -53,7 +53,7 @@ jobs:
         run: |
           set -e
           echo "Linting PHP files..."
-          find app config database routes library resources tests \
+          find app config database routes library resources tests get_domain.php \
             -name '*.php' -print0 | xargs -0 -n1 -P4 php -l >/dev/null
           echo "✓ No syntax errors."
 
@@ -732,6 +732,37 @@ jobs:
           else
             echo "::warning::Installer did not clearly refuse a re-run."
           fi
+
+      - name: aaPanel auto-detect — installer reads the DB from the panel, asks only for the email
+        run: |
+          set -e
+          # On aaPanel the installer should pull the DB name/user/password
+          # automatically (aaPanel stores them, plaintext, in its panel SQLite)
+          # and only ask for the admin email. Build a minimal panel SQLite that
+          # points at the CI database, then run a FRESH install feeding ONLY the
+          # email — no database prompts must be needed.
+          rm -f .env config/v2board.php
+          sudo mkdir -p /www/server/panel/data
+          sudo chmod -R 777 /www/server
+          php -r '
+            $p = getcwd();
+            $db = new PDO("sqlite:/www/server/panel/data/default.db");
+            $db->exec("CREATE TABLE sites (id INTEGER PRIMARY KEY, name TEXT, path TEXT)");
+            $db->exec("CREATE TABLE databases (id INTEGER PRIMARY KEY, pid INTEGER, name TEXT, username TEXT, password TEXT, ps TEXT)");
+            $db->prepare("INSERT INTO sites (id,name,path) VALUES (1,?,?)")->execute(["irboard.test", $p]);
+            $db->prepare("INSERT INTO databases (id,pid,name,username,password,ps) VALUES (1,1,?,?,?,?)")->execute(["irboard_install","root","root","irboard.test"]);
+            echo "mock aaPanel panel DB ready\n";
+          '
+          OUT="$(printf 'ci-admin@example.com\n' | php artisan v2board:install 2>&1)"
+          echo "$OUT"
+          echo "$OUT" | grep -qi 'aaPanel detected' || { echo "::error::installer did not auto-detect aaPanel"; exit 1; }
+          grep -q '^DB_DATABASE=irboard_install' .env || { echo "::error::DB name not auto-filled from the panel"; sed -n '1,30p' .env; exit 1; }
+          grep -q '^DB_USERNAME=root' .env       || { echo "::error::DB user not auto-filled from the panel"; exit 1; }
+          [ -f config/v2board.php ]               || { echo "::error::config/v2board.php not created"; exit 1; }
+          T=$(mysql -h127.0.0.1 -uroot -proot irboard_install -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='irboard_install';")
+          [ "$T" -ge 47 ] || { echo "::error::schema not imported via the aaPanel path ($T tables)"; exit 1; }
+          echo "✓ aaPanel path: DB creds pulled from the panel SQLite; only the admin email was asked."
+          sudo rm -rf /www/server/panel
 
   database:
     name: Database schema (install.sql)
