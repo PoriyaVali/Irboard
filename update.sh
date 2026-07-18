@@ -101,6 +101,19 @@ git rev-parse --verify --quiet "$REMOTE/$BRANCH" >/dev/null \
 if [ "$BEFORE" = "$(git rev-parse "$REMOTE/$BRANCH")" ]; then
     say "Code already up to date."
 else
+    # A file this update ADDS may already exist locally as UNTRACKED — e.g. one
+    # that used to be copied in by hand before the repo shipped it (get_domain.php
+    # was exactly this). git refuses to overwrite untracked files, which aborts the
+    # fast-forward with a confusing "diverged" death. Back those up first so the
+    # merge proceeds and the operator keeps their old copy.
+    while IFS= read -r _f; do
+        [ -n "$_f" ] || continue
+        if [ -e "$_f" ] && [ -z "$(git ls-files -- "$_f")" ]; then
+            _bak="${_f}.bak_update_$(date +%Y%m%d_%H%M%S)"
+            mv -f "$_f" "$_bak" && warn "Backed up local untracked '$_f' -> '$_bak' (now shipped by the repo)."
+        fi
+    done < <(git diff --name-only --diff-filter=A "$BEFORE" "$REMOTE/$BRANCH" 2>/dev/null)
+
     git merge --ff-only "$REMOTE/$BRANCH" \
         || die "Local and remote have diverged — cannot fast-forward.
 Nothing was changed. Resolve manually, then re-run."

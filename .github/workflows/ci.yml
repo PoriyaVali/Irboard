@@ -91,6 +91,37 @@ jobs:
             || { echo "::error::update.sh lost its self-update guard."; exit 1; }
           echo "✓ update.sh self-updates before running."
 
+      - name: update.sh keeps a hand-copied file the repo now ships (untracked-overwrite)
+        run: |
+          set -e
+          # When a file the update ADDS already exists locally as untracked (e.g.
+          # get_domain.php, copied in by hand before the repo shipped it), git
+          # refuses to overwrite it and the fast-forward aborts. update.sh must back
+          # it up and still update. Assert the logic is present AND that it works.
+          grep -q 'diff-filter=A' update.sh || { echo "::error::update.sh lost its untracked-shipped-file backup step."; exit 1; }
+          T="$(mktemp -d)"
+          (
+            cd "$T"
+            git init -q --bare origin.git
+            git clone -q origin.git p && cd p
+            git config user.email t@t; git config user.name t
+            echo base > a; git add a; git commit -qm base; git push -q origin HEAD:master
+            printf 'SHIPPED' > get_domain.php; git add get_domain.php; git commit -qm ship; git push -q origin master
+            # a panel one commit behind, with the file present but UNTRACKED (hand-copied)
+            git reset -q --hard HEAD~1
+            printf 'HANDCOPY' > get_domain.php
+            REMOTE=origin; BRANCH=master; git fetch -q "$REMOTE"; BEFORE="$(git rev-parse HEAD)"
+            while IFS= read -r f; do
+              [ -n "$f" ] || continue
+              if [ -e "$f" ] && [ -z "$(git ls-files -- "$f")" ]; then mv -f "$f" "$f.bak_x"; fi
+            done < <(git diff --name-only --diff-filter=A "$BEFORE" "$REMOTE/$BRANCH")
+            git merge --ff-only "$REMOTE/$BRANCH"
+            [ "$(cat get_domain.php)" = "SHIPPED" ]      || { echo "::error::shipped file was not brought in"; exit 1; }
+            [ "$(cat get_domain.php.bak_x)" = "HANDCOPY" ] || { echo "::error::hand-copied file was not backed up"; exit 1; }
+          )
+          rm -rf "$T"
+          echo "✓ update.sh backs up a hand-copied file and still fast-forwards."
+
       - name: cli-php.ini really enables OPcache + JIT (the webman runtime)
         run: |
           set -e
