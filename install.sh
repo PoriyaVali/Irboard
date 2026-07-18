@@ -165,15 +165,24 @@ else
     fi
 fi
 
-# A stray worker still holding the app port would make supervisor's WebMan fail to
-# bind. Reclaim it, but only when it is clearly one of ours.
+# An ORPHANED worker still holding the app port would make supervisor's WebMan fail
+# to bind. Reclaim it - but never touch a worker supervisor is legitimately running,
+# or re-running this installer would kill the live panel.
 if ss -lntpH 2>/dev/null | grep -q '127.0.0.1:6600'; then
     stray="$(ss -lntpH 2>/dev/null | grep '127.0.0.1:6600' | grep -oE 'pid=[0-9]+' | head -1 | cut -d= -f2)"
-    if [ -n "$stray" ] && tr '\0' ' ' < "/proc/$stray/cmdline" 2>/dev/null | grep -qiE 'workerman|webman|adapterman'; then
-        kill "$stray" 2>/dev/null && sleep 2
-        ok "released port 6600 from a stray worker (pid $stray)"
+    if [ -z "$stray" ]; then
+        warn "port 6600 is busy but the owning process could not be identified"
+    elif ! tr '\0' ' ' < "/proc/$stray/cmdline" 2>/dev/null | grep -qiE 'workerman|webman|adapterman'; then
+        warn "port 6600 is held by pid $stray, which is not a webman process — WebMan may fail to start"
     else
-        warn "port 6600 is in use by pid ${stray:-?} which is not a webman process — WebMan may fail to start"
+        stray_ppid="$(ps -o ppid= -p "$stray" 2>/dev/null | tr -d ' ')"
+        if [ -n "$stray_ppid" ] && [ "$stray_ppid" != "1" ] \
+           && ps -o args= -p "$stray_ppid" 2>/dev/null | grep -qi supervisord; then
+            skip "port 6600 held by the supervisor-managed worker — left running"
+        else
+            kill "$stray" 2>/dev/null && sleep 2
+            ok "released port 6600 from an orphaned worker (pid $stray)"
+        fi
     fi
 fi
 git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
@@ -244,6 +253,11 @@ numprocs=1
 stopsignal=QUIT
 process_name=%(program_name)s_%(process_num)02d
 INI
+        # If generating the file failed we must not compare against a truncated
+        # temp file and then claim the existing one is "already correct".
+        if ! grep -q "^\[program:$name\]" "$tmp" 2>/dev/null; then
+            rm -f "$tmp"; warn "could not generate the config for $name — left untouched"; return
+        fi
         if [ -f "$ini" ] && cmp -s "$tmp" "$ini"; then
             rm -f "$tmp"; skip "program $name already correct"; return
         fi
@@ -253,7 +267,11 @@ INI
     # Drop a program we previously created whose target has since gone away,
     # otherwise it sits in supervisor as a permanent FATAL entry.
     remove_program() {
-        local name="$1" ini="$SUP_PROFILE/$name.ini"
+        # NB: keep these on separate lines. Bash expands every argument of `local`
+        # before assigning any of them, so "local name=$1 ini=...$name..." would
+        # expand an unset $name and abort under `set -u`.
+        local name="$1"
+        local ini="$SUP_PROFILE/$name.ini"
         [ -f "$ini" ] || return 0
         [ -x "$SUP_CTL" ] && "$SUP_CTL" -c "$SUP_CONF" stop "$name:*" >/dev/null 2>&1
         rm -f "$ini" && ok "removed stale program $name"
