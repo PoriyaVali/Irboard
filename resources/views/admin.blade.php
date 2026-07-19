@@ -31,8 +31,16 @@
 <script src="/assets/admin/vendors.async.js?v={{$version}}"></script>
 <script src="/assets/admin/components.async.js?v={{$version}}"></script>
 <script>
-    // Language selector - stored in localStorage
-    window.adminLang = localStorage.getItem('admin_lang') || 'zh';
+    // The admin UI language is decided by umi's own locale plugin, which reads
+    // localStorage 'umi_locale' and otherwise falls back to the bundle default
+    // (zh-CN, inherited from upstream). Default it to Persian on first load, and
+    // only when unset, so the in-panel language switcher still works.
+    if (!localStorage.getItem('umi_locale')) { localStorage.setItem('umi_locale', 'fa-IR'); }
+
+    // NOTE: 'admin_lang' below decides nothing today - the bundle never reads
+    // window.adminLang, and umi.js and umi-fa.js are byte-identical. Left in place
+    // so a genuinely different umi-fa.js build would still be picked up.
+    window.adminLang = localStorage.getItem('admin_lang') || 'fa';
     var umiFile = window.adminLang === 'fa' ? 'umi-fa.js' : 'umi.js';
     document.write('<script src="/assets/admin/' + umiFile + '?v={{$version}}"><\/script>');
 </script>
