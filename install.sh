@@ -233,6 +233,16 @@ fi
 git config --global --add safe.directory "$APP_DIR" 2>/dev/null || true
 cd "$APP_DIR" || die "cannot cd to $APP_DIR"
 
+# init.sh runs `chmod -R 775 storage bootstrap/cache`, which flips the exec bit on
+# the tracked .gitignore files in there. git counts a mode change as a
+# modification, so the tree ends up permanently dirty and every future update
+# refuses to run - the installer would be sabotaging its own update path. File
+# modes on a deployment are managed by chmod/chown, not by git.
+if [ -d "$APP_DIR/.git" ] && [ "$(git -C "$APP_DIR" config core.fileMode 2>/dev/null)" != "false" ]; then
+    git -C "$APP_DIR" config core.fileMode false 2>/dev/null \
+        && ok "git set to ignore file-mode changes (chmod would otherwise block updates)"
+fi
+
 INSTALL_LOG=""
 # A present .env does NOT mean the install finished: init.sh writes it before it
 # even asks for the database, so an aborted attempt leaves one behind - and

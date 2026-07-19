@@ -50,6 +50,12 @@ fi
 # ── 3. Writable paths ───────────────────────────────────────────────────────
 mkdir -p storage/logs storage/framework/{cache,sessions,views} bootstrap/cache
 chmod -R 775 storage bootstrap/cache 2>/dev/null
+# That chmod flips the exec bit on the tracked .gitignore files under storage/,
+# and git reports a mode change as a modification. Left alone the working tree is
+# dirty from the moment of install, and update.sh - which refuses to run on a
+# dirty tree - could never update this deployment again. Modes here belong to the
+# deployment, not to git.
+[ -d .git ] && git config core.fileMode false 2>/dev/null
 
 # ── 4. Install ──────────────────────────────────────────────────────────────
 # NOTE: do NOT create .env here. `v2board:install` refuses to run when .env
