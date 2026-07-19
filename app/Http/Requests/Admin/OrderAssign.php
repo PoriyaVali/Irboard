@@ -24,11 +24,11 @@ class OrderAssign extends FormRequest
     public function messages()
     {
         return [
-            'plan_id.required' => '订阅不能为空',
-            'email.required' => '邮箱不能为空',
-            'total_amount.required' => '支付金额不能为空',
-            'period.required' => '订阅周期不能为空',
-            'period.in' => '订阅周期格式有误'
+            'plan_id.required' => '订阅 نمی‌تواند خالی باشد',
+            'email.required' => 'ایمیل نمی‌تواند خالی باشد',
+            'total_amount.required' => '支付金额 نمی‌تواند خالی باشد',
+            'period.required' => 'دوره‌ی اشتراک نمی‌تواند خالی باشد',
+            'period.in' => 'دوره‌ی اشتراک دارای فرمت نامعتبر است'
         ];
     }
 }

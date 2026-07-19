@@ -78,7 +78,7 @@ class CardPaymentController extends Controller
         $trackingNumber = trim($trackingNumber);
         
         // بررسی طول شماره پیگیری
-        if (strlen($trackingNumber) < 6 || strlen($trackingNumber) > 30) {
+        if (strlen($trackingNumber) < 4 || strlen($trackingNumber) > 30) {
             abort(400, 'شماره پیگیری نامعتبر است');
         }
 

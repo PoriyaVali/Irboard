@@ -20,59 +20,6 @@ use ReCaptcha\ReCaptcha;
 
 class AuthController extends Controller
 {
-    public function loginWithMailLink(Request $request)
-    {
-        if (!(int)config('v2board.login_with_mail_link_enable')) {
-            abort(404);
-        }
-        $params = $request->validate([
-            'email' => 'required|email:strict',
-            'redirect' => 'nullable'
-        ]);
-
-        if (Cache::get(CacheKey::get('LAST_SEND_LOGIN_WITH_MAIL_LINK_TIMESTAMP', $params['email']))) {
-            abort(500, __('Sending frequently, please try again later'));
-        }
-
-        $user = User::where('email', $params['email'])->first();
-        if (!$user) {
-            return response([
-                'data' => true
-            ]);
-        }
-
-        $code = Helper::guid();
-        $key = CacheKey::get('TEMP_TOKEN', $code);
-        Cache::put($key, $user->id, 300);
-        Cache::put(CacheKey::get('LAST_SEND_LOGIN_WITH_MAIL_LINK_TIMESTAMP', $params['email']), time(), 60);
-
-
-        $redirect = '/#/login?verify=' . $code . '&redirect=' . ($request->input('redirect') ? $request->input('redirect') : 'dashboard');
-        if (config('v2board.app_url')) {
-            $link = config('v2board.app_url') . $redirect;
-        } else {
-            $link = url($redirect);
-        }
-
-        SendEmailJob::dispatch([
-            'email' => $user->email,
-            'subject' => __('Login to :name', [
-                'name' => config('v2board.app_name', 'V2Board')
-            ]),
-            'template_name' => 'login',
-            'template_value' => [
-                'name' => config('v2board.app_name', 'V2Board'),
-                'link' => $link,
-                'url' => config('v2board.app_url')
-            ]
-        ]);
-
-        return response([
-            'data' => $link
-        ]);
-
-    }
-
     public function register(AuthRegister $request)
     {
         if ((int)config('v2board.register_limit_by_ip_enable', 0)) {
@@ -112,15 +59,18 @@ class AuthController extends Controller
                 abort(500, __('You must use the invitation code to register'));
             }
         }
+        $email = $request->input('email');
+        $cacheKeyEmail = is_string($email) ? strtolower(trim($email)) : '';
         if ((int)config('v2board.email_verify', 0)) {
-            if (empty($request->input('email_code'))) {
-                abort(500, __('Email verification code cannot be empty'));
+            $inputCode = $request->input('email_code');
+            if (!is_string($inputCode) || !preg_match('/^\d{6}$/', $inputCode)) {
+                abort(500, __('Incorrect email verification code'));
             }
-            if ((string)Cache::get(CacheKey::get('EMAIL_VERIFY_CODE', $request->input('email'))) !== (string)$request->input('email_code')) {
+            $cachedCode = Cache::get(CacheKey::get('EMAIL_VERIFY_CODE', $cacheKeyEmail));
+            if ($cachedCode === null || $cachedCode === '' || !hash_equals((string)$cachedCode, $inputCode)) {
                 abort(500, __('Incorrect email verification code'));
             }
         }
-        $email = $request->input('email');
         $password = $request->input('password');
         $exist = User::where('email', $email)->first();
         if ($exist) {
@@ -165,7 +115,7 @@ class AuthController extends Controller
             abort(500, __('Register failed'));
         }
         if ((int)config('v2board.email_verify', 0)) {
-            Cache::forget(CacheKey::get('EMAIL_VERIFY_CODE', $request->input('email')));
+            Cache::forget(CacheKey::get('EMAIL_VERIFY_CODE', $cacheKeyEmail));
         }
 
         $user->last_login_at = time();
@@ -266,10 +216,10 @@ class AuthController extends Controller
     public function getQuickLoginUrl(Request $request)
     {
         $authorization = $request->input('auth_data') ?? $request->header('authorization');
-        if (!$authorization) abort(403, '未登录或登陆已过期');
+        if (!$authorization) abort(403, 'وارد نشده‌اید یا نشست منقضی شده است');
 
         $user = AuthService::decryptAuthData($authorization);
-        if (!$user) abort(403, '未登录或登陆已过期');
+        if (!$user) abort(403, 'وارد نشده‌اید یا نشست منقضی شده است');
 
         $code = Helper::guid();
         $key = CacheKey::get('TEMP_TOKEN', $code);
@@ -287,26 +237,41 @@ class AuthController extends Controller
 
     public function forget(AuthForget $request)
     {
-        $forgetRequestLimitKey = CacheKey::get('FORGET_REQUEST_LIMIT', $request->input('email'));
-        $forgetRequestLimit = (int)Cache::get($forgetRequestLimitKey);
-        if ($forgetRequestLimit >= 3) abort(500, __('Reset failed, Please try again later'));
-        if ((string)Cache::get(CacheKey::get('EMAIL_VERIFY_CODE', $request->input('email'))) !== (string)$request->input('email_code')) {
-            Cache::put($forgetRequestLimitKey, $forgetRequestLimit ? $forgetRequestLimit + 1 : 1, 300);
+        $email     = $request->input('email');
+        $inputCode = $request->input('email_code');
+        $password  = $request->input('password');
+
+        if (!is_string($email) || !is_string($inputCode) || !is_string($password)) {
             abort(500, __('Incorrect email verification code'));
         }
-        $user = User::where('email', $request->input('email'))->first();
+        if (!preg_match('/^\d{6}$/', $inputCode)) {
+            abort(500, __('Incorrect email verification code'));
+        }
+
+        $cacheKeyEmail         = strtolower(trim($email));
+        $forgetRequestLimitKey = CacheKey::get('FORGET_REQUEST_LIMIT', $cacheKeyEmail);
+        $forgetRequestLimit    = (int)Cache::get($forgetRequestLimitKey);
+        if ($forgetRequestLimit >= 3) {
+            abort(500, __('Reset failed, Please try again later'));
+        }
+
+        $cachedCode = Cache::get(CacheKey::get('EMAIL_VERIFY_CODE', $cacheKeyEmail));
+        if ($cachedCode === null || $cachedCode === '' || !hash_equals((string)$cachedCode, $inputCode)) {
+            Cache::put($forgetRequestLimitKey, $forgetRequestLimit + 1, 300);
+            abort(500, __('Incorrect email verification code'));
+        }
+        $user = User::where('email', $email)->first();
         if (!$user) {
             abort(500, __('This email is not registered in the system'));
         }
-        $user->password = password_hash($request->input('password'), PASSWORD_DEFAULT);
-        $user->password_algo = NULL;
-        $user->password_salt = NULL;
+        $user->password      = password_hash($password, PASSWORD_DEFAULT);
+        $user->password_algo = null;
+        $user->password_salt = null;
         if (!$user->save()) {
             abort(500, __('Reset failed'));
         }
-        Cache::forget(CacheKey::get('EMAIL_VERIFY_CODE', $request->input('email')));
-        $authService = new AuthService($user);
-        $authService->removeAllSession();
+        Cache::forget(CacheKey::get('EMAIL_VERIFY_CODE', $cacheKeyEmail));
+        (new AuthService($user))->removeAllSession();
         return response([
             'data' => true
         ]);

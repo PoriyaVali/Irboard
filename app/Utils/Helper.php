@@ -196,6 +196,22 @@ class Helper
         return filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_IPV6) ? "[$host]" : $host;
     }
 
+    public static function buildMdnsUri($uuid, $server)
+    {
+        $domain = is_array($server['domain'] ?? null) ? implode(',', $server['domain']) : ($server['domain'] ?? '');
+        $params = [
+            'domain' => $domain,
+            'enc'    => $server['encryption_method'] ?? 2,
+            'key'    => $server['encryption_key'] ?? '',
+            'secret' => self::getServerKey($server['created_at'], 32),
+        ];
+        $host = self::formatHost($server['host']);
+        $port = $server['server_port'];
+        $name = $server['name'];
+        $query = http_build_query($params);
+        return "mdns://{$uuid}@{$host}:{$port}?{$query}#" . rawurlencode($name) . "\r\n";
+    }
+
     public static function buildShadowsocksUri($uuid, $server)
     {
         $cipher = $server['cipher'];
@@ -316,6 +332,13 @@ class Helper
                 $config['sid'] = $tlsSettings['short_id'] ?? '';
             }
         }
+        if (!empty($tlsSettings['ech'])) {
+            if ($tlsSettings['ech'] === 'cloudflare') {
+                $config['ech'] = 'cloudflare-ech.com+https://doh.pub/dns-query';
+            } elseif ($tlsSettings['ech'] === 'custom' && !empty($tlsSettings['ech_config'])) {
+                $config['ech'] = is_array($tlsSettings['ech_config']) ? $tlsSettings['ech_config'][0] : $tlsSettings['ech_config'];
+            }
+        }
         if (isset($server['encryption']) && $server['encryption'] == 'mlkem768x25519plus') {
             $encSettings = $server['encryption_settings'];
             $enc = 'mlkem768x25519plus.' . ($encSettings['mode'] ?? 'native') . '.' . ($encSettings['rtt'] ?? '1rtt');
@@ -354,6 +377,13 @@ class Helper
                 }
             }
         }
+        if (!empty($tlsSettings['ech'])) {
+            if ($tlsSettings['ech'] === 'cloudflare') {
+                $config['ech'] = 'cloudflare-ech.com+https://doh.pub/dns-query';
+            } elseif ($tlsSettings['ech'] === 'custom' && !empty($tlsSettings['ech_config'])) {
+                $config['ech'] = is_array($tlsSettings['ech_config']) ? $tlsSettings['ech_config'][0] : $tlsSettings['ech_config'];
+            }
+        }
         $query = http_build_query($config);
         return "trojan://{$password}@" . self::formatHost($server['host']) . ":{$server['port']}?{$query}#". rawurlencode($server['name']) . "\r\n";
     }
@@ -367,14 +397,14 @@ class Helper
         $firstPort = strpos($parts[0], '-') !== false ? explode('-', $parts[0])[0] : $parts[0];
 
         $uri = $server['version'] == 2 ?
-            "hysteria2://{$password}@{$remote}:{$firstPort}/?insecure={$server['insecure']}&sni=" . ($server['server_name'] ?? $server['host']) :
-            "hysteria://{$remote}:{$firstPort}/?protocol=udp&auth={$password}&insecure={$server['insecure']}&peer=" . ($server['server_name'] ?? $server['host']) . "&upmbps={$server['down_mbps']}&downmbps={$server['up_mbps']}";
+            "hysteria2://{$password}@{$remote}:{$firstPort}/?insecure={$server['insecure']}&sni={$server['server_name']}" :
+            "hysteria://{$remote}:{$firstPort}/?protocol=udp&auth={$password}&insecure={$server['insecure']}&peer={$server['server_name']}&upmbps={$server['down_mbps']}&downmbps={$server['up_mbps']}";
 
         if (isset($server['obfs']) && isset($server['obfs_password'])) {
             $obfs_password = rawurlencode($server['obfs_password']);
             $uri .= $server['version'] == 2 ? 
                 "&obfs={$server['obfs']}&obfs-password={$obfs_password}" :
-                "&obfs={$server['obfs']}&obfsParam={$obfs_password}";
+                "&obfs={$server['obfs']}&obfsParam{$obfs_password}";
         }
         if (count($parts) !== 1 || strpos($parts[0], '-') !== false) {
             $uri .= "&mport={$server['mport']}";
@@ -391,7 +421,7 @@ class Helper
         $firstPort = strpos($parts[0], '-') !== false ? explode('-', $parts[0])[0] : $parts[0];
         $tlsSettings = $server['tls_settings'] ?? [];
         $insecure = $tlsSettings['allow_insecure'] ?? 0;
-        $sni = $tlsSettings['server_name'] ?? ($server['server_name'] ?? $server['host']);
+        $sni = $tlsSettings['server_name'] ?? '';
         $uri = "hysteria2://{$password}@{$remote}:{$firstPort}/?insecure={$insecure}&sni={$sni}";
 
         if (isset($server['obfs']) && isset($server['obfs_password'])) {
@@ -428,18 +458,71 @@ class Helper
     {
         $tlsSettings = $server['tls_settings'] ?? [];
         $config = [
+            'type' => $server['network'] ?? 'tcp',
             'insecure' => $server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0),
+            'fp' => $tlsSettings['fingerprint'] ?? 'chrome',
         ];
-        if (isset($server['server_name'])|| isset($tlsSettings['server_name'])) {
+        if (isset($server['server_name']) || isset($tlsSettings['server_name'])) {
             $config['sni'] = $server['server_name'] ?? ($tlsSettings['server_name'] ?? '');
         }
-
+        if (isset($server['tls']) && $server['tls'] == 2) {
+            $config['security'] = 'reality';
+            $config['pbk'] = $tlsSettings['public_key'] ?? '';
+            $config['sid'] = $tlsSettings['short_id'] ?? '';
+        }
         $remote = self::formatHost($server['host']);
         $port = $server['port'];
         $name = self::encodeURIComponent($server['name']);
-
+        if (isset($server['network']) && isset($server['network_settings'])) {
+            self::configureNetworkSettings($server, $config);
+        }
         $query = http_build_query($config);
         return "anytls://{$password}@{$remote}:{$port}/?{$query}#{$name}\r\n";
+    }
+
+    /**
+     * Generate ECH (Encrypted Client Hello) key pair for sing-box.
+     * Produces ech_key (MarshalECHKeys format, for server inbound)
+     * and ech_config (ECHConfigList, for client outbound).
+     *
+     * @param string $outerSni The cover/front domain for the outer ClientHello SNI (public_name).
+     *                         This is the FAKE domain visible to network observers.
+     *                         The real server_name is encrypted in the inner ClientHello.
+     */
+    public static function generateEchKeyPair($outerSni)
+    {
+        $privateKey = random_bytes(32);
+        $publicKey = sodium_crypto_scalarmult_base($privateKey);
+
+        $configId = random_int(0, 255);
+
+        // ECHConfig contents per draft-ietf-tls-esni
+        $configData = pack('C', $configId);              // config_id
+        $configData .= pack('n', 0x0020);                // kem_id: DHKEM(X25519, HKDF-SHA256)
+        $configData .= pack('n', 32) . $publicKey;       // public_key with length prefix
+        // cipher suites: {HKDF-SHA256, AES-128-GCM}, {HKDF-SHA256, AES-256-GCM}, {HKDF-SHA256, ChaCha20-Poly1305}
+        $suites = pack('nnnnnn', 0x0001, 0x0001, 0x0001, 0x0002, 0x0001, 0x0003);
+        $configData .= pack('n', strlen($suites)) . $suites;
+        $configData .= pack('C', 0);                     // maximum_name_length
+        $configData .= pack('C', strlen($outerSni)) . $outerSni; // public_name (cover domain, NOT real SNI)
+        $configData .= pack('n', 0);                     // extensions (empty)
+
+        // ECHConfig = version(0xfe0d) + length + data
+        $echConfig = pack('n', 0xfe0d) . pack('n', strlen($configData)) . $configData;
+
+        // ECHConfigList for client (no outer length prefix, per Go crypto/tls)
+        $echConfigList = $echConfig;
+
+        // MarshalECHKeys for server: length-prefixed configs + key entries
+        $echKeys = pack('n', strlen($echConfig)) . $echConfig;
+        $echKeys .= pack('n', 1);                        // num_keys = 1
+        $echKeys .= pack('C', $configId);                // config_id
+        $echKeys .= pack('n', 32) . $privateKey;         // private key with length prefix
+
+        return [
+            'ech_key' => base64_encode($echKeys),
+            'ech_config' => base64_encode($echConfigList),
+        ];
     }
 
     public static function configureNetworkSettings($server, &$config)

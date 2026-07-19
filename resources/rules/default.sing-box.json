@@ -52,10 +52,6 @@
             "mtu": 1400,
             "stack": "gvisor",
             "strict_route": true,
-            "sniff": true,
-            "sniff_override_destination": true,
-            "sniff_timeout": "300ms",
-            "domain_strategy": "prefer_ipv4",
             "route_exclude_address_set": [
                 "geoip-ir"
             ]
@@ -207,7 +203,7 @@
                     "myket.ir",
                     "balad.ir",
                     "neshan.org",
-                    "YOUR_FRONTEND_DOMAIN"
+                    "drmobjay.com"
                 ],
                 "action": "route",
                 "outbound": "DIRECT"
@@ -328,7 +324,7 @@
                 "tag": "geoip-ir",
                 "type": "remote",
                 "format": "binary",
-                "url": "https://YOUR_FRONTEND_DOMAIN/route/geoip-ir.srs",
+                "url": "https://drmobjay.com/route/geoip-ir.srs",
                 "download_detour": "DIRECT",
                 "update_interval": "168h"
             },
@@ -336,7 +332,7 @@
                 "tag": "geosite-ir",
                 "type": "remote",
                 "format": "binary",
-                "url": "https://YOUR_FRONTEND_DOMAIN/route/geosite-ir.srs",
+                "url": "https://drmobjay.com/route/geosite-ir.srs",
                 "download_detour": "DIRECT",
                 "update_interval": "168h"
             },
@@ -344,7 +340,7 @@
                 "tag": "category-ads-all",
                 "type": "remote",
                 "format": "binary",
-                "url": "https://YOUR_FRONTEND_DOMAIN/route/geosite-category-ads-all.srs",
+                "url": "https://drmobjay.com/route/geosite-category-ads-all.srs",
                 "download_detour": "DIRECT",
                 "update_interval": "168h"
             }

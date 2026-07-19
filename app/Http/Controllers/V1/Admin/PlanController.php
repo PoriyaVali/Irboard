@@ -13,7 +13,7 @@ use App\Services\PlanService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\BotSetting;
-use App\Services\ExchangeRateService;
+use App\Services\ExchangeService;
 
 class PlanController extends Controller
 {
@@ -39,7 +39,7 @@ class PlanController extends Controller
         if ($request->input('id')) {
             $plan = Plan::find($request->input('id'));
             if (!$plan) {
-                abort(500, '该订阅不存在');
+                abort(500, 'این اشتراک یافت نشد');
             }
             DB::beginTransaction();
             // update user group id and transfer
@@ -74,7 +74,7 @@ class PlanController extends Controller
                 }
             } catch (\Exception $e) {
                 DB::rollBack();
-                abort(500, '保存失败');
+                abort(500, 'ذخیره ناموفق بود');
             }
             DB::commit();
             return response([
@@ -82,7 +82,7 @@ class PlanController extends Controller
             ]);
         }
         if (!Plan::create($params)) {
-            abort(500, '创建失败');
+            abort(500, 'ساخت ناموفق بود');
         }
         return response([
             'data' => true
@@ -92,15 +92,15 @@ class PlanController extends Controller
     public function drop(Request $request)
     {
         if (Order::where('plan_id', $request->input('id'))->first()) {
-            abort(500, '该订阅下存在订单无法删除');
+            abort(500, 'به‌دلیل وجود سفارش، این اشتراک قابل حذف نیست');
         }
         if (User::where('plan_id', $request->input('id'))->first()) {
-            abort(500, '该订阅下存在用户无法删除');
+            abort(500, 'به‌دلیل وجود کاربر، این اشتراک قابل حذف نیست');
         }
         if ($request->input('id')) {
             $plan = Plan::find($request->input('id'));
             if (!$plan) {
-                abort(500, '该订阅ID不存在');
+                abort(500, 'شناسه‌ی این اشتراک یافت نشد');
             }
         }
         return response([
@@ -118,13 +118,13 @@ class PlanController extends Controller
 
         $plan = Plan::find($request->input('id'));
         if (!$plan) {
-            abort(500, '该订阅不存在');
+            abort(500, 'این اشتراک یافت نشد');
         }
 
         try {
             $plan->update($updateData);
         } catch (\Exception $e) {
-            abort(500, '保存失败');
+            abort(500, 'ذخیره ناموفق بود');
         }
 
         return response([
@@ -138,7 +138,7 @@ class PlanController extends Controller
         foreach ($request->input('plan_ids') as $k => $v) {
             if (!Plan::find($v)->update(['sort' => $k + 1])) {
                 DB::rollBack();
-                abort(500, '保存失败');
+                abort(500, 'ذخیره ناموفق بود');
             }
         }
         DB::commit();
@@ -156,7 +156,7 @@ class PlanController extends Controller
             return $params;
         }
 
-        $rate = ExchangeRateService::getUsdSellPriceFresh();
+        $rate = ExchangeService::getCurrentRate();
         if (!$rate) {
             return $params;
         }

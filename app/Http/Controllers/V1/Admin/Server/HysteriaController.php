@@ -48,12 +48,12 @@ class HysteriaController extends Controller
         if ($request->input('id')) {
             $server = ServerHysteria::find($request->input('id'));
             if (!$server) {
-                abort(500, '服务器不存在');
+                abort(500, 'سرور یافت نشد');
             }
             try {
                 $server->update($params);
             } catch (\Exception $e) {
-                abort(500, '保存失败');
+                abort(500, 'ذخیره ناموفق بود');
             }
             return response([
                 'data' => true
@@ -61,7 +61,7 @@ class HysteriaController extends Controller
         }
 
         if (!ServerHysteria::create($params)) {
-            abort(500, '创建失败');
+            abort(500, 'ساخت ناموفق بود');
         }
 
         return response([
@@ -74,7 +74,7 @@ class HysteriaController extends Controller
         if ($request->input('id')) {
             $server = ServerHysteria::find($request->input('id'));
             if (!$server) {
-                abort(500, '节点ID不存在');
+                abort(500, 'شناسه‌ی نود یافت نشد');
             }
         }
         return response([
@@ -87,7 +87,7 @@ class HysteriaController extends Controller
         $request->validate([
             'show' => 'in:0,1'
         ], [
-            'show.in' => '显示状态格式不正确'
+            'show.in' => 'فرمت وضعیت نمایش نادرست است'
         ]);
         $params = $request->only([
             'show',
@@ -96,12 +96,12 @@ class HysteriaController extends Controller
         $server = ServerHysteria::find($request->input('id'));
 
         if (!$server) {
-            abort(500, '该服务器不存在');
+            abort(500, 'این سرور یافت نشد');
         }
         try {
             $server->update($params);
         } catch (\Exception $e) {
-            abort(500, '保存失败');
+            abort(500, 'ذخیره ناموفق بود');
         }
 
         return response([
@@ -114,10 +114,10 @@ class HysteriaController extends Controller
         $server = ServerHysteria::find($request->input('id'));
         $server->show = 0;
         if (!$server) {
-            abort(500, '服务器不存在');
+            abort(500, 'سرور یافت نشد');
         }
         if (!ServerHysteria::create($server->toArray())) {
-            abort(500, '复制失败');
+            abort(500, 'کپی ناموفق بود');
         }
 
         return response([

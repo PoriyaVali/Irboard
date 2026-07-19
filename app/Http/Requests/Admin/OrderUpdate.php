@@ -22,8 +22,8 @@ class OrderUpdate extends FormRequest
     public function messages()
     {
         return [
-            'status.in' => '销售状态格式不正确',
-            'commission_status.in' => '佣金状态格式不正确'
+            'status.in' => 'وضعیت فروش دارای فرمت نادرست است',
+            'commission_status.in' => 'وضعیت پورسانت دارای فرمت نادرست است'
         ];
     }
 }

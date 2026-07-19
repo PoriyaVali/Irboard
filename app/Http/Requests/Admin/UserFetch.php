@@ -23,11 +23,11 @@ class UserFetch extends FormRequest
     public function messages()
     {
         return [
-            'filter.*.key.required' => '过滤键不能为空',
-            'filter.*.key.in' => '过滤键参数有误',
-            'filter.*.condition.required' => '过滤条件不能为空',
-            'filter.*.condition.in' => '过滤条件参数有误',
-            'filter.*.value.required' => '过滤值不能为空'
+            'filter.*.key.required' => 'کلید فیلتر نمی‌تواند خالی باشد',
+            'filter.*.key.in' => 'کلید فیلترپارامتر نامعتبر است',
+            'filter.*.condition.required' => 'شرط فیلتر نمی‌تواند خالی باشد',
+            'filter.*.condition.in' => 'شرط فیلترپارامتر نامعتبر است',
+            'filter.*.value.required' => 'مقدار فیلتر نمی‌تواند خالی باشد'
         ];
     }
 }

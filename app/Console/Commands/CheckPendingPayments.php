@@ -554,13 +554,13 @@ class CheckPendingPayments extends Command
             $verifyResult = $zibal->verify($trackId);
 
             if ($verifyResult) {
-                if ($order->status !== 3) {
-                    $order->status = 3;
-                    $order->paid_at = time();
-                    $order->updated_at = time();
-                    $order->save();
+                if ((int)$order->status === 0 || (int)$order->status === 2) {
+                    // به‌جای ست مستقیم status، از مسیر استاندارد paid() استفاده می‌کنیم
+                    // تا OrderHandleJob -> open() اجرا و تعرفه فعال/رزرو شود.
+                    $orderService = new \App\Services\OrderService($order);
+                    $orderService->paid((string)$trackId);
                     
-                    Log::channel('payment')->info('✓ Order verified in recovery', [
+                    Log::channel('payment')->info('✓ Order verified in recovery (activated)', [
                         'order_id' => $order->id,
                         'trade_no' => $order->trade_no,
                         'track_id' => $trackId,
@@ -593,6 +593,16 @@ class CheckPendingPayments extends Command
         try {
             DB::beginTransaction();
 
+            // IDEMPOTENCY GUARD: never credit the same order twice
+            $lockedOrder = Order::lockForUpdate()->find($order->id);
+            if ($lockedOrder && in_array((int)$lockedOrder->status, [3, 4], true)) {
+                PaymentTrack::where('trade_no', $lockedOrder->trade_no)->where('is_used', 0)->update(['is_used' => 1]);
+                cache()->forget("zibal_track_{$lockedOrder->trade_no}");
+                DB::commit();
+                Log::channel('payment')->warning('Refund skipped: already credited (idempotency)', ['order_id' => $order->id, 'status' => $lockedOrder->status]);
+                return true;
+            }
+
             $user = User::lockForUpdate()->find($order->user_id);
 
             if (!$user) {
@@ -606,9 +616,9 @@ class CheckPendingPayments extends Command
             $order->status = 4;
             $order->save();
 
-            $track = PaymentTrack::where('track_id', $trackId)->first();
-            if ($track && !$track->is_used) {
-                $track->markAsUsed();
+            // mark ALL tracks of this trade_no used (not just one) to stop re-selection
+            foreach (PaymentTrack::where('trade_no', $order->trade_no)->where('is_used', 0)->get() as $__tk) {
+                $__tk->markAsUsed();
             }
 
             cache()->forget("zibal_track_{$order->trade_no}");

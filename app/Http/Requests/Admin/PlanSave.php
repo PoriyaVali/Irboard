@@ -38,27 +38,30 @@ class PlanSave extends FormRequest
             'reset_price_usd' => 'nullable|numeric',
             'reset_traffic_method' => 'nullable|integer|in:0,1,2,3,4',
             'capacity_limit' => 'nullable|integer',
-            'speed_limit' => 'nullable|integer'
+            'speed_limit' => 'nullable|integer',
+            'show' => 'in:0,1',
+            'renew' => 'in:0,1',
+            'carry_over_days' => 'in:0,1'
         ];
     }
 
     public function messages()
     {
         return [
-            'name.required' => '套餐名称不能为空',
-            'type.required' => '套餐类型不能为空',
-            'type.in' => '套餐类型格式有误',
-            'group_id.required' => '权限组不能为空',
-            'transfer_enable.required' => '流量不能为空',
-            'device_limit.integer' => '设备数限制格式有误',
-            'month_price.integer' => '月付金额格式有误',
-            'quarter_price.integer' => '季付金额格式有误',
-            'half_year_price.integer' => '半年付金额格式有误',
-            'year_price.integer' => '年付金额格式有误',
-            'two_year_price.integer' => '两年付金额格式有误',
-            'three_year_price.integer' => '三年付金额格式有误',
-            'onetime_price.integer' => '一次性金额有误',
-            'reset_price.integer' => '流量重置包金额有误',
+            'name.required' => 'نام بسته نمی‌تواند خالی باشد',
+            'type.required' => 'نوع بسته نمی‌تواند خالی باشد',
+            'type.in' => 'نوع بسته دارای فرمت نامعتبر است',
+            'group_id.required' => 'گروه دسترسی نمی‌تواند خالی باشد',
+            'transfer_enable.required' => 'ترافیک نمی‌تواند خالی باشد',
+            'device_limit.integer' => 'محدودیت تعداد دستگاه دارای فرمت نامعتبر است',
+            'month_price.integer' => 'مبلغ ماهانه دارای فرمت نامعتبر است',
+            'quarter_price.integer' => 'مبلغ فصلی دارای فرمت نامعتبر است',
+            'half_year_price.integer' => 'مبلغ شش‌ماهه دارای فرمت نامعتبر است',
+            'year_price.integer' => 'مبلغ سالانه دارای فرمت نامعتبر است',
+            'two_year_price.integer' => 'مبلغ دوساله دارای فرمت نامعتبر است',
+            'three_year_price.integer' => 'مبلغ سه‌ساله دارای فرمت نامعتبر است',
+            'onetime_price.integer' => 'مبلغ یک‌باره有误',
+            'reset_price.integer' => 'مبلغ بسته‌ی بازنشانی ترافیک有误',
             'month_price_usd.numeric' => 'قیمت دلاری ماهانه نامعتبر است',
             'quarter_price_usd.numeric' => 'قیمت دلاری سه ماهه نامعتبر است',
             'half_year_price_usd.numeric' => 'قیمت دلاری شش ماهه نامعتبر است',
@@ -67,10 +70,10 @@ class PlanSave extends FormRequest
             'three_year_price_usd.numeric' => 'قیمت دلاری سه ساله نامعتبر است',
             'onetime_price_usd.numeric' => 'قیمت دلاری یکباره نامعتبر است',
             'reset_price_usd.numeric' => 'قیمت دلاری ریست نامعتبر است',
-            'reset_traffic_method.integer' => '流量重置方式格式有误',
-            'reset_traffic_method.in' => '流量重置方式格式有误',
-            'capacity_limit.integer' => '容纳用户量限制格式有误',
-            'speed_limit.integer' => '限速格式有误'
+            'reset_traffic_method.integer' => 'روش بازنشانی ترافیک دارای فرمت نامعتبر است',
+            'reset_traffic_method.in' => 'روش بازنشانی ترافیک دارای فرمت نامعتبر است',
+            'capacity_limit.integer' => 'محدودیت ظرفیت کاربر دارای فرمت نامعتبر است',
+            'speed_limit.integer' => 'محدودیت سرعت دارای فرمت نامعتبر است'
         ];
     }
 }

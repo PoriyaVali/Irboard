@@ -13,6 +13,7 @@ use App\Models\ServerVmess;
 use App\Models\ServerVless;
 use App\Models\ServerAnytls;
 use App\Models\ServerV2node;
+use App\Models\ServerMdns;
 use App\Models\Stat;
 use App\Models\StatServer;
 use App\Models\StatUser;
@@ -76,27 +77,27 @@ class StatController extends Controller
         foreach ($statistics as $statistic) {
             $date = date('m-d', $statistic['record_at']);
             $result[] = [
-                'type' => '注册人数',
+                'type' => 'تعداد ثبت‌نام',
                 'date' => $date,
                 'value' => $statistic['register_count']
             ];
             $result[] = [
-                'type' => '收款金额',
+                'type' => 'مبلغ دریافتی',
                 'date' => $date,
                 'value' => $statistic['paid_total'] / 100
             ];
             $result[] = [
-                'type' => '收款笔数',
+                'type' => 'تعداد تراکنش دریافتی',
                 'date' => $date,
                 'value' => $statistic['paid_count']
             ];
             $result[] = [
-                'type' => '佣金金额(已发放)',
+                'type' => 'مبلغ پورسانت (پرداخت‌شده)',
                 'date' => $date,
                 'value' => $statistic['commission_total'] / 100
             ];
             $result[] = [
-                'type' => '佣金笔数(已发放)',
+                'type' => 'تعداد پورسانت (پرداخت‌شده)',
                 'date' => $date,
                 'value' => $statistic['commission_count']
             ];
@@ -118,7 +119,8 @@ class StatController extends Controller
             'tuic' => ServerTuic::where('parent_id', null)->get()->toArray(),
             'hysteria'=> ServerHysteria::where('parent_id', null)->get()->toArray(),
             'anytls' => ServerAnytls::where('parent_id', null)->get()->toArray(),
-            'v2node' => ServerV2node::where('parent_id', null)->get()->toArray()
+            'v2node' => ServerV2node::where('parent_id', null)->get()->toArray(),
+            'mdns' => ServerMdns::where('parent_id', null)->get()->toArray()
         ];
         $startAt = strtotime('-1 day', strtotime(date('Y-m-d')));
         $endAt = strtotime(date('Y-m-d'));
@@ -137,7 +139,7 @@ class StatController extends Controller
             ->get()
             ->toArray();
         foreach ($statistics as $k => $v) {
-            foreach ($servers[$v['server_type']] as $server) {
+            foreach (($servers[$v['server_type']] ?? []) as $server) {
                 if ($server['id'] === $v['server_id']) {
                     $statistics[$k]['server_name'] = $server['name'];
                 }
@@ -161,7 +163,8 @@ class StatController extends Controller
             'tuic' => ServerTuic::where('parent_id', null)->get()->toArray(),
             'hysteria'=> ServerHysteria::where('parent_id', null)->get()->toArray(),
             'anytls' => ServerAnytls::where('parent_id', null)->get()->toArray(),
-            'v2node' => ServerV2node::where('parent_id', null)->get()->toArray()
+            'v2node' => ServerV2node::where('parent_id', null)->get()->toArray(),
+            'mdns' => ServerMdns::where('parent_id', null)->get()->toArray()
         ];
         $startAt = strtotime(date('Y-m-d'));
         $endAt = time();
@@ -180,7 +183,7 @@ class StatController extends Controller
             ->get()
             ->toArray();
         foreach ($statistics as $k => $v) {
-            foreach ($servers[$v['server_type']] as $server) {
+            foreach (($servers[$v['server_type']] ?? []) as $server) {
                 if ($server['id'] === $v['server_id']) {
                     $statistics[$k]['server_name'] = $server['name'];
                 }

@@ -21,16 +21,17 @@ class GoogleAuthService
     /**
      * تولید URL ورود به گوگل
      */
-    public function getAuthorizationUrl(): string
+    public function getAuthorizationUrl(string $state = ''): string
     {
-        $params = http_build_query([
+        $params = http_build_query(array_filter([
             'client_id'     => $this->clientId,
             'redirect_uri'  => $this->redirectUri,
             'response_type' => 'code',
             'scope'         => 'openid email profile',
             'access_type'   => 'offline',
-            'prompt'        => 'consent'
-        ]);
+            'prompt'        => 'consent',
+            'state'         => $state ?: null,
+        ]));
 
         return 'https://accounts.google.com/o/oauth2/v2/auth?' . $params;
     }

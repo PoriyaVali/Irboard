@@ -42,15 +42,15 @@ body{font-family:Tahoma;background:#e74c3c;min-height:100vh;display:flex;align-i
 </div>
 <div class="cd" id="cd">5</div>
 <div class="ct">ثانیه تا بازگشت خودکار</div>
-<a href="{{ config('v2board.frontend_url') }}/index.html#/dashboard/store" class="b">🛒 بازگشت به فروشگاه</a>
+<a href="{{ config('v2board.frontend_url') }}/{{ config('v2board.frontend_login_path', 'index.html') }}#/dashboard/store" class="b">🛒 بازگشت به فروشگاه</a>
 </div>
 <script>
 let n=new Date(),cd=5;
 document.getElementById('d').textContent=n.getFullYear()+'/'+(n.getMonth()+1).toString().padStart(2,'0')+'/'+n.getDate().toString().padStart(2,'0');
 document.getElementById('t').textContent=n.getHours().toString().padStart(2,'0')+':'+n.getMinutes().toString().padStart(2,'0');
 document.getElementById('c').textContent='ERR-'+Date.now().toString().slice(-6);
-setInterval(()=>{cd--;document.getElementById('cd').textContent=cd;if(cd<=0)location.href='{{ config('v2board.frontend_url') }}/index.html#/dashboard/store'},1000);
-document.addEventListener('keydown',e=>{if(e.key==='Escape')location.href='{{ config('v2board.frontend_url') }}/index.html#/dashboard/store'});
+setInterval(()=>{cd--;document.getElementById('cd').textContent=cd;if(cd<=0)location.href='{{ config('v2board.frontend_url') }}/{{ config('v2board.frontend_login_path', 'index.html') }}#/dashboard/store'},1000);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')location.href='{{ config('v2board.frontend_url') }}/{{ config('v2board.frontend_login_path', 'index.html') }}#/dashboard/store'});
 </script>
 </body>
 </html>

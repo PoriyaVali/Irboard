@@ -18,9 +18,15 @@ class AdminRoute
             $router->get ('/config/getThemeTemplate', 'V1\\Admin\\ConfigController@getThemeTemplate');
             $router->post('/config/setTelegramWebhook', 'V1\\Admin\\ConfigController@setTelegramWebhook');
             $router->post('/config/testSendMail', 'V1\\Admin\\ConfigController@testSendMail');
+            // Staff list (admins & staff popup)
+            $router->get ('/staff/list', 'V1\\Admin\\StaffController@list');
+            $router->get ('/staff/tree', 'V1\\Admin\\StaffController@tree');
+            $router->get ('/staff/users', 'V1\\Admin\\StaffController@users');
             // Bot Settings
             $router->get ('/botSetting/fetch', 'V1\\Admin\\BotSettingController@fetch');
             $router->post('/botSetting/save', 'V1\\Admin\\BotSettingController@save');
+            $router->get ('/exchange-rate/current', 'V1\Admin\ExchangeRateAdminController@current');
+            $router->post('/exchange-rate/refresh', 'V1\Admin\ExchangeRateAdminController@refresh');
             // Plan
             $router->get ('/plan/fetch', 'V1\\Admin\\PlanController@fetch');
             $router->post('/plan/save', 'V1\\Admin\\PlanController@save');
@@ -93,6 +99,14 @@ class AdminRoute
                 $router->post('copy', 'V1\\Admin\\Server\\AnyTLSController@copy');
             });
             $router->group([
+                'prefix' => 'server/mdns'
+            ], function ($router) {
+                $router->post('save', 'V1\\Admin\\Server\\MdnsController@save');
+                $router->post('drop', 'V1\\Admin\\Server\\MdnsController@drop');
+                $router->post('update', 'V1\\Admin\\Server\\MdnsController@update');
+                $router->post('copy', 'V1\\Admin\\Server\\MdnsController@copy');
+            });
+            $router->group([
                 'prefix' => 'server/v2node'
             ], function ($router) {
                 $router->post('save', 'V1\\Admin\\Server\\V2nodeController@save');
@@ -121,6 +135,7 @@ class AdminRoute
             // Card Payment Routes
             $router->get ('/card-payment/list', 'V1\\Admin\\CardPaymentController@list');
             $router->get ('/card-payment/detail', 'V1\\Admin\\CardPaymentController@detail');
+            $router->get ('/card-payment/receipt', 'V1\\Admin\\CardPaymentController@receipt');
             $router->post('/card-payment/verify-full', 'V1\\Admin\\CardPaymentController@verifyFull');
             $router->post('/card-payment/verify-different', 'V1\\Admin\\CardPaymentController@verifyDifferent');
             $router->post('/card-payment/reject', 'V1\\Admin\\CardPaymentController@reject');

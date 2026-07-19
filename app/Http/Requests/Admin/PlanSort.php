@@ -21,8 +21,8 @@ class PlanSort extends FormRequest
     public function messages()
     {
         return [
-            'plan_ids.required' => '订阅计划ID不能为空',
-            'plan_ids.array' => '订阅计划ID格式有误'
+            'plan_ids.required' => 'شناسه‌ی پلن اشتراک نمی‌تواند خالی باشد',
+            'plan_ids.array' => 'شناسه‌ی پلن اشتراک دارای فرمت نامعتبر است'
         ];
     }
 }

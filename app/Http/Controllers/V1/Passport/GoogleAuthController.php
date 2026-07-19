@@ -24,10 +24,11 @@ class GoogleAuthController extends Controller
     /**
      * دریافت URL ورود به گوگل
      */
-    public function getLoginUrl()
+    public function getLoginUrl(Request $request)
     {
         try {
-            $url = $this->googleAuthService->getAuthorizationUrl();
+            $state = $request->query('platform') === 'app' ? 'app' : '';
+            $url = $this->googleAuthService->getAuthorizationUrl($state);
             return response()->json(['data' => $url]);
         } catch (\Exception $e) {
             Log::error('Google getLoginUrl Error: ' . $e->getMessage());
@@ -219,17 +220,22 @@ class GoogleAuthController extends Controller
                 'token_preview' => substr($jwtToken, 0, 30) . '...'
             ]);
 
-            // ✅ FIX: Redirect به صفحه LOGIN با auth_data در query string
+            // اگر از اپ آمده (state=app)، به deep link ریدایرکت کن
+            $state = request()->query('state');
+            if ($state === 'app') {
+                $redirectUrl = 'drmobile://auth?auth_data=' . urlencode($jwtToken);
+                Log::info('Google OAuth: Redirecting to app deep link', ['user_id' => $user->id]);
+                return redirect($redirectUrl);
+            }
+
+            // ریدایرکت به وب فرانت‌اند
             $frontendUrl = config('v2board.frontend_url');
-            
-            // روش 1: auth_data در query string قبل از hash (توصیه می‌شود)
-            $redirectUrl = $frontendUrl . '/index.html?auth_data=' . urlencode($jwtToken) . '#/login';
-            
+            $loginPath = config('v2board.frontend_login_path', 'index.html');
+            $redirectUrl = $frontendUrl . '/' . $loginPath . '?auth_data=' . urlencode($jwtToken) . '#/login';
             Log::info('Google OAuth: Redirecting to frontend', [
-                'url' => $frontendUrl . '/index.html?auth_data=***#/login',
+                'url' => $frontendUrl . '/' . $loginPath . '?auth_data=***#/login',
                 'user_id' => $user->id
             ]);
-
             return redirect($redirectUrl);
             
         } catch (\Exception $e) {
@@ -249,11 +255,14 @@ class GoogleAuthController extends Controller
     {
         Log::warning('Google OAuth: Redirecting with error', ['message' => $message]);
         
+        $state = request()->query('state');
+        if ($state === 'app') {
+            return redirect('drmobile://auth?error=' . urlencode($message));
+        }
         $frontendUrl = config('v2board.frontend_url');
-        
-        // ✅ FIX: error در query string قبل از hash
-        $redirectUrl = $frontendUrl . '/index.html?error=' . urlencode($message) . '#/login';
-        
+        $loginPath = config('v2board.frontend_login_path', 'index.html');
+        $redirectUrl = $frontendUrl . '/' . $loginPath . '?error=' . urlencode($message) . '#/login';
+
         return redirect($redirectUrl);
     }
 }

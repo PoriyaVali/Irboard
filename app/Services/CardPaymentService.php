@@ -32,9 +32,25 @@ class CardPaymentService
     /**
      * ارسال نوتیفیکیشن به ادمین
      */
+    private function getAdminChatIds(): array
+    {
+        if (\App\Models\BotSetting::getBool('notify_all_admins', false)) {
+            return \App\Models\User::where('is_admin', 1)
+                ->whereNotNull('telegram_id')
+                ->pluck('telegram_id')
+                ->map(function ($v) { return (string) $v; })
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+        }
+        return $this->adminChatId ? [$this->adminChatId] : [];
+    }
+
     public function sendAdminNotification(CardPayment $cardPayment): bool
     {
-        if (empty($this->telegramToken) || empty($this->adminChatId)) {
+        $targets = $this->getAdminChatIds();
+        if (empty($this->telegramToken) || empty($targets)) {
             Log::channel('payment')->warning('Telegram config missing for card payment notification');
             return false;
         }
@@ -95,41 +111,50 @@ class CardPaymentService
             ]
         ];
 
-        try {
-            $response = Http::post("https://api.telegram.org/bot{$this->telegramToken}/sendMessage", [
-                'chat_id' => $this->adminChatId,
-                'text' => $text,
-                'parse_mode' => 'Markdown',
-                'reply_markup' => json_encode($keyboard)
-            ]);
-
-            $result = $response->json();
-
-            if ($response->successful() && isset($result['result']['message_id'])) {
-                $cardPayment->telegram_message_id = $result['result']['message_id'];
-                $cardPayment->telegram_chat_id = $this->adminChatId;
-                $cardPayment->save();
-
-                Log::channel('payment')->info('Admin notification sent', [
-                    'payment_id' => $cardPayment->id,
-                    'message_id' => $result['result']['message_id']
+        $sentAny = false;
+        $firstMsg = null;
+        $firstChat = null;
+        foreach ($targets as $cid) {
+            try {
+                $response = Http::post("https://api.telegram.org/bot{$this->telegramToken}/sendMessage", [
+                    'chat_id' => $cid,
+                    'text' => $text,
+                    'parse_mode' => 'Markdown',
+                    'reply_markup' => json_encode($keyboard)
                 ]);
-                return true;
+                $result = $response->json();
+                if ($response->successful() && isset($result['result']['message_id'])) {
+                    if ($firstMsg === null) {
+                        $firstMsg = $result['result']['message_id'];
+                        $firstChat = $cid;
+                    }
+                    $sentAny = true;
+                } else {
+                    Log::channel('payment')->error('Failed to send admin notification', [
+                        'payment_id' => $cardPayment->id,
+                        'chat_id' => $cid,
+                        'response' => $result
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::channel('payment')->error('Telegram API error', [
+                    'payment_id' => $cardPayment->id,
+                    'chat_id' => $cid,
+                    'error' => $e->getMessage()
+                ]);
             }
-
-            Log::channel('payment')->error('Failed to send admin notification', [
-                'payment_id' => $cardPayment->id,
-                'response' => $result
-            ]);
-            return false;
-
-        } catch (\Exception $e) {
-            Log::channel('payment')->error('Telegram API error', [
-                'payment_id' => $cardPayment->id,
-                'error' => $e->getMessage()
-            ]);
-            return false;
         }
+        if ($sentAny) {
+            $cardPayment->telegram_message_id = $firstMsg;
+            $cardPayment->telegram_chat_id = $firstChat;
+            $cardPayment->save();
+            Log::channel('payment')->info('Admin notification sent', [
+                'payment_id' => $cardPayment->id,
+                'message_id' => $firstMsg
+            ]);
+            return true;
+        }
+        return false;
     }
 
     /**

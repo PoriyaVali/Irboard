@@ -25,7 +25,7 @@ class UserController extends Controller
     public function resetSecret(Request $request)
     {
         $user = User::find($request->input('id'));
-        if (!$user) abort(500, '用户不存在');
+        if (!$user) abort(500, 'کاربر یافت نشد');
         $user->token = Helper::guid();
         $user->uuid = Helper::guid(true);
         return response([
@@ -111,7 +111,7 @@ class UserController extends Controller
     public function getUserInfoById(Request $request)
     {
         if (empty($request->input('id'))) {
-            abort(500, '参数错误');
+            abort(500, 'پارامتر نادرست است');
         }
         $user = User::find($request->input('id'));
         if ($user->invite_user_id) {
@@ -149,10 +149,10 @@ class UserController extends Controller
         $params = $request->validated();
         $user = User::find($request->input('id'));
         if (!$user) {
-            abort(500, '用户不存在');
+            abort(500, 'کاربر یافت نشد');
         }
         if (User::where('email', $params['email'])->first() && $user->email !== $params['email']) {
-            abort(500, '邮箱已被使用');
+            abort(500, 'این ایمیل قبلاً استفاده شده است');
         }
         if (isset($params['password'])) {
             $params['password'] = password_hash($params['password'], PASSWORD_DEFAULT);
@@ -160,22 +160,33 @@ class UserController extends Controller
         } else {
             unset($params['password']);
         }
-        if (isset($params['plan_id'])) {
-            $plan = Plan::find($params['plan_id']);
-            if (!$plan) {
-                abort(500, '订阅计划不存在');
+        // Only touch group_id when plan_id is actually part of THIS request.
+        // Otherwise a partial update (ban / edit traffic / edit email — which do
+        // not send plan_id) would wipe the user's group to null, stripping their
+        // VIP/Test tier and server access. When plan_id is present we derive the
+        // group from the plan (or clear it if the plan is being removed).
+        if ($request->exists('plan_id')) {
+            if ($request->input('plan_id')) {
+                $plan = Plan::find($request->input('plan_id'));
+                if (!$plan) {
+                    abort(500, 'پلن اشتراک یافت نشد');
+                }
+                $params['group_id'] = $plan->group_id;
+            } else {
+                $params['group_id'] = null;
             }
-            $params['group_id'] = $plan->group_id;
-        } else {
-            $params['group_id'] = null;
         }
-        if ($request->input('invite_user_email')) {
-            $inviteUser = User::where('email', $request->input('invite_user_email'))->first();
-            if ($inviteUser) {
-                $params['invite_user_id'] = $inviteUser->id;
+        // Likewise: only change invite_user_id when the field is submitted, so a
+        // partial update doesn't drop the user's referrer.
+        if ($request->exists('invite_user_email')) {
+            if ($request->input('invite_user_email')) {
+                $inviteUser = User::where('email', $request->input('invite_user_email'))->first();
+                if ($inviteUser) {
+                    $params['invite_user_id'] = $inviteUser->id;
+                }
+            } else {
+                $params['invite_user_id'] = null;
             }
-        } else {
-            $params['invite_user_id'] = null;
         }
 
         if (isset($params['banned']) && (int)$params['banned'] === 1) {
@@ -187,7 +198,7 @@ class UserController extends Controller
             AuthService::invalidateUserAuthCache($user->id);
             $user->update($params);
         } catch (\Exception $e) {
-            abort(500, '保存失败');
+            abort(500, 'ذخیره ناموفق بود');
         }
         return response([
             'data' => true
@@ -208,15 +219,15 @@ class UserController extends Controller
             }
         }
 
-        $data = "邮箱,余额,推广佣金,总流量,设备数限制,剩余流量,套餐到期时间,订阅计划,订阅地址\r\n";
+        $data = "ایمیل,موجودی,پورسانت معرفی,کل ترافیک,محدودیت دستگاه,ترافیک باقی‌مانده,زمان انقضای بسته,پلن اشتراک,آدرس اشتراک\r\n";
         foreach($res as $user) {
-            $expireDate = $user['expired_at'] === NULL ? '长期有效' : date('Y-m-d H:i:s', $user['expired_at']);
+            $expireDate = $user['expired_at'] === NULL ? 'دائمی' : date('Y-m-d H:i:s', $user['expired_at']);
             $balance = $user['balance'] / 100;
             $commissionBalance = $user['commission_balance'] / 100;
             $transferEnable = $user['transfer_enable'] ? $user['transfer_enable'] / 1073741824 : 0;
             $deviceLimit = $user['devce_limit'] ? $user['devce_limit'] : NULL;
             $notUseFlow = (($user['transfer_enable'] - ($user['u'] + $user['d'])) / 1073741824) ?? 0;
-            $planName = $user['plan_name'] ?? '无订阅';
+            $planName = $user['plan_name'] ?? 'بدون اشتراک';
             $subscribeUrl =  Helper::getSubscribeUrl($user['token']);
             $data .= "{$user['email']},{$balance},{$commissionBalance},{$transferEnable}, {$deviceLimit}, {$notUseFlow},{$expireDate},{$planName},{$subscribeUrl}\r\n";
 
@@ -230,25 +241,30 @@ class UserController extends Controller
             if ($request->input('plan_id')) {
                 $plan = Plan::find($request->input('plan_id'));
                 if (!$plan) {
-                    abort(500, '订阅计划不存在');
+                    abort(500, 'پلن اشتراک یافت نشد');
                 }
             }
             $user = [
                 'email' => $request->input('email_prefix') . '@' . $request->input('email_suffix'),
                 'plan_id' => isset($plan->id) ? $plan->id : NULL,
                 'group_id' => isset($plan->group_id) ? $plan->group_id : NULL,
-                'transfer_enable' => isset($plan->transfer_enable) ? $plan->transfer_enable * 1073741824 : 0,
+                // Traffic: an explicitly-entered transfer_enable (GB) wins, so a
+                // user created WITHOUT a plan still gets the admin's traffic instead
+                // of 0; otherwise fall back to the plan's traffic.
+                'transfer_enable' => $request->input('transfer_enable') !== null
+                    ? (int)$request->input('transfer_enable') * 1073741824
+                    : (isset($plan->transfer_enable) ? $plan->transfer_enable * 1073741824 : 0),
                 'device_limit' => isset($plan->device_limit) ? $plan->device_limit : NULL,
                 'expired_at' => $request->input('expired_at') ?? NULL,
                 'uuid' => Helper::guid(true),
                 'token' => Helper::guid()
             ];
             if (User::where('email', $user['email'])->first()) {
-                abort(500, '邮箱已存在于系统中');
+                abort(500, 'این ایمیل از قبل در سیستم وجود دارد');
             }
             $user['password'] = password_hash($request->input('password') ?? $user['email'], PASSWORD_DEFAULT);
             if (!User::create($user)) {
-                abort(500, '生成失败');
+                abort(500, 'تولید ناموفق بود');
             }
             return response([
                 'data' => true
@@ -264,7 +280,7 @@ class UserController extends Controller
         if ($request->input('plan_id')) {
             $plan = Plan::find($request->input('plan_id'));
             if (!$plan) {
-                abort(500, '订阅计划不存在');
+                abort(500, 'پلن اشتراک یافت نشد');
             }
         }
         $users = [];
@@ -287,12 +303,12 @@ class UserController extends Controller
         DB::beginTransaction();
         if (!User::insert($users)) {
             DB::rollBack();
-            abort(500, '生成失败');
+            abort(500, 'تولید ناموفق بود');
         }
         DB::commit();
-        $data = "账号,密码,过期时间,UUID,创建时间,订阅地址\r\n";
+        $data = "نام کاربری,رمز عبور,زمان انقضا,UUID,زمان ساخت,آدرس اشتراک\r\n";
         foreach($users as $user) {
-            $expireDate = $user['expired_at'] === NULL ? '长期有效' : date('Y-m-d H:i:s', $user['expired_at']);
+            $expireDate = $user['expired_at'] === NULL ? 'دائمی' : date('Y-m-d H:i:s', $user['expired_at']);
             $createDate = date('Y-m-d H:i:s', $user['created_at']);
             $password = $request->input('password') ?? $user['email'];
             $subscribeUrl = Helper::getSubscribeUrl($user['token']);
@@ -340,7 +356,7 @@ class UserController extends Controller
                 'banned' => 1
             ]);
         } catch (\Exception $e) {
-            abort(500, '处理失败');
+            abort(500, 'پردازش ناموفق بود');
         }
 
         return response([
@@ -373,7 +389,7 @@ class UserController extends Controller
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
-            abort(500, '批量删除用户信息失败');
+            abort(500, 'حذف انبوه اطلاعات کاربران ناموفق بود');
         }  
 
         return response([
@@ -385,7 +401,7 @@ class UserController extends Controller
     {
         $user = User::find($request->input('id'));
         if (!$user) {
-            abort(500, '用户不存在');
+            abort(500, 'کاربر یافت نشد');
         }
         DB::beginTransaction();
         try {
@@ -405,7 +421,7 @@ class UserController extends Controller
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
-            abort(500, '删除用户失败');
+            abort(500, 'حذف کاربر ناموفق بود');
         }
 
         return response([

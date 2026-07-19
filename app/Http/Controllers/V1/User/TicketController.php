@@ -71,16 +71,16 @@ class TicketController extends Controller
                         ->exists();
 
                     if (!$hasOrder) {
-                        throw new \Exception(__('请先购买套餐'));
+                        throw new \Exception(__('ابتدا یک بسته خریداری کنید'));
                     }
                     break;
                 case 2:
                     // 完全禁止所有工单
-                    throw new \Exception(__('当前套餐不允许发起工单'));
+                    throw new \Exception(__('بسته‌ی فعلی اجازه‌ی ثبت تیکت نمی‌دهد'));
                     break;
                 default:
                     // 处理未知状态
-                    throw new \Exception(__('未知的工单状态'));
+                    throw new \Exception(__('وضعیت تیکت نامشخص است'));
             }
 
             $ticketData = $request->only(['subject', 'level']) + ['user_id' => $request->user['id']];
@@ -246,21 +246,21 @@ class TicketController extends Controller
 				if ($user_location && $user_location['status'] === 'success') {
 					$location =  $user_location['city'] . ", " . $user_location['country'];
 				} else {
-					$location =  "无法确定用户地址";
+					$location =  "موقعیت کاربر قابل تشخیص نیست";
 				}
 
 				$plan = Plan::where('id', $user->plan_id)->first();
-				$planName = $plan ? $plan->name : '未找到套餐信息'; // Check if plan data is available
+				$planName = $plan ? $plan->name : 'اطلاعات بسته یافت نشد'; // Check if plan data is available
 
 				$money = $user->balance / 100;
 				$affmoney = $user->commission_balance / 100;
-				$telegramService->sendMessageWithAdmin("📮工单提醒 #{$ticket->id}\n———————————————\n邮箱：\n`{$user->email}`\n用户位置：\n`{$location}`\nIP:\n{$ip_address}\n套餐与流量：\n`{$planName} of {$transfer_enable}/{$remaining_traffic}`\n上传/下载：\n`{$u}/{$d}`\n到期时间：\n`{$expired_at}`\n余额/佣金余额：\n`{$money}/{$affmoney}`\n主题：\n`{$ticket->subject}`\n内容：\n {$message} ", true);
+				$telegramService->sendMessageToAdminsBySwitch("📮یادآوری تیکت #{$ticket->id}\n———————————————\nایمیل: \n`{$user->email}`\nموقعیت کاربر: \n`{$location}`\nIP:\n{$ip_address}\nبسته و ترافیک: \n`{$planName} of {$transfer_enable}/{$remaining_traffic}`\nآپلود/دانلود: \n`{$u}/{$d}`\nزمان انقضا: \n`{$expired_at}`\nموجودی/موجودی پورسانت: \n`{$money}/{$affmoney}`\nموضوع: \n`{$ticket->subject}`\nمحتوا: \n {$message} ");
 			} else {
 				// Handle case where user data is not found
-				$telegramService->sendMessageWithAdmin("User data not found for user ID: {$userid}", true);
+				$telegramService->sendMessageToAdminsBySwitch("User data not found for user ID: {$userid}");
 			}
 		} else {
-			$telegramService->sendMessageWithAdmin("📮工单提醒 #{$ticket->id}\n———————————————\n主题：\n`{$ticket->subject}`\n内容：\n {$message} ", true);
+			$telegramService->sendMessageToAdminsBySwitch("📮یادآوری تیکت #{$ticket->id}\n———————————————\nموضوع: \n`{$ticket->subject}`\nمحتوا: \n {$message} ");
 		}
 	}
 

@@ -94,7 +94,12 @@ class TelegramBotService
 
         // قفل کارت‌به‌کارت: تا پاسخ ادمین، هیچ کار دیگری انجام نشود
         if ($this->hasPendingCardClaim()) {
-            $this->sendMessage($chatId, "⏳ درخواست پرداخت کارت‌به‌کارت شما در حال بررسی است.\nلطفاً تا پاسخ ادمین منتظر بمانید. نتیجه از طریق ربات اطلاع‌رسانی می‌شود.");
+            $pendingCp = \App\Models\CardPayment::where('user_id', $this->user->id)
+                ->where('status', \App\Models\CardPayment::STATUS_CLAIMED)
+                ->orderBy('id', 'desc')->first();
+            $tradeNo = $pendingCp ? $pendingCp->trade_no : '';
+            $remindKb = $pendingCp ? [[['text' => '🔔 یادآوری به ادمین', 'callback_data' => 'remind_admin_' . $pendingCp->id]]] : null;
+            $this->sendMessage($chatId, "⏳ درخواست پرداخت کارت‌به‌کارت شما در حال بررسی است.\n🔢 شماره سفارش: {$tradeNo}\nلطفاً تا پاسخ ادمین منتظر بمانید. نتیجه از طریق ربات اطلاع‌رسانی می‌شود.", null, $remindKb);
             return;
         }
 
@@ -210,7 +215,7 @@ class TelegramBotService
         if (!empty($this->user) && !empty($this->user->token)) {
             array_unshift($keyboard, [[
                 'text' => '🌐 ورود به پنل',
-                'web_app' => ['url' => 'https://YOUR_BACKEND_DOMAIN/api/v1/guest/telegram/auth?token=' . $this->user->token . '&redirect=dashboard']
+                'web_app' => ['url' => rtrim(config('v2board.app_url', ''), '/') . '/api/v1/guest/telegram/auth?token=' . $this->user->token . '&redirect=dashboard']
             ]]);
         }
 
@@ -349,7 +354,8 @@ class TelegramBotService
         if ($this->hasPendingCardClaim()
             && !Str::startsWith($data, 'card_verify_')
             && !Str::startsWith($data, 'card_reject_')
-            && !Str::startsWith($data, 'card_confirm_')) {
+            && !Str::startsWith($data, 'card_confirm_')
+            && !Str::startsWith($data, 'remind_admin_')) {
             $this->answerCallback($callback['id'], '⏳ منتظر پاسخ ادمین باشید.');
             return;
         }
@@ -421,6 +427,10 @@ class TelegramBotService
         } elseif ($data === 'card_done') {
             $this->answerCallback($callback['id'], 'این پرداخت قبلاً پردازش شده است');
             return;
+        } elseif (Str::startsWith($data, 'remind_admin_')) {
+            $paymentId = (int) Str::after($data, 'remind_admin_');
+            $this->handleRemindAdmin($chatId, $paymentId, $callback['id']);
+            return;
         } elseif (Str::startsWith($data, 'card_verify_full_')) { // ━━━ Card Payment Callbacks ━━━
             $paymentId = (int) Str::after($data, 'card_verify_full_');
             $this->handleCardVerifyFull($chatId, $paymentId, $callback['id']);
@@ -438,6 +448,10 @@ class TelegramBotService
             return;
         } elseif (Str::startsWith($data, 'card_confirm_reject_')) {
             $this->handleCardConfirmReject($chatId, $data, $callback['id']);
+            return;
+        } elseif (Str::startsWith($data, 'help_')) {
+            $this->answerCallback($callback['id']);
+            $this->sendHelpPlatform($chatId, Str::after($data, 'help_'));
             return;
         }
 
@@ -733,6 +747,104 @@ class TelegramBotService
     /**
      * راهنما
      */
+    protected function sendHelpPlatform(int $chatId, string $platform): void
+    {
+        $valid = ['android', 'ios', 'windows'];
+        if (!in_array($platform, $valid, true)) {
+            $this->sendMainMenu($chatId);
+            return;
+        }
+        $text  = BotText::get('help_' . $platform . '_text', '');
+        $image = BotText::get('help_' . $platform . '_image', '');
+        $links = json_decode(BotText::get('help_' . $platform . '_links', '[]'), true);
+        if (!is_array($links)) $links = [];
+        if ($text === '') $text = 'محتوای این بخش هنوز تنظیم نشده است.';
+
+        $inline = [];
+        foreach ($links as $lk) {
+            if (($lk['type'] ?? '') === 'url' && !empty($lk['url'])) {
+                $label = !empty($lk['label']) ? $lk['label'] : '🔗 لینک';
+                $inline[] = [['text' => $label, 'url' => $lk['url']]];
+            }
+        }
+        $inline[] = [['text' => '🏠 بازگشت', 'callback_data' => 'main_menu']];
+
+        if ($image !== '') {
+            if (mb_strlen($text) > 1000) {
+                $this->sendPhoto($chatId, $image, '', null);
+                $this->sendMessage($chatId, $text, null, $inline);
+            } else {
+                $this->sendPhoto($chatId, $image, $text, $inline);
+            }
+        } else {
+            $this->sendMessage($chatId, $text, null, $inline);
+        }
+
+        foreach ($links as $lk) {
+            if (($lk['type'] ?? '') !== 'file' || empty($lk['file'])) continue;
+            $path    = public_path(ltrim($lk['file'], '/'));
+            $caption = !empty($lk['label']) ? $lk['label'] : '';
+            $size    = file_exists($path) ? filesize($path) : 0;
+            if ($size > 0 && $size <= 50 * 1024 * 1024) {
+                $this->sendDocumentFile($chatId, $path, $caption);
+            } else {
+                $fileUrl = secure_url('/' . ltrim($lk['file'], '/'));
+                $btnText = '⬇️ ' . ($caption !== '' ? $caption : 'دانلود فایل');
+                $note    = ($caption !== '' ? $caption : 'فایل') . ' (حجم: ' . $this->humanSize($size) . ')';
+                $this->sendMessage($chatId, $note, null, [[['text' => $btnText, 'url' => $fileUrl]]]);
+            }
+        }
+    }
+
+    protected function sendPhoto(int $chatId, string $photo, string $caption = '', ?array $inlineKeyboard = null): void
+    {
+        $data = ['chat_id' => $chatId, 'photo' => $photo];
+        if ($caption !== '') $data['caption'] = $caption;
+        if ($inlineKeyboard) {
+            $data['reply_markup'] = json_encode(['inline_keyboard' => $inlineKeyboard]);
+        }
+        try {
+            $resp = Http::post($this->apiUrl . 'sendPhoto', $data);
+            Log::info('sendPhoto', ['status' => $resp->status(), 'ok' => $resp->json('ok')]);
+        } catch (\Throwable $e) {
+            Log::error('sendPhoto error', ['msg' => $e->getMessage()]);
+            $this->sendMessage($chatId, $caption, null, $inlineKeyboard);
+        }
+    }
+
+    protected function sendDocument(int $chatId, string $document, string $caption = ''): void
+    {
+        $data = ['chat_id' => $chatId, 'document' => $document];
+        if ($caption !== '') $data['caption'] = $caption;
+        try {
+            $resp = Http::post($this->apiUrl . 'sendDocument', $data);
+            Log::info('sendDocument(url)', ['status' => $resp->status(), 'ok' => $resp->json('ok')]);
+        } catch (\Throwable $e) {
+            Log::error('sendDocument error', ['msg' => $e->getMessage()]);
+        }
+    }
+
+    protected function sendDocumentFile(int $chatId, string $path, string $caption = ''): void
+    {
+        try {
+            $payload = ['chat_id' => $chatId];
+            if ($caption !== '') $payload['caption'] = $caption;
+            $resp = Http::attach('document', fopen($path, 'r'), basename($path))
+                ->timeout(180)
+                ->post($this->apiUrl . 'sendDocument', $payload);
+            Log::info('sendDocumentFile', ['file' => basename($path), 'size' => @filesize($path), 'status' => $resp->status(), 'ok' => $resp->json('ok')]);
+        } catch (\Throwable $e) {
+            Log::error('sendDocumentFile error', ['msg' => $e->getMessage()]);
+        }
+    }
+
+    protected function humanSize(int $bytes): string
+    {
+        if ($bytes >= 1048576) return round($bytes / 1048576, 1) . ' MB';
+        if ($bytes >= 1024) return round($bytes / 1024, 1) . ' KB';
+        return $bytes . ' B';
+    }
+
     protected function sendHelpInfo(int $chatId): void
     {
         $text = BotText::get('text_help', "📚 *راهنما*\n\nبرای دریافت راهنمای استفاده از سرویس، گزینه مورد نظر را انتخاب کنید.");
@@ -1834,6 +1946,27 @@ class TelegramBotService
     /**
      * ساخت تیکت در دیتابیس
      */
+    protected function handleRemindAdmin(int $chatId, int $paymentId, string $callbackId): void
+    {
+        $cp = \App\Models\CardPayment::where('id', $paymentId)
+            ->where('user_id', $this->user->id)
+            ->where('status', \App\Models\CardPayment::STATUS_CLAIMED)
+            ->first();
+        if (!$cp) {
+            $this->answerCallback($callbackId, 'این سفارش دیگر در حال بررسی نیست.');
+            return;
+        }
+        $already = \App\Models\TicketMessage::where('user_id', $this->user->id)
+            ->where('message', 'like', '%' . $cp->trade_no . '%')
+            ->exists();
+        if ($already) {
+            $this->answerCallback($callbackId, 'برای این سفارش قبلاً یادآوری ثبت شده است.');
+            return;
+        }
+        $this->createTicket($chatId, 'یادآوری', "لطفاً وضعیت پرداخت کارت‌به‌کارت با شماره سفارش {$cp->trade_no} را بررسی کنید.", 2);
+        $this->answerCallback($callbackId, 'یادآوری برای ادمین ارسال شد');
+    }
+
     protected function createTicket(int $chatId, string $subject, string $message, int $level): void
     {
         try {
@@ -1907,7 +2040,7 @@ class TelegramBotService
             $text .= "💬 پیام:\n{$message}";
             
             $telegramService = new \App\Services\TelegramService();
-            $telegramService->sendMessageWithAdmin($text, true);
+            $telegramService->sendMessageToAdminsBySwitch($text);
             
         } catch (\Exception $e) {
             \Log::error('Failed to send ticket notify: ' . $e->getMessage());
@@ -2442,17 +2575,28 @@ class TelegramBotService
         $cardPayment->status = \App\Models\CardPayment::STATUS_CLAIMED;
         $cardPayment->claimed_at = time();
         $cardPayment->tracking_number = 'receipt_photo';
+        // Keep the Telegram photo file_id so the admin app can fetch & show the
+        // receipt (getFile → download). Without this only Telegram admins see it.
+        $cardPayment->receipt_file_id = $fileId;
         $cardPayment->save();
 
         // پاک کردن step
         $this->user->update(['bot_step' => null, 'bot_data' => null]);
 
         // دریافت اطلاعات ادمین
-        $payment = \App\Models\Payment::where('payment', 'Card2Card')->where('enable', 1)->first();
-        $adminChatId = $payment->config['telegram_admin_id'] ?? null;
+        if (\App\Models\BotSetting::getBool('notify_all_admins', false)) {
+            $adminChatIds = \App\Models\User::where('is_admin', 1)
+                ->whereNotNull('telegram_id')
+                ->pluck('telegram_id')->map(function ($v) { return (string) $v; })
+                ->filter()->unique()->values()->all();
+        } else {
+            $payment = \App\Models\Payment::where('payment', 'Card2Card')->where('enable', 1)->first();
+            $cid = $payment->config['telegram_admin_id'] ?? null;
+            $adminChatIds = $cid ? [(string) $cid] : [];
+        }
         $token = config('v2board.telegram_bot_token');
 
-        if (!$adminChatId || !$token) {
+        if (empty($adminChatIds) || !$token) {
             $this->sendMessage($chatId, '✅ رسید ارسال شد. منتظر تأیید ادمین باشید.');
             return;
         }
@@ -2478,31 +2622,39 @@ class TelegramBotService
             ]
         ];
 
-        $payload = [
-            'chat_id' => $adminChatId,
-            'photo' => $fileId,
-            'caption' => $caption,
-            'parse_mode' => 'Markdown',
-            'reply_markup' => json_encode($keyboard)
-        ];
-        try {
-            $response = \Illuminate\Support\Facades\Http::post("https://api.telegram.org/bot{$token}/sendPhoto", $payload);
-            $result = $response->json();
-            if (!$response->successful()) {
-                \Illuminate\Support\Facades\Log::error('Card receipt sendPhoto failed; retry without parse_mode', ['resp' => $result]);
-                unset($payload['parse_mode']);
+        $firstMsg = null; $firstChat = null;
+        foreach ($adminChatIds as $cidT) {
+            $payload = [
+                'chat_id' => $cidT,
+                'photo' => $fileId,
+                'caption' => $caption,
+                'parse_mode' => 'Markdown',
+                'reply_markup' => json_encode($keyboard)
+            ];
+            try {
                 $response = \Illuminate\Support\Facades\Http::post("https://api.telegram.org/bot{$token}/sendPhoto", $payload);
                 $result = $response->json();
+                if (!$response->successful()) {
+                    unset($payload['parse_mode']);
+                    $response = \Illuminate\Support\Facades\Http::post("https://api.telegram.org/bot{$token}/sendPhoto", $payload);
+                    $result = $response->json();
+                }
+                if ($response->successful() && isset($result['result']['message_id'])) {
+                    if ($firstMsg === null) {
+                        $firstMsg = $result['result']['message_id'];
+                        $firstChat = $cidT;
+                    }
+                } else {
+                    \Illuminate\Support\Facades\Log::error('Card receipt delivery to admin failed', ['chat_id' => $cidT, 'resp' => $result]);
+                }
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error('Failed to send receipt to admin', ['chat_id' => $cidT, 'error' => $e->getMessage()]);
             }
-            if ($response->successful() && isset($result['result']['message_id'])) {
-                $cardPayment->telegram_message_id = $result['result']['message_id'];
-                $cardPayment->telegram_chat_id = $adminChatId;
-                $cardPayment->save();
-            } else {
-                \Illuminate\Support\Facades\Log::error('Card receipt delivery to admin failed', ['resp' => $result]);
-            }
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to send receipt to admin', ['error' => $e->getMessage()]);
+        }
+        if ($firstMsg !== null) {
+            $cardPayment->telegram_message_id = $firstMsg;
+            $cardPayment->telegram_chat_id = $firstChat;
+            $cardPayment->save();
         }
 
         $this->sendMessage($chatId, "✅ رسید شما ارسال شد.\nمنتظر تأیید ادمین باشید. نتیجه از طریق ربات اطلاع‌رسانی می‌شود.");

@@ -31,15 +31,15 @@ class CouponController extends Controller
     public function show(Request $request)
     {
         if (empty($request->input('id'))) {
-            abort(500, '参数有误');
+            abort(500, 'پارامتر نامعتبر است');
         }
         $coupon = Coupon::find($request->input('id'));
         if (!$coupon) {
-            abort(500, '优惠券不存在');
+            abort(500, 'کد تخفیف یافت نشد');
         }
         $coupon->show = $coupon->show ? 0 : 1;
         if (!$coupon->save()) {
-            abort(500, '保存失败');
+            abort(500, 'ذخیره ناموفق بود');
         }
 
         return response([
@@ -60,13 +60,13 @@ class CouponController extends Controller
                 $params['code'] = Helper::randomChar(8);
             }
             if (!Coupon::create($params)) {
-                abort(500, '创建失败');
+                abort(500, 'ساخت ناموفق بود');
             }
         } else {
             try {
                 Coupon::find($request->input('id'))->update($params);
             } catch (\Exception $e) {
-                abort(500, '保存失败');
+                abort(500, 'ذخیره ناموفق بود');
             }
         }
 
@@ -98,18 +98,18 @@ class CouponController extends Controller
             return $item;
         }, $coupons))) {
             DB::rollBack();
-            abort(500, '生成失败');
+            abort(500, 'تولید ناموفق بود');
         }
         DB::commit();
-        $data = "名称,类型,金额或比例,开始时间,结束时间,可用次数,可用于订阅,券码,生成时间\r\n";
+        $data = "نام,نوع,مبلغ یا درصد,زمان شروع,زمان پایان,تعداد مجاز,قابل‌استفاده برای اشتراک,کد کوپن,زمان تولید\r\n";
         foreach($coupons as $coupon) {
             $type = ['', '金额', '比例'][$coupon['type']];
             $value = ['', ($coupon['value'] / 100),$coupon['value']][$coupon['type']];
             $startTime = date('Y-m-d H:i:s', $coupon['started_at']);
             $endTime = date('Y-m-d H:i:s', $coupon['ended_at']);
-            $limitUse = $coupon['limit_use'] ?? '不限制';
+            $limitUse = $coupon['limit_use'] ?? 'نامحدود';
             $createTime = date('Y-m-d H:i:s', $coupon['created_at']);
-            $limitPlanIds = isset($coupon['limit_plan_ids']) ? implode("/", $coupon['limit_plan_ids']) : '不限制';
+            $limitPlanIds = isset($coupon['limit_plan_ids']) ? implode("/", $coupon['limit_plan_ids']) : 'نامحدود';
             $data .= "{$coupon['name']},{$type},{$value},{$startTime},{$endTime},{$limitUse},{$limitPlanIds},{$coupon['code']},{$createTime}\r\n";
         }
         echo $data;
@@ -118,14 +118,14 @@ class CouponController extends Controller
     public function drop(Request $request)
     {
         if (empty($request->input('id'))) {
-            abort(500, '参数有误');
+            abort(500, 'پارامتر نامعتبر است');
         }
         $coupon = Coupon::find($request->input('id'));
         if (!$coupon) {
-            abort(500, '优惠券不存在');
+            abort(500, 'کد تخفیف یافت نشد');
         }
         if (!$coupon->delete()) {
-            abort(500, '删除失败');
+            abort(500, 'حذف ناموفق بود');
         }
 
         return response([

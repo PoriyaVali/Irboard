@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
-use App\Services\ExchangeRateService;
+use App\Services\ExchangeService;
 
 class SyncPlanPrices extends Command
 {
@@ -18,7 +18,7 @@ class SyncPlanPrices extends Command
     {
         $this->info('شروع بروزرسانی قیمت‌ها...');
 
-        $rate = ExchangeRateService::getUsdSellPriceFresh();
+        $rate = ExchangeService::getCurrentRate();
         if (!$rate) {
             $this->error('خطا در دریافت نرخ دلار');
             return 1;

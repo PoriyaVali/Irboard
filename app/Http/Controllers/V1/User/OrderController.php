@@ -249,6 +249,9 @@ class OrderController extends Controller
             $order->handling_amount = round(($order->total_amount * ($payment->handling_fee_percent / 100)) + $payment->handling_fee_fixed);
         }
         $order->payment_id = $method;
+        if ($request->input('source') === 'app') {
+            $order->source = 'app';
+        }
         if (!$order->save()) abort(500, __('Request failed, please try again later'));
         $result = $paymentService->pay([
             'trade_no' => $tradeNo,
@@ -330,6 +333,17 @@ class OrderController extends Controller
         }
         if ($order->status !== 0) {
             abort(500, __('You can only cancel pending orders'));
+        }
+        // Guard: never cancel an order whose card-to-card payment is already
+        // CLAIMED (the user sent money + tracking number and it's awaiting admin
+        // verification). Otherwise a "retry / back → cancel previous order" flow
+        // would silently wipe a paid-but-unverified order. The user must wait for
+        // the admin to verify or reject it.
+        $claimed = \App\Models\CardPayment::where('order_id', $order->id)
+            ->where('status', 'claimed')
+            ->exists();
+        if ($claimed) {
+            abort(500, 'این سفارش یک پرداختِ کارت‌به‌کارتِ در انتظارِ تأیید دارد و قابلِ لغو نیست. لطفاً تا بررسیِ ادمین صبر کنید.');
         }
         $orderService = new OrderService($order);
         if (!$orderService->cancel()) {

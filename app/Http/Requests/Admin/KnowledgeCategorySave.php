@@ -22,8 +22,8 @@ class KnowledgeCategorySave extends FormRequest
     public function messages()
     {
         return [
-            'name.required' => '分类名称不能为空',
-            'language.required' => '分类语言不能为空'
+            'name.required' => 'نام دسته نمی‌تواند خالی باشد',
+            'language.required' => 'زبان دسته نمی‌تواند خالی باشد'
         ];
     }
 }

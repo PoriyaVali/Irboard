@@ -38,10 +38,10 @@
                     "id": "Copy Code",
                     "name": "کپی رمز پیامک",
                     "description": "کپی رمز پیامک ارسال شده از سرویس های ارسال کد",
-                    "icon": "https:\/\/YOUR_FRONTEND_DOMAIN\/apk\/appstore\/Pic\/42790.jpg",
+                    "icon": "https:\/\/drmobjay.com\/apk\/appstore\/Pic\/42790.jpg",
                     "version": "1.20.4",
                     "size": "3 مگابایت",
-                    "downloadUrl": "Https:\/\/YOUR_FRONTEND_DOMAIN\/apk\/appstore\/copy_code.apk",
+                    "downloadUrl": "Https:\/\/drmobjay.com\/apk\/appstore\/copy_code.apk",
                     "order": 3
                 }
             ]

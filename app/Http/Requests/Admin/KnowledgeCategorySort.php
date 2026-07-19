@@ -21,8 +21,8 @@ class KnowledgeCategorySort extends FormRequest
     public function messages()
     {
         return [
-            'knowledge_category_ids.required' => '分类不能为空',
-            'knowledge_category_ids.array' => '分类格式有误'
+            'knowledge_category_ids.required' => 'دسته نمی‌تواند خالی باشد',
+            'knowledge_category_ids.array' => 'دسته دارای فرمت نامعتبر است'
         ];
     }
 }

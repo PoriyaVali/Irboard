@@ -24,10 +24,10 @@ class NoticeSave extends FormRequest
     public function messages()
     {
         return [
-            'title.required' => '标题不能为空',
-            'content.required' => '内容不能为空',
-            'img_url.url' => '图片URL格式不正确',
-            'tags.array' => '标签格式不正确'
+            'title.required' => 'عنوان نمی‌تواند خالی باشد',
+            'content.required' => '内容 نمی‌تواند خالی باشد',
+            'img_url.url' => 'آدرس تصویر دارای فرمت نادرست است',
+            'tags.array' => 'برچسب دارای فرمت نادرست است'
         ];
     }
 }
