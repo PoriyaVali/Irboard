@@ -11,7 +11,7 @@
 #   1. preflight        root / aaPanel / php / sqlite3 / python3
 #   2. site             resolve domain + install dir (aaPanel sites table)
 #   3. prerequisites    redis-server, php redis/pcntl/posix extensions
-#   4. code             clone the repo (if needed) and run init.sh
+#   4. code             clone + init.sh, or update an existing install (update.sh)
 #   5. nginx rewrite    _server_configs/backend_rewrite.conf -> vhost/rewrite/<domain>.conf
 #   6. supervisor       WebMan / V2b(horizon) / server-config-agent  (.ini + UI registry)
 #   7. cron             artisan schedule:run every minute, aaPanel-native
@@ -41,6 +41,7 @@ TUNE_NGINX=0
 SKIP_INSTALL=0
 FORCE=0
 RESET_PASSWORD=0
+NO_UPDATE=0
 
 say()  { printf '\033[1;36m==>\033[0m %s\n' "$*"; }
 ok()   { printf '  \033[1;32m[ok]\033[0m %s\n' "$*"; }
@@ -64,6 +65,7 @@ Usage: install.sh [options]
   --reset-admin-password
                     Issue a new admin password and print it. Only needed if you
                     lost it: a re-run never changes it on its own.
+  --no-update       Do not update the code on an existing install (repair only)
   -h, --help        Show this help
 USAGE
 }
@@ -76,6 +78,7 @@ while [ $# -gt 0 ]; do
         --skip-install) SKIP_INSTALL=1; shift ;;
         --force)  FORCE=1; shift ;;
         --reset-admin-password) RESET_PASSWORD=1; shift ;;
+        --no-update) NO_UPDATE=1; shift ;;
         -h|--help) usage; exit 0 ;;
         *) die "Unknown option: $1 (try --help)" ;;
     esac
@@ -239,7 +242,40 @@ INSTALL_LOG=""
 if [ "$SKIP_INSTALL" -eq 1 ]; then
     skip "--skip-install given"
 elif [ -f "$APP_DIR/config/v2board.php" ]; then
-    skip "already installed — not re-running init.sh"
+    # Already installed, so this run is an UPDATE. Never init.sh again: that
+    # imports install.sql, which begins every table with DROP TABLE IF EXISTS and
+    # would destroy the data. Updating goes through update.sh, whose database step
+    # is v2board:update -> update.sql, which is additive (CREATE IF NOT EXISTS /
+    # ADD COLUMN) and safe to re-apply.
+    if [ "$NO_UPDATE" -eq 1 ]; then
+        skip "already installed — update skipped (--no-update)"
+    elif [ ! -d "$APP_DIR/.git" ]; then
+        skip "already installed — not a git deployment, cannot update"
+    elif ! git -C "$APP_DIR" remote get-url origin >/dev/null 2>&1; then
+        skip "already installed — no git remote configured, cannot update"
+    elif [ -n "$(git -C "$APP_DIR" status --porcelain --untracked-files=no 2>/dev/null)" ]; then
+        warn "this deployment has local code changes — update skipped so they are not overwritten"
+        printf '    %s\n' "$(git -C "$APP_DIR" status --short --untracked-files=no | head -5)"
+    else
+        # Snapshot the database first. update.sql is additive, but a dump costs a
+        # second and turns "the schema step went wrong" into something recoverable.
+        envval() { sed -n "s/^$1=//p" "$APP_DIR/.env" | tr -d '"' | head -1; }
+        _bkdir="$APP_DIR/storage/backups"; mkdir -p "$_bkdir"
+        _dump="$_bkdir/pre-update_$TS.sql.gz"
+        if mysqldump -h"$(envval DB_HOST)" -u"$(envval DB_USERNAME)" -p"$(envval DB_PASSWORD)" \
+             --single-transaction --quick --routines --triggers "$(envval DB_DATABASE)" 2>/dev/null \
+             | gzip > "$_dump" && [ -s "$_dump" ]; then
+            ok "database snapshot: $_dump ($(du -h "$_dump" | cut -f1))"
+            # keep the five most recent
+            ls -1t "$_bkdir"/pre-update_*.sql.gz 2>/dev/null | tail -n +6 | xargs -r rm -f
+        else
+            rm -f "$_dump"
+            warn "could not snapshot the database — updating anyway would be a gamble"
+            die "Aborted before any change. Check the DB_* values in .env."
+        fi
+        say "     updating via update.sh (fast-forward only, additive DB update)"
+        bash "$APP_DIR/update.sh" || warn "update.sh reported a problem — see its output above"
+    fi
 else
     if [ -f "$APP_DIR/.env" ]; then
         backup "$APP_DIR/.env"
