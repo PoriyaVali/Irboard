@@ -45,9 +45,19 @@ echo "✅ force_https = 0"
 sed -i "s/protected \$proxies;/protected \$proxies = '*';/" "$BASEDIR/app/Http/Middleware/TrustProxies.php"
 echo "✅ TrustProxies = *"
 
-# ۶. فایروال
-firewall-cmd --add-port=8443/tcp --permanent 2>/dev/null && firewall-cmd --reload 2>/dev/null
-echo "✅ Firewall port 8443"
+# ۶. فایروال (same tool detection as server_config_agent.sh open_port —
+# firewall-cmd alone silently does nothing on Debian/Ubuntu ufw boxes)
+if command -v firewall-cmd >/dev/null 2>&1; then
+    firewall-cmd --add-port=8443/tcp --permanent 2>/dev/null && firewall-cmd --reload 2>/dev/null
+    echo "✅ Firewall port 8443 (firewalld)"
+elif command -v ufw >/dev/null 2>&1; then
+    ufw allow 8443/tcp >/dev/null 2>&1
+    echo "✅ Firewall port 8443 (ufw)"
+elif [ -x /etc/init.d/bt ]; then
+    echo "⏭️ aaPanel firewall manages ports - open 8443 in the panel UI"
+else
+    echo "⚠️ No firewall tool found - open 8443/tcp manually"
+fi
 
 # ۷. Laravel cache clear
 cd "$BASEDIR"
