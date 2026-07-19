@@ -53,3 +53,10 @@ nohup.out
 /debug_payment.sh
 /alanchand.html
 /laravel-serve.php
+*.bak2
+/storage/.circuit-breaker
+/storage/.webman-hash*
+/storage/framework/laravel-serve.pid
+/storage/framework/server-info.json
+/storage/server_config_status.json
+/public/.well-known/
