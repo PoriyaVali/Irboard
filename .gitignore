@@ -38,3 +38,18 @@ workerman.log
 # scratch, sometimes reference private infrastructure, and must never ride a
 # prod->repo sync into the public repo.
 _*.php
+
+# Runtime and operator artifacts that live inside a running panel's tree.
+# Some of these are catastrophic to publish (storage/app/backups holds full
+# database dumps with real user data), the rest are junk a prod->repo sync
+# must never pick up.
+/storage/app/backups/
+*.sql.gz
+/public/bot_files/
+/public/assets/admin/1/
+nohup.out
+*~
+/payment_debug_report.txt
+/debug_payment.sh
+/alanchand.html
+/laravel-serve.php

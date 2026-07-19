@@ -139,7 +139,7 @@
             },
             {
                 "domain": [
-                    "YOUR_FRONTEND_DOMAIN"
+                    "drmobjay.com"
                 ],
                 "outbound": "direct"
             },

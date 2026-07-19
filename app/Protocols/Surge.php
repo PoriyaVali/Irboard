@@ -80,8 +80,8 @@ class Surge
         $download = round($user['d'] / (1024*1024*1024), 2);
         $useTraffic = $upload + $download;
         $totalTraffic = round($user['transfer_enable'] / (1024*1024*1024), 2);
-        $expireDate = $user['expired_at'] === NULL ? '长期有效' : date('Y-m-d H:i:s', $user['expired_at']);
-        $subscribeInfo = "title={$appName}订阅信息, content=上传流量：{$upload}GB\\n下载流量：{$download}GB\\n剩余流量：{$useTraffic}GB\\n套餐流量：{$totalTraffic}GB\\n到期时间：{$expireDate}";
+        $expireDate = $user['expired_at'] === NULL ? 'دائمی' : date('Y-m-d H:i:s', $user['expired_at']);
+        $subscribeInfo = "title={$appName}订阅信息, content=上传ترافیک：{$upload}GB\\n下载ترافیک：{$download}GB\\nترافیک باقی‌مانده：{$useTraffic}GB\\n套餐ترافیک：{$totalTraffic}GB\\nزمان انقضا: {$expireDate}";
         $config = str_replace('$subscribe_info', $subscribeInfo, $config);
 
         return $config;

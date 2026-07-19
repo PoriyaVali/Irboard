@@ -50,9 +50,9 @@ class PaymentController extends Controller
     public function show(Request $request)
     {
         $payment = Payment::find($request->input('id'));
-        if (!$payment) abort(500, '支付方式不存在');
+        if (!$payment) abort(500, 'روش پرداخت یافت نشد');
         $payment->enable = !$payment->enable;
-        if (!$payment->save()) abort(500, '保存失败');
+        if (!$payment->save()) abort(500, 'ذخیره ناموفق بود');
         return response([
             'data' => true
         ]);
@@ -61,7 +61,7 @@ class PaymentController extends Controller
     public function save(Request $request)
     {
         if (!config('v2board.app_url')) {
-            abort(500, '请在站点配置中配置站点地址');
+            abort(500, 'لطفاً ابتدا آدرس سایت را در تنظیمات پیکربندی کنید');
         }
         $params = $request->validate([
             'name' => 'required',
@@ -72,16 +72,16 @@ class PaymentController extends Controller
             'handling_fee_fixed' => 'nullable|integer',
             'handling_fee_percent' => 'nullable|numeric|between:0.1,100'
         ], [
-            'name.required' => '显示名称不能为空',
-            'payment.required' => '网关参数不能为空',
-            'config.required' => '配置参数不能为空',
-            'notify_domain.url' => '自定义通知域名格式有误',
-            'handling_fee_fixed.integer' => '固定手续费格式有误',
-            'handling_fee_percent.between' => '百分比手续费范围须在0.1-100之间'
+            'name.required' => 'نام نمایشی نمی‌تواند خالی باشد',
+            'payment.required' => 'پارامتر درگاه نمی‌تواند خالی باشد',
+            'config.required' => 'پارامتر پیکربندی نمی‌تواند خالی باشد',
+            'notify_domain.url' => 'فرمت دامنه‌ی اعلان سفارشی نامعتبر است',
+            'handling_fee_fixed.integer' => 'فرمت کارمزد ثابت نامعتبر است',
+            'handling_fee_percent.between' => 'بازه‌ی کارمزد درصدی باید بین ۰.۱ تا ۱۰۰ باشد'
         ]);
         if ($request->input('id')) {
             $payment = Payment::find($request->input('id'));
-            if (!$payment) abort(500, '支付方式不存在');
+            if (!$payment) abort(500, 'روش پرداخت یافت نشد');
             try {
                 $payment->update($params);
             } catch (\Exception $e) {
@@ -93,7 +93,7 @@ class PaymentController extends Controller
         }
         $params['uuid'] = Helper::randomChar(8);
         if (!Payment::create($params)) {
-            abort(500, '保存失败');
+            abort(500, 'ذخیره ناموفق بود');
         }
         return response([
             'data' => true
@@ -103,7 +103,7 @@ class PaymentController extends Controller
     public function drop(Request $request)
     {
         $payment = Payment::find($request->input('id'));
-        if (!$payment) abort(500, '支付方式不存在');
+        if (!$payment) abort(500, 'روش پرداخت یافت نشد');
         return response([
             'data' => $payment->delete()
         ]);
@@ -115,14 +115,14 @@ class PaymentController extends Controller
         $request->validate([
             'ids' => 'required|array'
         ], [
-            'ids.required' => '参数有误',
-            'ids.array' => '参数有误'
+            'ids.required' => 'پارامتر نامعتبر است',
+            'ids.array' => 'پارامتر نامعتبر است'
         ]);
         DB::beginTransaction();
         foreach ($request->input('ids') as $k => $v) {
             if (!Payment::find($v)->update(['sort' => $k + 1])) {
                 DB::rollBack();
-                abort(500, '保存失败');
+                abort(500, 'ذخیره ناموفق بود');
             }
         }
         DB::commit();

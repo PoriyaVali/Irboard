@@ -64,12 +64,13 @@ class CircuitBreaker {
 }
 
 class Manager {
-    private $dir, $pid, $hash, $hashData, $workers, $hashes = [], $fails = 0, $cb;
+    private $dir, $pid, $hash, $hashData, $workers, $hashes = [], $fails = 0, $cb, $cpu;
     private $watchDirs = ['app','config','routes','database'];
-    
+
     public function __construct($dir, $workers) {
         $this->dir = $dir;
         $this->workers = $workers;
+        $this->cpu = (int)shell_exec('nproc') ?: 4; // cached once; was re-shelled every 30s
         $this->pid = $dir . '/workerman.webman.php.pid';
         $this->hash = $dir . '/storage/.webman-hash';
         $this->hashData = $dir . '/storage/.webman-hash.data';
@@ -123,7 +124,7 @@ class Manager {
     public function health() {
         $ok = true;
         $ch = curl_init('http://127.0.0.1:6600/api/v1/guest/comm/config');
-        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER=>true, CURLOPT_TIMEOUT=>5]);
+        curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER=>true, CURLOPT_TIMEOUT=>3, CURLOPT_CONNECTTIMEOUT=>2]);
         curl_exec($ch);
         if (!in_array(curl_getinfo($ch, CURLINFO_HTTP_CODE), [200,401,403,404])) $ok = false;
         curl_close($ch);
@@ -181,8 +182,7 @@ class Manager {
     
     public function checkResources() {
         $load = sys_getloadavg()[0];
-        $cpu = (int)shell_exec('nproc') ?: 4;
-        if ($load > $cpu * 2) Logger::log("RESOURCE", "HIGH CPU: {$load}", "FATAL");
+        if ($load > $this->cpu * 2) Logger::log("RESOURCE", "HIGH CPU: {$load}", "FATAL");
         
         $mem = explode(' ', trim((string)shell_exec("free -m | awk '/^Mem:/{print \$3, \$2}'")));
         $pct = round(($mem[0] / $mem[1]) * 100, 1);
@@ -203,7 +203,12 @@ class Manager {
         if (!$this->cb->canRestart()) return;
         $this->cb->record();
         $pid = $this->getMasterPid();
-        if ($pid > 0) { posix_kill($pid, SIGUSR2); Logger::log("MANAGER", "Restart", "WARN"); }
+        // SIGUSR1 = graceful reload: recycles every worker while keeping the listen socket
+        // (zero-downtime) — the only meaningful in-process recovery. The old code sent
+        // SIGUSR2, which in Workerman merely writes a status file, so the "restart after 3
+        // health failures" self-healing was a silent no-op. A truly dead master is Supervisor's
+        // job (autorestart=true); this path recovers stuck/bloated workers.
+        if ($pid > 0) { posix_kill($pid, SIGUSR1); Logger::log("MANAGER", "Health-recovery reload (PID: {$pid})", "WARN"); }
     }
 }
 
@@ -215,18 +220,29 @@ $http->count = $workers;
 $http->name = 'AdapterMan';
 $http->reloadable = true;
 
-$http->onWorkerStart = function($w) use ($workers, $dir) {
+// HTTP workers now do ONLY request serving — no management logic runs in the request path.
+$http->onWorkerStart = function($w) use ($dir) {
     require $dir . '/start.php';
-    if ($w->id !== 0) return;
-    
+};
+
+// Dedicated management worker: runs the file-watcher / health / monitor loops in its own
+// process, so their blocking calls (curl, Redis, shell_exec) never stall an HTTP worker's
+// event loop — and they no longer die/re-init when HTTP worker 0 recycles on memory/request
+// limits. reloadable=false keeps this loop stable across app SIGUSR1 reloads.
+$manager = new Worker();
+$manager->count = 1;
+$manager->name = 'Manager';
+$manager->reloadable = false;
+
+$manager->onWorkerStart = function($w) use ($workers, $dir) {
     Logger::log("MANAGER", "════════════════════════════════════", "INFO");
     Logger::log("MANAGER", "WEBMAN STARTED | Workers: {$workers}", "INFO");
     Logger::log("MANAGER", "════════════════════════════════════", "INFO");
-    
+
     $m = new Manager($dir, $workers);
     $m->killZombies();
-    
-    Timer::add(5, fn() => $m->checkFiles());
+
+    Timer::add(15, fn() => $m->checkFiles());   // was 5s: full recursive rescan every 5s was wasteful
     Timer::add(15, fn() => $m->health());
     Timer::add(30, function() use ($m) { $m->killZombies(); $m->checkWorkers(); $m->checkResources(); });
 };

@@ -33,26 +33,26 @@ class UserUpdate extends FormRequest
     public function messages()
     {
         return [
-            'email.required' => '邮箱不能为空',
-            'email.email' => '邮箱格式不正确',
-            'transfer_enable.numeric' => '流量格式不正确',
-            'device_limit.integer' => '设备数限制格式不正确',
-            'expired_at.integer' => '到期时间格式不正确',
-            'banned.required' => '是否封禁不能为空',
-            'banned.in' => '是否封禁格式不正确',
-            'plan_id.integer' => '订阅计划格式不正确',
-            'commission_rate.integer' => '推荐返利比例格式不正确',
-            'commission_rate.nullable' => '推荐返利比例格式不正确',
-            'commission_rate.min' => '推荐返利比例最小为0',
-            'commission_rate.max' => '推荐返利比例最大为100',
-            'discount.integer' => '专属折扣比例格式不正确',
-            'discount.nullable' => '专属折扣比例格式不正确',
-            'discount.min' => '专属折扣比例最小为0',
-            'discount.max' => '专属折扣比例最大为100',
-            'u.integer' => '上行流量格式不正确',
-            'd.integer' => '下行流量格式不正确',
-            'balance.integer' => '余额格式不正确',
-            'commission_balance.integer' => '佣金格式不正确'
+            'email.required' => 'ایمیل نمی‌تواند خالی باشد',
+            'email.email' => 'ایمیل دارای فرمت نادرست است',
+            'transfer_enable.numeric' => 'ترافیک دارای فرمت نادرست است',
+            'device_limit.integer' => 'محدودیت تعداد دستگاه دارای فرمت نادرست است',
+            'expired_at.integer' => '到期时间 دارای فرمت نادرست است',
+            'banned.required' => 'وضعیت مسدودسازی نمی‌تواند خالی باشد',
+            'banned.in' => 'وضعیت مسدودسازی دارای فرمت نادرست است',
+            'plan_id.integer' => 'پلن اشتراک دارای فرمت نادرست است',
+            'commission_rate.integer' => 'درصد پورسانت معرفی دارای فرمت نادرست است',
+            'commission_rate.nullable' => 'درصد پورسانت معرفی دارای فرمت نادرست است',
+            'commission_rate.min' => 'درصد پورسانت معرفی最小为0',
+            'commission_rate.max' => 'درصد پورسانت معرفی最大为100',
+            'discount.integer' => 'درصد تخفیف اختصاصی دارای فرمت نادرست است',
+            'discount.nullable' => 'درصد تخفیف اختصاصی دارای فرمت نادرست است',
+            'discount.min' => 'درصد تخفیف اختصاصی最小为0',
+            'discount.max' => 'درصد تخفیف اختصاصی最大为100',
+            'u.integer' => 'ترافیک آپلود دارای فرمت نادرست است',
+            'd.integer' => 'ترافیک دانلود دارای فرمت نادرست است',
+            'balance.integer' => 'موجودی دارای فرمت نادرست است',
+            'commission_balance.integer' => '佣金 دارای فرمت نادرست است'
         ];
     }
 }

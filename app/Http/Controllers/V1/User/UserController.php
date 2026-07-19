@@ -390,6 +390,7 @@ class UserController extends Controller
                 'status' => 'claimed'
             ];
         }
+        $user['reserved_count'] = \App\Models\ReservedPlan::where('user_id', $request->user['id'])->where('status', 0)->count();
         return response([
             'data' => $user
         ]);
@@ -567,7 +568,7 @@ class UserController extends Controller
         $order->status = 3;
         $order->total_amount = 0;
         $order->surplus_amount = $request->input('transfer_amount');
-        $order->callback_no = '佣金划转 Commission transfer';
+        $order->callback_no = 'انتقال پورسانت Commission transfer';
         if (!$order->save()||!$user->save()) {
             DB::rollback();
             abort(500, __('Transfer failed'));
@@ -729,6 +730,7 @@ class UserController extends Controller
                     'plan_name' => $item->plan ? $item->plan->name : 'نامشخص',
                     'transfer_enable' => $item->plan ? $item->plan->transfer_enable : 0,
                     'period' => $item->period,
+                    'months' => (function($p) { if(preg_match('/^month_(\d+)$/', $p, $m)) return (int)$m[1]; if(preg_match('/^year_(\d+)$/', $p, $m)) return (int)$m[1]*12; return 0; })($item->period),
                     'created_at' => $item->created_at
                 ];
             });

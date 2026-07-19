@@ -34,6 +34,7 @@ class BotSettingController extends Controller
             'test_duration',
             'test_limit',
             'test_volume',
+            'usd_pricing_enabled',
         ];
 
         foreach ($request->all() as $key => $value) {

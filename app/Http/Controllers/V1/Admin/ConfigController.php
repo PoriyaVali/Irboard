@@ -231,6 +231,7 @@ class ConfigController extends Controller
         $onDisk = File::exists($configFile) ? include $configFile : null;
         $config = is_array($onDisk) ? $onDisk : config('v2board');
 
+
         foreach (ConfigSave::RULES as $k => $v) {
             if (array_key_exists($k, $data)) {
                 $config[$k] = $data[$k];
@@ -238,7 +239,7 @@ class ConfigController extends Controller
         }
         $data = var_export($config, 1);
         if (!File::put($configFile, "<?php\n return $data ;")) {
-            abort(500, '修改失败');
+            abort(500, 'Failed to write the config file.');
         }
         if (function_exists('opcache_invalidate')) {
             opcache_invalidate($configFile, true);

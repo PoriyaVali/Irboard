@@ -26,13 +26,13 @@ class NoticeController extends Controller
         ]);
         if (!$request->input('id')) {
             if (!Notice::create($data)) {
-                abort(500, '保存失败');
+                abort(500, 'ذخیره ناموفق بود');
             }
         } else {
             try {
                 Notice::find($request->input('id'))->update($data);
             } catch (\Exception $e) {
-                abort(500, '保存失败');
+                abort(500, 'ذخیره ناموفق بود');
             }
         }
         return response([
@@ -43,14 +43,14 @@ class NoticeController extends Controller
     public function drop(Request $request)
     {
         if (empty($request->input('id'))) {
-            abort(500, '参数错误');
+            abort(500, 'پارامتر نادرست است');
         }
         $notice = Notice::find($request->input('id'));
         if (!$notice) {
-            abort(500, '公告不存在');
+            abort(500, 'اعلان یافت نشد');
         }
         if (!$notice->delete()) {
-            abort(500, '删除失败');
+            abort(500, 'حذف ناموفق بود');
         }
         return response([
             'data' => true

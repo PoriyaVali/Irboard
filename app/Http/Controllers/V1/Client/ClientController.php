@@ -35,6 +35,12 @@ class ClientController extends Controller
             return $class->handle();
         }
 
+        // Hiddify detection (sing-box core, separate template) - must precede 'sing'
+        if (strpos($flag, 'hiddify') !== false) {
+            $class = new \App\Protocols\Hiddify\Hiddify($user, $servers);
+            return $class->handle();
+        }
+
         // Singbox detection (check first to avoid unnecessary protocol loop)
         if (strpos($flag, 'sing') !== false) {
             $version = null;

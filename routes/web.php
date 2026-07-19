@@ -191,6 +191,11 @@ Route::prefix('api/v1/' . config('v2board.secure_path', 'admin') . '/appstore')-
     Route::post('/delete-banner', 'V1\\Admin\\AppStoreController@deleteBanner');
 });
 
+Route::prefix('api/v1/' . config('v2board.secure_path', 'admin') . '/smartbot')->middleware('admin')->group(function () {
+    Route::get('/get', 'V1\\Admin\\SmartBotController@get');
+    Route::post('/save', 'V1\\Admin\\SmartBotController@save');
+});
+
 // Hedioum tunnel toggle (admin) — per-node DIRECT/TUNNEL switch, backed by v2_tunnel_map
 Route::prefix('api/v1/' . config('v2board.secure_path', 'admin') . '/tunnel')->middleware('admin')->group(function () {
     Route::get('/status', 'V1\\Admin\\TunnelController@status');

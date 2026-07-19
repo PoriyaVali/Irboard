@@ -37,12 +37,12 @@ class OrderService
 
             if (!$this->user->save()) {
                 DB::rollBack();
-                abort(500, '充值失败');
+                abort(500, 'شارژ حساب ناموفق بود');
             }
             $order->status = 3;
             if (!$order->save()) {
                 DB::rollBack();
-                abort(500, '充值失败');
+                abort(500, 'شارژ حساب ناموفق بود');
             }
             DB::commit();
             return;
@@ -67,7 +67,7 @@ class OrderService
                 ]);
             } catch (\Exception $e) {
                 DB::rollback();
-                abort(500, '开通失败');
+                abort(500, 'فعال‌سازی ناموفق بود');
             }
         }
         switch ((string)$order->period) {
@@ -97,12 +97,12 @@ class OrderService
 
         if (!$this->user->save()) {
             DB::rollBack();
-            abort(500, '开通失败');
+            abort(500, 'فعال‌سازی ناموفق بود');
         }
         $order->status = 3;
         if (!$order->save()) {
             DB::rollBack();
-            abort(500, '开通失败');
+            abort(500, 'فعال‌سازی ناموفق بود');
         }
 
         DB::commit();
@@ -117,7 +117,7 @@ class OrderService
         } else if ($order->period === 'reset_price') {
             $order->type = 4;
         } else if ($user->plan_id !== NULL && $order->plan_id !== $user->plan_id && ($user->expired_at > time() || $user->expired_at === NULL)) {
-            if (!(int)config('v2board.plan_change_enable', 1)) abort(500, '目前不允许更改订阅，请联系客服或提交工单操作');
+            if (!(int)config('v2board.plan_change_enable', 1)) abort(500, 'در حال حاضر تغییر اشتراک مجاز نیست؛ لطفاً با پشتیبانی تماس بگیرید یا تیکت ثبت کنید');
             $order->type = 3;
             if ((int)config('v2board.surplus_enable', 1)) $this->getSurplusValue($user, $order);
             if ($order->surplus_amount >= $order->total_amount) {

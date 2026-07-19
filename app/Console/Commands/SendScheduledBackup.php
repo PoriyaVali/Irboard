@@ -85,26 +85,42 @@ class SendScheduledBackup extends Command
         $when = \Morilog\Jalali\Jalalian::fromCarbon(\Carbon\Carbon::now('Asia/Tehran'))->format('Y/m/d H:i');
         $caption = "🗄 بکاپ دیتابیس\n📅 {$when}\n💾 " . round($size / 1024, 1) . " KB";
 
-        $ch = curl_init("https://api.telegram.org/bot{$token}/sendDocument");
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST => true,
-            CURLOPT_POSTFIELDS => [
-                'chat_id'  => $chatId,
-                'caption'  => $caption,
-                'document' => new \CURLFile($file, 'application/gzip', basename($file)),
-            ],
-            CURLOPT_TIMEOUT => 180,
-        ]);
-        $resp = curl_exec($ch);
-        $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $cerr = curl_error($ch);
-        curl_close($ch);
-
-        if ($code !== 200) {
-            return 'ارسال فایل به تلگرام ناموفق: ' . ($cerr ?: substr((string) $resp, 0, 300));
+        if (BotSetting::getBool('backup_all_admins', false)) {
+            $targets = \App\Models\User::where('is_admin', 1)
+                ->whereNotNull('telegram_id')
+                ->pluck('telegram_id')->map(function ($v) { return (string) $v; })
+                ->filter()->unique()->values()->all();
+        } else {
+            $targets = [(string) $chatId];
         }
-        return null;
+        if (empty($targets)) {
+            return 'هیچ ادمینی با تلگرام برای ارسال بکاپ یافت نشد.';
+        }
+
+        $okAny = false; $lastErr = null;
+        foreach ($targets as $cid) {
+            $ch = curl_init("https://api.telegram.org/bot{$token}/sendDocument");
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => [
+                    'chat_id'  => $cid,
+                    'caption'  => $caption,
+                    'document' => new \CURLFile($file, 'application/gzip', basename($file)),
+                ],
+                CURLOPT_TIMEOUT => 180,
+            ]);
+            $resp = curl_exec($ch);
+            $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $cerr = curl_error($ch);
+            curl_close($ch);
+            if ($code === 200) {
+                $okAny = true;
+            } else {
+                $lastErr = 'ارسال فایل به تلگرام ناموفق: ' . ($cerr ?: substr((string) $resp, 0, 300));
+            }
+        }
+        return $okAny ? null : $lastErr;
     }
 
     private static function pruneBackups(string $dir, int $keep): void

@@ -148,4 +148,16 @@ class TelegramService
             SendTelegramJob::dispatch($user->telegram_id, $message);
         }
     }
+
+    public function sendMessageToAdminsBySwitch($message)
+    {
+        if (!config('v2board.telegram_bot_enable', 0)) return;
+        $query = User::where('is_admin', 1)->where('telegram_id', '!=', NULL);
+        if (!\App\Models\BotSetting::getBool('notify_all_admins', false)) {
+            $query->orderBy('id')->limit(1);
+        }
+        foreach ($query->get() as $user) {
+            SendTelegramJob::dispatch($user->telegram_id, $message);
+        }
+    }
 }

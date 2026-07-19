@@ -7,7 +7,6 @@ use App\Models\ServerV2node;
 use Illuminate\Http\Request;
 use ParagonIE_Sodium_Compat as SodiumCompat;
 use App\Utils\Helper;
-use Illuminate\Support\Facades\Cache;
 
 class V2nodeController extends Controller
 {
@@ -45,8 +44,10 @@ class V2nodeController extends Controller
             'show' => 'nullable|in:0,1',
             'sort' => 'nullable'
         ]);
-
-        if (in_array($params['protocol'], ['anytls', 'hysteria2', 'trojan', 'tuic'])) {
+        if ($params['protocol'] == 'anytls' && $params['tls'] === 0) {
+            $params['tls'] = 1;
+        }
+        if (in_array($params['protocol'], ['hysteria2', 'trojan', 'tuic'])) {
             $params['tls'] = 1;
         }
         if (isset($params['tls']) && (int)$params['tls'] === 2) {
@@ -65,6 +66,22 @@ class V2nodeController extends Controller
                 $params['tls_settings']['server_port'] = "443";
             }
         }
+        if (isset($params['tls_settings']) && !empty($params['tls_settings']['ech']) && $params['tls_settings']['ech'] === 'custom') {
+            if (empty($params['tls_settings']['ech_server_name'])) {
+                $params['tls_settings']['ech'] = '';
+            } else {
+                $outerSni = $params['tls_settings']['ech_server_name'];
+                if (empty($params['tls_settings']['ech_key']) || empty($params['tls_settings']['ech_config'])) {
+                    $echPair = Helper::generateEchKeyPair($outerSni);
+                    if (empty($params['tls_settings']['ech_key'])) {
+                        $params['tls_settings']['ech_key'] = $echPair['ech_key'];
+                    }
+                    if (empty($params['tls_settings']['ech_config'])) {
+                        $params['tls_settings']['ech_config'] = $echPair['ech_config'];
+                    }
+                }
+            }
+        }
         if (isset($params['network_settings'])) {
             $ns = $params['network_settings'];
             if (isset($ns['acceptProxyProtocol'])) {
@@ -79,6 +96,9 @@ class V2nodeController extends Controller
             $ns = $params['network_settings'];
             if (isset($ns['extra']) && is_array($ns['extra'])) {
                 $extra = $ns['extra'];
+                if (isset($extra['xPaddingObfsMode'])) {
+                    $extra['xPaddingObfsMode'] = filter_var($extra['xPaddingObfsMode'], FILTER_VALIDATE_BOOLEAN);
+                }
                 if (isset($extra['noGRPCHeader'])) {
                     $extra['noGRPCHeader'] = filter_var($extra['noGRPCHeader'], FILTER_VALIDATE_BOOLEAN);
                 }
@@ -152,12 +172,12 @@ class V2nodeController extends Controller
         if ($request->input('id')) {
             $server = ServerV2node::find($request->input('id'));
             if (!$server) {
-                abort(500, '服务器不存在');
+                abort(500, 'سرور یافت نشد');
             }
             try {
                 $server->update($params);
             } catch (\Exception $e) {
-                abort(500, '保存失败');
+                abort(500, 'ذخیره ناموفق بود');
             }
             return response([
                 'data' => true
@@ -165,7 +185,7 @@ class V2nodeController extends Controller
         }
 
         if (!ServerV2node::create($params)) {
-            abort(500, '创建失败');
+            abort(500, 'ساخت ناموفق بود');
         }
         return response([
             'data' => true
@@ -177,7 +197,7 @@ class V2nodeController extends Controller
         if ($request->input('id')) {
             $server = ServerV2node::find($request->input('id'));
             if (!$server) {
-                abort(500, '节点ID不存在');
+                abort(500, 'شناسه‌ی نود یافت نشد');
             }
         }
         return response([
@@ -194,12 +214,12 @@ class V2nodeController extends Controller
         $server = ServerV2node::find($request->input('id'));
 
         if (!$server) {
-            abort(500, '该服务器不存在');
+            abort(500, 'این سرور یافت نشد');
         }
         try {
             $server->update($params);
         } catch (\Exception $e) {
-            abort(500, '保存失败');
+            abort(500, 'ذخیره ناموفق بود');
         }
         return response([
             'data' => true
@@ -211,10 +231,10 @@ class V2nodeController extends Controller
         $server = ServerV2node::find($request->input('id'));
         $server->show = 0;
         if (!$server) {
-            abort(500, '服务器不存在');
+            abort(500, 'سرور یافت نشد');
         }
         if (!ServerV2node::create($server->toArray())) {
-            abort(500, '复制失败');
+            abort(500, 'کپی ناموفق بود');
         }
 
         return response([

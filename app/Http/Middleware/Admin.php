@@ -17,10 +17,10 @@ class Admin
     public function handle($request, Closure $next)
     {
         $authorization = $request->input('auth_data') ?? $request->header('authorization');
-        if (!$authorization) abort(403, '未登录或登陆已过期');
+        if (!$authorization) abort(403, 'وارد نشده‌اید یا نشست منقضی شده است');
 
         $user = AuthService::decryptAuthData($authorization);
-        if (!$user || !$user['is_admin']) abort(403, '未登录或登陆已过期');
+        if (!$user || !$user['is_admin']) abort(403, 'وارد نشده‌اید یا نشست منقضی شده است');
         $request->merge([
             'user' => $user
         ]);

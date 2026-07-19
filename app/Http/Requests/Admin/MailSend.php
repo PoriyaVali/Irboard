@@ -24,11 +24,11 @@ class MailSend extends FormRequest
     public function messages()
     {
         return [
-            'type.required' => '发送类型不能为空',
-            'type.in' => '发送类型格式有误',
-            'subject.required' => '主题不能为空',
-            'content.required' => '内容不能为空',
-            'receiver.array' => '收件人格式有误'
+            'type.required' => 'نوع ارسال نمی‌تواند خالی باشد',
+            'type.in' => 'نوع ارسال دارای فرمت نامعتبر است',
+            'subject.required' => '主题 نمی‌تواند خالی باشد',
+            'content.required' => '内容 نمی‌تواند خالی باشد',
+            'receiver.array' => 'گیرنده دارای فرمت نامعتبر است'
         ];
     }
 }

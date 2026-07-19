@@ -28,7 +28,8 @@ class ManageController extends Controller
             'tuic',
             'hysteria',
             'anytls',
-            'v2node'
+            'v2node',
+            'mdns'
         ) ?? [];
         if (empty($params)) {
             $params = [
@@ -40,6 +41,7 @@ class ManageController extends Controller
                 'hysteria'    => $_POST['hysteria'] ?? null,
                 'anytls'      => $_POST['anytls'] ?? null,
                 'v2node'      => $_POST['v2node'] ?? null,
+                'mdns'        => $_POST['mdns'] ?? null,
             ];
         }
         DB::beginTransaction();
@@ -48,7 +50,7 @@ class ManageController extends Controller
             foreach($v as $id => $sort) {
                 if (!$model::find($id)->update(['sort' => $sort])) {
                     DB::rollBack();
-                    abort(500, '保存失败');
+                    abort(500, 'ذخیره ناموفق بود');
                 }
             }
         }

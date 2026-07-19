@@ -133,7 +133,7 @@ class ConfigSave extends FormRequest
                     if($tier == '') {
                         continue;
                     }
-                    $fail('充值奖励格式不正确，必须为充值金额:奖励金额');
+                    $fail('فرمت پاداش شارژ نادرست است؛ باید به‌صورت «مبلغ شارژ:مبلغ پاداش» باشد');
                 }
             }
         };
@@ -144,15 +144,15 @@ class ConfigSave extends FormRequest
     {
         // illiteracy prompt
         return [
-            'app_url.url' => '站点URL格式不正确，必须携带http(s)://',
-            'subscribe_url.url' => '订阅URL格式不正确，必须携带http(s)://',
-            'subscribe_path.regex' => '订阅路径必须以/开头',
-            'server_token.min' => '通讯密钥长度必须大于16位',
-            'tos_url.url' => '服务条款URL格式不正确，必须携带http(s)://',
-            'telegram_discuss_link.url' => 'Telegram群组地址必须为URL格式，必须携带http(s)://',
-            'logo.url' => 'LOGO URL格式不正确，必须携带https(s)://',
-            'secure_path.min' => '后台路径长度最小为8位',
-            'secure_path.regex' => '后台路径只能为字母或数字',
+            'app_url.url' => 'فرمت آدرس سایت نادرست است؛ باید شامل http(s):// باشد',
+            'subscribe_url.url' => 'فرمت آدرس اشتراک نادرست است؛ باید شامل http(s):// باشد',
+            'subscribe_path.regex' => 'مسیر اشتراک باید با / شروع شود',
+            'server_token.min' => 'طول کلید ارتباطی باید بیش از ۱۶ کاراکتر باشد',
+            'tos_url.url' => 'فرمت آدرس قوانین خدمات نادرست است؛ باید شامل http(s):// باشد',
+            'telegram_discuss_link.url' => 'آدرس گروه تلگرام باید URL معتبر و شامل http(s):// باشد',
+            'logo.url' => 'فرمت آدرس لوگو نادرست است؛ باید شامل https:// باشد',
+            'secure_path.min' => 'حداقل طول مسیر پنل مدیریت ۸ کاراکتر است',
+            'secure_path.regex' => 'مسیر پنل مدیریت فقط می‌تواند حروف یا اعداد باشد',
         ];
     }
 }

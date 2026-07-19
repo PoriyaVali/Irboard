@@ -187,4 +187,46 @@ class CardPaymentController extends Controller
             'data' => $stats
         ]);
     }
+
+    /**
+     * رسیدِ عکسیِ ارسال‌شده از رباتِ تلگرام را برمی‌گرداند (base64) تا اپِ ادمین
+     * بتواند نمایشش دهد. عکس روی سرورِ تلگرام است؛ اینجا با getFile آن را می‌گیریم
+     * و پروکسی می‌کنیم تا توکنِ ربات به کلاینت لو نرود.
+     */
+    public function receipt(Request $request)
+    {
+        $payment = CardPayment::find($request->input('id'));
+        if (!$payment) {
+            abort(404, 'پرداخت یافت نشد');
+        }
+        if (empty($payment->receipt_file_id)) {
+            return response(['data' => null]); // این پرداخت رسیدِ عکسی ندارد
+        }
+        $token = config('v2board.telegram_bot_token');
+        if (!$token) {
+            abort(500, 'توکن ربات تلگرام تنظیم نشده است');
+        }
+        try {
+            $getFile = \Illuminate\Support\Facades\Http::timeout(15)
+                ->get("https://api.telegram.org/bot{$token}/getFile", ['file_id' => $payment->receipt_file_id]);
+            $filePath = $getFile->json('result.file_path');
+            if (!$filePath) {
+                abort(500, 'دریافتِ رسید از تلگرام ناموفق بود (شاید منقضی شده)');
+            }
+            $bin = \Illuminate\Support\Facades\Http::timeout(30)
+                ->get("https://api.telegram.org/file/bot{$token}/{$filePath}");
+            if (!$bin->successful()) {
+                abort(500, 'دانلودِ رسید ناموفق بود');
+            }
+            $mime = $bin->header('Content-Type') ?: 'image/jpeg';
+            return response([
+                'data' => [
+                    'mime' => $mime,
+                    'image' => base64_encode($bin->body()),
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            abort(500, 'خطا در دریافتِ رسید: ' . $e->getMessage());
+        }
+    }
 }

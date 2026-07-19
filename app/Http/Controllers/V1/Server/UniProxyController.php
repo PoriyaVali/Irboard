@@ -36,6 +36,15 @@ class UniProxyController extends Controller
         if (!$this->nodeInfo) abort(500, 'server is not exist');
     }
 
+    // node status heartbeat (cpu/mem/uptime...) - V2bX posts this every 60s
+    public function status(Request $request)
+    {
+        Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_LAST_CHECK_AT', $this->nodeInfo->id), time(), 3600);
+        return response([
+            'data' => true
+        ]);
+    }
+
     // 后端获取用户
     public function user(Request $request)
     {
@@ -129,28 +138,52 @@ class UniProxyController extends Controller
         if (empty($data)) {
             $data = $_POST;
         }
-        if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
-            // JSON decoding error
+        if (empty($data)) {
             return response([
-                'error' => 'Invalid online data'
+                'data' => true
+            ]);
+        }
+        if (!is_array($data)) {
+            return response([
+                'error' => 'Invalid online data format'
             ], 400);
         }
         $updateAt = time();
+        $cacheKeys = array_map(function ($uid) {
+            return 'ALIVE_IP_USER_' . $uid;
+        }, array_keys($data));
+
+        if (empty($cacheKeys)) {
+            return response([
+                'data' => true
+            ]);
+        }
+
+        $cachedData = Cache::many($cacheKeys);
+        $updates = [];
+
         foreach ($data as $uid => $ips) {
-            $ips_array = Cache::get('ALIVE_IP_USER_' . $uid) ?? [];
+            if (!is_numeric($uid) || !is_array($ips)) {
+                continue; // 跳过无效数据
+            }
+            $key = 'ALIVE_IP_USER_' . $uid;
+            $ips_array = $cachedData[$key] ?? [];
+
             // 更新节点数据
             $ips_array[$this->nodeType . $this->nodeId] = ['aliveips' => $ips, 'lastupdateAt' => $updateAt];
             // 清理过期数据
             foreach ($ips_array as $nodetypeid => $oldips) {
-                if (!is_int($oldips) && ($updateAt - $oldips['lastupdateAt'] > 100)) {
+                if ($nodetypeid !== 'alive_ip' && is_array($oldips) && ($updateAt - ($oldips['lastupdateAt'] ?? 0) > 100)) {
                     unset($ips_array[$nodetypeid]);
                 }
             }
+
+            // 计算活跃IP数量
             $count = 0;
             if (config('v2board.device_limit_mode', 0) == 1) {
                 $ipmap = [];
                 foreach ($ips_array as $nodetypeid => $newdata) {
-                    if (!is_int($newdata) && isset($newdata['aliveips'])) {
+                    if ($nodetypeid !== 'alive_ip' && is_array($newdata) && isset($newdata['aliveips'])) {
                         foreach ($newdata['aliveips'] as $ip_NodeId) {
                             $ip = explode("_", $ip_NodeId)[0];
                             $ipmap[$ip] = 1;
@@ -160,13 +193,19 @@ class UniProxyController extends Controller
                 $count = count($ipmap);
             } else {
                 foreach ($ips_array as $nodetypeid => $newdata) {
-                    if (!is_int($newdata) && isset($newdata['aliveips'])) {
+                    if ($nodetypeid !== 'alive_ip' && is_array($newdata) && isset($newdata['aliveips'])) {
                         $count += count($newdata['aliveips']);
                     }
                 }
             }
             $ips_array['alive_ip'] = $count;
-            Cache::put('ALIVE_IP_USER_' . $uid, $ips_array, 120);
+
+            $updates[$key] = $ips_array;
+        }
+
+        // 批量更新缓存
+        foreach ($updates as $key => $value) {
+            Cache::put($key, $value, 120);
         }
 
         return response([
@@ -178,6 +217,15 @@ class UniProxyController extends Controller
     public function config(Request $request)
     {
         switch ($this->nodeType) {
+            case 'mdns':
+                $response = [
+                    'server_port' => $this->nodeInfo->server_port,
+                    'domain' => $this->nodeInfo->domain,
+                    'encryption_method' => $this->nodeInfo->encryption_method,
+                    'encryption_key' => $this->nodeInfo->encryption_key,
+                    'node_secret' => Helper::getServerKey($this->nodeInfo->created_at, 32),
+                ];
+                break;
             case 'shadowsocks':
                 $response = [
                     'server_port' => $this->nodeInfo->server_port,
@@ -261,7 +309,9 @@ class UniProxyController extends Controller
         }
         $response['base_config'] = [
             'push_interval' => (int)config('v2board.server_push_interval', 60),
-            'pull_interval' => (int)config('v2board.server_pull_interval', 60)
+            'pull_interval' => (int)config('v2board.server_pull_interval', 60),
+            'node_report_min_traffic' => (int)config('v2board.server_node_report_min_traffic', 0),
+            'device_online_min_traffic' => (int)config('v2board.server_device_online_min_traffic', 0)
         ];
         if ($this->nodeInfo['route_id']) {
             $response['routes'] = $this->serverService->getRoutes($this->nodeInfo['route_id']);

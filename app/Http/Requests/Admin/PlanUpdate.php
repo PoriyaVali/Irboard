@@ -23,8 +23,8 @@ class PlanUpdate extends FormRequest
     public function messages()
     {
         return [
-            'show.in' => '销售状态格式不正确',
-            'renew.in' => '续费状态格式不正确'
+            'show.in' => 'وضعیت فروش دارای فرمت نادرست است',
+            'renew.in' => 'وضعیت تمدید دارای فرمت نادرست است'
         ];
     }
 }

@@ -13,6 +13,7 @@ use App\Models\ServerVmess;
 use App\Models\ServerTrojan;
 use App\Models\ServerTuic;
 use App\Models\ServerAnytls;
+use App\Models\ServerMdns;
 use App\Utils\CacheKey;
 use App\Utils\Helper;
 use Illuminate\Support\Facades\Cache;
@@ -37,9 +38,12 @@ class ServerService
                 $server[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_VLESS_LAST_CHECK_AT', $server[$key]['id']));
             }
             if (isset($server[$key]['tls_settings'])) {
-                if (isset($server[$key]['tls_settings']['private_key'])) {
-                    $server[$key]['tls_settings'] = array_diff_key($server[$key]['tls_settings'], array('private_key' => ''));
-                }
+                $server[$key]['tls_settings'] = array_diff_key(
+                    $server[$key]['tls_settings'],
+                    array_flip(array_filter(['private_key', 'ech_key'], function($k) use ($server, $key) {
+                        return isset($server[$key]['tls_settings'][$k]);
+                    }))
+                );
             }
             if (isset($server[$key]['encryption_settings'])) {
                 if (isset($server[$key]['encryption_settings']['private_key'])) {
@@ -202,9 +206,12 @@ class ServerService
                 $v2node[$key]['created_at'] = $v2node[$v['parent_id']]['created_at'];
             }
             if (isset($v2node[$key]['tls_settings'])) {
-                if (isset($v2node[$key]['tls_settings']['private_key'])) {
-                    $v2node[$key]['tls_settings'] = array_diff_key($v2node[$key]['tls_settings'], array('private_key' => ''));
-                }
+                $v2node[$key]['tls_settings'] = array_diff_key(
+                    $v2node[$key]['tls_settings'],
+                    array_flip(array_filter(['private_key', 'ech_key'], function($k) use ($v2node, $key) {
+                        return isset($v2node[$key]['tls_settings'][$k]);
+                    }))
+                );
             }
             if (isset($v2node[$key]['encryption_settings'])) {
                 if (isset($v2node[$key]['encryption_settings']['private_key'])) {
@@ -212,6 +219,25 @@ class ServerService
                 }
             }
             $servers[] = $v2node[$key]->toArray();
+        }
+        return $servers;
+    }
+
+    public function getAvailableMdns(User $user)
+    {
+        $servers = [];
+        $model = ServerMdns::orderBy('sort', 'ASC');
+        $mdns = $model->get()->keyBy('id');
+        foreach ($mdns as $key => $v) {
+            if (!$v['show']) continue;
+            $mdns[$key]['type'] = 'mdns';
+            $mdns[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_MDNS_LAST_CHECK_AT', $v['id']));
+            if (!in_array($user->group_id, $v['group_id'])) continue;
+            if (isset($mdns[$v['parent_id']])) {
+                $mdns[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_MDNS_LAST_CHECK_AT', $v['parent_id']));
+                $mdns[$key]['created_at'] = $mdns[$v['parent_id']]['created_at'];
+            }
+            $servers[] = $mdns[$key]->toArray();
         }
         return $servers;
     }
@@ -226,15 +252,12 @@ class ServerService
             $this->getAvailableHysteria($user),
             $this->getAvailableVless($user),
             $this->getAvailableAnyTLS($user),
-            $this->getAvailableV2node($user)
+            $this->getAvailableV2node($user),
+            $this->getAvailableMdns($user)
         );
         $tmp = array_column($servers, 'sort');
         array_multisort($tmp, SORT_ASC, $servers);
         return array_map(function ($server) {
-            // اگر tunnel_host تنظیم شده، جایگزین host شود
-            if (!empty($server['tunnel_host'])) {
-                $server['host'] = $server['tunnel_host'];
-            }
             if (strpos($server['port'], '-')) {
                 $server['mport'] = (string)$server['port'];
             } else {
@@ -376,6 +399,17 @@ class ServerService
         return $servers;
     }
 
+    public function getAllMdns()
+    {
+        $servers = ServerMdns::orderBy('sort', 'ASC')
+            ->get()
+            ->toArray();
+        foreach ($servers as $k => $v) {
+            $servers[$k]['type'] = 'mdns';
+        }
+        return $servers;
+    }
+
     public function getAllV2node()
     {
         $servers = ServerV2node::orderBy('sort', 'ASC')
@@ -389,8 +423,15 @@ class ServerService
 
             $apiHost = config('v2board.server_api_url', config('v2board.app_url'));
             $apiKey = config('v2board.server_token', '');
-            $nodeId = $v['id'];
-            $servers[$k]['install_command'] = "wget -N https://raw.githubusercontent.com/wyx2685/v2node/master/script/install.sh && bash install.sh --api-host {$apiHost} --node-id {$nodeId} --api-key {$apiKey}";
+            $nodeId = (int) $v['id'];
+            $apiHostArg = escapeshellarg((string) $apiHost);
+            $apiKeyArg = escapeshellarg((string) $apiKey);
+            $servers[$k]['install_command'] = sprintf(
+                'wget -N https://raw.githubusercontent.com/wyx2685/v2node/master/script/install.sh && bash install.sh --api-host %s --node-id %d --api-key %s',
+                $apiHostArg,
+                $nodeId,
+                $apiKeyArg
+            );
         }
         return $servers;
     }
@@ -422,7 +463,8 @@ class ServerService
             $this->getAllHysteria(),
             $this->getAllVLess(),
             $this->getAllAnyTLS(),
-            $this->getAllV2node()
+            $this->getAllV2node(),
+            $this->getAllMdns()
         );
         $this->mergeData($servers);
         $tmp = array_column($servers, 'sort');
@@ -433,7 +475,11 @@ class ServerService
     public function getRoutes(array $routeIds)
     {
         $routeIds = array_map('intval', $routeIds);
-        $routes = ServerRoute::select(['id', 'match', 'action', 'action_value'])->whereIn('id', $routeIds)->get();
+        $order = implode(',', $routeIds);
+        $routes = ServerRoute::select(['id', 'match', 'action', 'action_value'])
+            ->whereIn('id', $routeIds)
+            ->orderByRaw("FIELD(id, $order)")
+            ->get();
         foreach ($routes as $k => $route) {
             $array = json_decode($route->match, true);
             if (is_array($array)) $routes[$k]['match'] = $array;
@@ -460,6 +506,8 @@ class ServerService
                 return ServerVless::find($serverId);
             case 'anytls':
                 return ServerAnytls::find($serverId);
+            case 'mdns':
+                return ServerMdns::find($serverId);
             default:
                 return false;
         }

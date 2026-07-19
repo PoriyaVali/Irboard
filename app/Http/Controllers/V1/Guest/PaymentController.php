@@ -262,6 +262,10 @@ class PaymentController extends Controller
             $this->notifyTelegramUser($order, $success, $message);
             return $this->renderTelegramResult($success, $message, $order);
         }
+
+        if ($order && $order->source === 'app') {
+            return $this->renderAppResult($success, $message, $order);
+        }
         
         if ($success) {
             $this->logInfo('Success page displayed', ['trade_no' => $tradeNo]);
@@ -321,6 +325,56 @@ class PaymentController extends Controller
         }
     }
     
+    private function renderAppResult($success, $message, $order)
+    {
+        $adjustedAmount = ($order->total_amount > 0) ? $order->total_amount : $order->balance_amount;
+        $status = $success ? 'success' : 'failed';
+        $deeplink = 'hiddify://payment-result?status=' . $status . '&trade_no=' . urlencode($order->trade_no);
+
+        if ($success) {
+            $title = 'پرداخت موفق';
+            $icon = '✅';
+            $color = '#28a745';
+            $desc = $order->plan_id ? 'اشتراک شما فعال شد!' : 'کیف پول شما شارژ شد!';
+        } else {
+            $title = 'پرداخت ناموفق';
+            $icon = '❌';
+            $color = '#dc3545';
+            $desc = $message;
+        }
+
+        $dl = htmlspecialchars($deeplink, ENT_QUOTES);
+        $html = '<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>' . $title . '</title>
+<style>
+body{font-family:Tahoma,sans-serif;background:#f5f5f5;display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0}
+.card{background:#fff;border-radius:16px;padding:40px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,.1);max-width:400px}
+.icon{font-size:64px;margin-bottom:20px}
+h1{color:' . $color . ';margin-bottom:10px}
+.amount{font-size:24px;color:#333;margin:20px 0}
+.desc{color:#666;margin-bottom:30px}
+.btn{display:inline-block;background:#0088cc;color:#fff;padding:12px 30px;border-radius:8px;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="card">
+<div class="icon">' . $icon . '</div>
+<h1>' . $title . '</h1>
+<div class="amount">' . number_format($adjustedAmount) . ' تومان</div>
+<p class="desc">' . $desc . '</p>
+<a href="' . $dl . '" class="btn">بازگشت به برنامه</a>
+</div>
+<script>setTimeout(function(){window.location.href="' . $dl . '";},800);</script>
+</body>
+</html>';
+
+        return response($html);
+    }
+
     private function renderTelegramResult($success, $message, $order)
     {
         $adjustedAmount = ($order->total_amount > 0) ? $order->total_amount : $order->balance_amount;

@@ -734,3 +734,58 @@
 
     console.log('[i18n-fa] Persian translation loaded - ' + sortedKeys.length + ' entries');
 })();
+
+/* ===== دکمه/پاپ‌آپِ ادمین‌ها و کارمندها (تزریق‌شده) ===== */
+(function(){
+  'use strict';
+  var BTN_ID='staffListBtn';
+  function fmtDate(ts){ if(!ts) return '—'; try{ var n=Number(ts); var ms=(''+ts).length<=10? n*1000:n; return new Date(ms).toLocaleString('fa-IR'); }catch(e){ return '—'; } }
+  function openPopup(){
+    if(document.getElementById('staffListOverlay')) return;
+    var ov=document.createElement('div'); ov.id='staffListOverlay';
+    ov.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,.5);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px';
+    ov.innerHTML='<div style="background:#fff;color:#1f2937;border-radius:14px;max-width:560px;width:100%;max-height:80vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid #eef2f7"><b style="font-size:15px">👥 ادمین‌ها و کارمندها</b><span id="staffClose" style="cursor:pointer;font-size:18px;color:#64748b">✕</span></div>'
+      +'<div id="staffBody" style="padding:14px 18px;font-size:13px">در حال بارگذاری…</div></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click',function(e){ if(e.target===ov) ov.remove(); });
+    ov.querySelector('#staffClose').onclick=function(){ ov.remove(); };
+    var sp=(window.settings&&window.settings.secure_path)||'admin';
+    fetch('/api/v1/'+sp+'/staff/list',{headers:{'Authorization':localStorage.getItem('authorization')||''}})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        var list=(d&&d.data)||[]; var body=ov.querySelector('#staffBody');
+        if(!list.length){ body.textContent='موردی یافت نشد.'; return; }
+        var html='<div style="color:#64748b;margin-bottom:8px">مجموع: '+list.length+'</div>';
+        list.forEach(function(u){
+          var role=u.is_admin?'<span style="background:#fee2e2;color:#b91c1c;padding:2px 9px;border-radius:8px;font-size:11px">ادمین</span>':'<span style="background:#dbeafe;color:#1d4ed8;padding:2px 9px;border-radius:8px;font-size:11px">کارمند</span>';
+          html+='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9"><div><div style="direction:ltr;text-align:left">'+(u.email||'')+'</div><div style="color:#94a3b8;font-size:11px">آخرین ورود: '+fmtDate(u.last_login_at)+'</div></div>'+role+'</div>';
+        });
+        body.innerHTML=html;
+      })
+      .catch(function(){ var b=ov.querySelector('#staffBody'); if(b) b.textContent='خطا در دریافت اطلاعات.'; });
+  }
+  function makeBtn(){
+    var b=document.createElement('button'); b.id=BTN_ID; b.type='button';
+    b.textContent='👥 نمایش ادمین‌ها و کارمندها';
+    b.style.cssText='display:block;margin:12px 0;padding:8px 16px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;border:none;border-radius:8px;font-size:13px;cursor:pointer';
+    b.addEventListener('click',function(e){ e.preventDefault(); e.stopPropagation(); openPopup(); });
+    return b;
+  }
+  function tryInject(){
+    if(document.getElementById(BTN_ID)) return;
+    var heads=document.querySelectorAll('.ant-collapse-header,.ant-card-head-title,.ant-tabs-tab,h2,h3');
+    for(var i=0;i<heads.length;i++){
+      var t=(heads[i].textContent||'').replace(/\s+/g,'');
+      if(t.indexOf('پیکربندیسایت')>=0 || t.indexOf('站点配置')>=0){
+        var h=heads[i], item=h.closest('.ant-collapse-item'), card=h.closest('.ant-card');
+        if(item){ var box=item.querySelector('.ant-collapse-content-box'); if(box){ box.insertBefore(makeBtn(),box.firstChild); return; } }
+        if(card){ var cb=card.querySelector('.ant-card-body'); if(cb){ cb.insertBefore(makeBtn(),cb.firstChild); return; } }
+        h.parentNode.insertBefore(makeBtn(), h.nextSibling); return;
+      }
+    }
+  }
+  var tm=null; function schedule(){ if(tm) return; tm=setTimeout(function(){ tm=null; tryInject(); },300); }
+  if(document.body){ new MutationObserver(schedule).observe(document.body,{childList:true,subtree:true}); }
+  setInterval(tryInject,1500); setTimeout(tryInject,800);
+})();

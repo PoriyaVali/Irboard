@@ -36,7 +36,7 @@ class TicketService {
         $ticket = Ticket::where('id', $ticketId)
             ->first();
         if (!$ticket) {
-            abort(500, '工单不存在');
+            abort(500, 'تیکت یافت نشد');
         }
         
         DB::beginTransaction();
@@ -54,7 +54,7 @@ class TicketService {
         $ticket->touch();
         if (!$ticketMessage || !$ticket->save()) {
             DB::rollback();
-            abort(500, '工单回复失败');
+            abort(500, 'ثبت پاسخ تیکت ناموفق بود');
         }
         DB::commit();
         $this->sendEmailNotify($ticket, $ticketMessage);
@@ -91,12 +91,12 @@ class TicketService {
             Cache::put($cacheKey, 1, 1800);
             SendEmailJob::dispatch([
                 'email' => $user->email,
-                'subject' => '您在' . config('v2board.app_name', 'V2Board') . '的工单得到了回复',
+                'subject' => 'تیکت شما در ' . config('v2board.app_name', 'V2Board') . ' پاسخ داده شد',
                 'template_name' => 'notify',
                 'template_value' => [
                     'name' => config('v2board.app_name', 'V2Board'),
                     'url' => config('v2board.app_url'),
-                    'content' => "主题：{$ticket->subject}\r\n回复内容：{$ticketMessage->message}"
+                    'content' => "موضوع: {$ticket->subject}\r\nمتن پاسخ: {$ticketMessage->message}"
                 ]
             ]);
         }
