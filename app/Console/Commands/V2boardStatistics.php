@@ -23,7 +23,7 @@ class V2boardStatistics extends Command
      *
      * @var string
      */
-    protected $description = '统计任务';
+    protected $description = 'Build daily usage statistics';
 
     /**
      * Create a new command instance.
@@ -47,7 +47,7 @@ class V2boardStatistics extends Command
         //$this->statUser();
         //$this->statServer();
         $this->stat();
-        info('统计任务执行完毕。耗时:' . (microtime(true) - $startAt) / 1000);
+        info('Statistics run complete. Elapsed: ' . (microtime(true) - $startAt) / 1000);
     }
 
     private function statServer()

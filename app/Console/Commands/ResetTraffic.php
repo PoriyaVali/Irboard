@@ -24,7 +24,7 @@ class ResetTraffic extends Command
      *
      * @var string
      */
-    protected $description = '流量清空';
+    protected $description = 'Reset user traffic counters on their billing cycle';
 
     /**
      * Create a new command instance.
@@ -187,10 +187,10 @@ class ResetTraffic extends Command
                 if ($attempts >= $maxAttempts || strpos($e->getMessage(), '40001') === false && strpos(strtolower($e->getMessage()), 'deadlock') === false) {
                     $telegramService = new TelegramService();
                     $message = sprintf(
-                        date('Y/m/d H:i:s') . "用户流量重置失败：" . $e->getMessage()
+                        date('Y/m/d H:i:s') . "User traffic reset failed: " . $e->getMessage()
                     );
                     $telegramService->sendMessageWithAdmin($message);
-                    abort(500, '用户流量重置失败'. $e->getMessage());
+                    abort(500, 'User traffic reset failed: '. $e->getMessage());
                 }
                 sleep(5);
             }
