@@ -19,7 +19,7 @@ class V2boardUpdate extends Command
      *
      * @var string
      */
-    protected $description = 'v2board 更新';
+    protected $description = 'Apply pending database updates (database/update.sql)';
 
     /**
      * Create a new command instance.
@@ -42,14 +42,14 @@ class V2boardUpdate extends Command
         DB::connection()->getPdo();
         $file = \File::get(base_path() . '/database/update.sql');
         if (!$file) {
-            abort(500, '数据库文件不存在');
+            abort(500, 'database/update.sql is missing.');
         }
         $sql = str_replace("\n", "", $file);
         $sql = preg_split("/;/", $sql);
         if (!is_array($sql)) {
-            abort(500, '数据库文件格式有误');
+            abort(500, 'database/update.sql could not be parsed.');
         }
-        $this->info('正在导入数据库请稍等...');
+        $this->info('Applying database updates, please wait...');
         foreach ($sql as $item) {
             $item = trim($item);
             // Skip blanks (preg_split leaves an empty tail after the final ';'), and
@@ -64,6 +64,6 @@ class V2boardUpdate extends Command
             }
         }
         \Artisan::call('horizon:terminate');
-        $this->info('更新完毕，队列服务已重启，你无需进行任何操作。');
+        $this->info('Database is up to date. The queue workers were restarted; nothing else is needed.');
     }
 }
