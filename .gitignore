@@ -33,3 +33,8 @@ workerman.log
 *.bak_*
 /workerman.log
 /public/.user.ini
+# Underscore-prefixed .php files are operator diagnostics dropped onto a live
+# panel (e.g. _tuncheck.php, _tunmon.php, public/_oc.php). They are per-server
+# scratch, sometimes reference private infrastructure, and must never ride a
+# prod->repo sync into the public repo.
+_*.php
