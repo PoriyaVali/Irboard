@@ -116812,35 +116812,49 @@ function launcher(){
 
 /* Per-row buttons.
 
-   A table with fixed columns makes antd render every row TWICE, in two
-   separate tables: the scrollable copy carries the email, while the copy
-   holding the visible action column carries only the fixed cells. Looking for
-   the email and the action cell in the same <tr> therefore never matched, and
-   no button was produced. Both copies share the same data-row-key, so the
-   email is collected by key first and the button then goes on the copy that
-   actually shows the action column.                                        */
-var EMAIL_RE=/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
+   Two things about this table decide where the button can go.
+
+   A fixed column is drawn by antd as a SEPARATE overlay table stacked on top
+   of the main one. The main table still renders its own copy of that cell, so
+   a button placed there sits in the DOM, reports itself visible to script, and
+   is completely hidden from the operator behind the overlay - the row read
+   "عملیات گروه‌ها" while the screen showed only "عملیات". The button therefore
+   goes on the copy that lives inside the overlay.
+
+   And the email is read from a single cell, never from the row's text: cells
+   concatenate without separators, so the row reads "3226tg_...@telegram.user"
+   and a loose match swallows the id column into the address. That address then
+   either fails to resolve or, worse, resolves to somebody else - the same
+   class of wrong-target bug that once wrote groups onto two unrelated
+   accounts. An anchored match against one cell cannot do that.             */
+var EMAIL_RE=/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 function decorate(){
   var rows=document.querySelectorAll('tr[data-row-key]');
   if(!rows.length)return;
-  var mailByKey={}, best={};
+  var byKey={};
   rows.forEach(function(tr){
     var k=tr.getAttribute('data-row-key');
-    var m=(tr.textContent||'').match(EMAIL_RE);
-    if(m&&!mailByKey[k])mailByKey[k]=m[0];
-    var tds=tr.querySelectorAll('td');
-    if(!tds.length)return;
-    var lastCls=tds[tds.length-1].className||'';
-    // prefer the copy whose final cell is a fixed column - that is the one
-    // the operator can actually see and click
-    if(!best[k]||/fixed-columns/.test(lastCls))best[k]=tr;
+    (byKey[k]=byKey[k]||[]).push(tr);
   });
-  Object.keys(best).forEach(function(k){
-    var email=mailByKey[k];
-    if(!email)return;                       // not a user row
-    var tr=best[k];
-    if(tr.querySelector('.xgrp-btn'))return;
-    var tds=tr.querySelectorAll('td');
+  Object.keys(byKey).forEach(function(k){
+    var copies=byKey[k], email=null, target=null;
+    copies.forEach(function(tr){
+      if(!email){
+        [].forEach.call(tr.querySelectorAll('td'),function(td){
+          var t=(td.textContent||'').trim();
+          if(!email&&EMAIL_RE.test(t))email=t;
+        });
+      }
+      if(tr.closest('.ant-table-fixed-right,.ant-table-fixed-left,.ant-table-body-inner'))target=tr;
+    });
+    if(!email)return;                            // not a user row
+    if(!target)target=copies[copies.length-1];   // table without fixed columns
+    copies.forEach(function(tr){                 // drop any button on a covered copy
+      if(tr!==target){var old=tr.querySelector('.xgrp-btn'); if(old)old.remove();}
+    });
+    if(target.querySelector('.xgrp-btn'))return;
+    var tds=target.querySelectorAll('td');
+    if(!tds.length)return;
     var b=document.createElement('button');
     b.className='ant-btn ant-btn-sm xgrp-btn';
     b.style.cssText='margin-inline-start:6px';
@@ -116853,5 +116867,5 @@ function decorate(){
 function tick(){launcher();decorate();}
 new MutationObserver(tick).observe(document.documentElement,{childList:true,subtree:true});
 setTimeout(tick,800); setTimeout(tick,2500);
-console.log('👥 Extra Groups Admin v1.4 — row buttons handle fixed-column tables; _xgrpOpen("email") also works');
+console.log('👥 Extra Groups Admin v1.6 — verified in-page: button in the fixed-column overlay, email read per-cell; _xgrpOpen("email") also works');
 })();
