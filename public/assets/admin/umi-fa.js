@@ -116725,19 +116725,29 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 
 /* ---------- the dialog ------------------------------------------------ */
+function fmtN(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
 function render(d, who){
   var primary=d.primary_group_id, extras=d.extra_group_ids||[], groups=d.groups||[];
   var rows=groups.map(function(g){
     var isP=String(g.id)===String(primary);
     var on=isP||extras.map(String).indexOf(String(g.id))>-1;
+    // A priced group charges the wallet as soon as it is granted, so say so
+    // here rather than letting it look like any other tick box.
+    var tag=g.metered
+      ? '<span style="font-size:11px;color:#fa8c16">پولی — '+fmtN(g.price_per_gb)+' تومان/گیگ</span>'
+      : '<span style="font-size:11px;color:#999">رایگان</span>';
     return '<label style="display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid #f0f0f0;'+(isP?'opacity:.65':'cursor:pointer')+'">'
       +'<input type="checkbox" class="xgrp-cb" value="'+esc(g.id)+'"'+(on?' checked':'')+(isP?' disabled':'')+'>'
-      +'<span style="flex:1">'+esc(g.name)+'</span>'
-      +(isP?'<span style="font-size:11px;color:#999">گروه پلن — همیشه فعال</span>':'')+'</label>';
+      +'<span style="flex:1">'+esc(g.name)+'</span>'+tag
+      +(isP?'<span style="font-size:11px;color:#999;margin-inline-start:6px">گروه پلن</span>':'')+'</label>';
   }).join('');
-  return '<div style="font-size:12px;color:#666;margin:6px 0 10px;direction:ltr;text-align:right">'
+  var wallet=(typeof d.balance==='number')
+    ? '<div style="font-size:12px;margin:4px 0 8px">موجودی کیف پول: <b>'+fmtN(d.balance)+'</b> تومان</div>' : '';
+  return '<div style="font-size:12px;color:#666;margin:6px 0 4px;direction:ltr;text-align:right">'
     +esc(d.email||who)+' <span style="color:#aaa">(#'+esc(d.user_id)+')</span></div>'
-    +'<div style="max-height:40vh;overflow:auto">'+rows+'</div>';
+    +wallet
+    +'<div style="max-height:40vh;overflow:auto">'+rows+'</div>'
+    +'<div style="font-size:11px;color:#888;margin-top:8px">گروه پولی تا وقتی موجودی کیف پول از قیمت یک گیگ بیشتر باشد کار می‌کند و با انقضای پلن پایه تمام می‌شود.</div>';
 }
 
 function openFor(query, label){
@@ -116866,7 +116876,7 @@ function decorate(){
 function tick(){decorate();}
 new MutationObserver(tick).observe(document.documentElement,{childList:true,subtree:true});
 setTimeout(tick,800); setTimeout(tick,2500);
-console.log('👥 Extra Groups Admin v1.8 — row buttons; _xgrpOpen("email") still available from the console');
+console.log('👥 Extra Groups Admin v1.9 — row buttons, metered tiers labelled; _xgrpOpen("email") still available from the console');
 })();
 /*__GROUPPRICING_START__*/
 ;(function(){

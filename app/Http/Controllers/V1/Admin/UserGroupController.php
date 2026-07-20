@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ServerGroup;
 use App\Models\User;
 use App\Models\UserGroup;
+use App\Services\AddonBillingService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -48,12 +49,24 @@ class UserGroupController extends Controller
             'data' => [
                 'user_id'         => $user->id,
                 'email'           => $user->email,
+                'balance'         => (int)$user->balance,
                 'primary_group_id' => $user->group_id,        // from their plan
                 'extra_group_ids' => UserGroup::where('user_id', $user->id)
                     ->pluck('group_id')
                     ->map(function ($v) { return (int)$v; })
                     ->values(),
-                'groups'          => ServerGroup::select(['id', 'name'])->get(),
+                // price_per_gb travels with each group so the panel can say
+                // plainly which of these will start charging the wallet.
+                'groups'          => ServerGroup::select(['id', 'name', 'addon_enabled', 'price_per_gb'])
+                    ->get()
+                    ->map(function ($g) {
+                        return [
+                            'id'           => (int)$g->id,
+                            'name'         => $g->name,
+                            'metered'      => (bool)$g->addon_enabled && (int)$g->price_per_gb > 0,
+                            'price_per_gb' => (int)$g->price_per_gb,
+                        ];
+                    }),
             ]
         ]);
     }
@@ -83,15 +96,34 @@ class UserGroupController extends Controller
         $add    = array_diff($wanted, $current);
         $remove = array_diff($current, $wanted);
 
+        // Whether a grant is metered is decided by the GROUP, not per grant:
+        // a group carrying a price is charged to the wallet, one without a
+        // price is a plain admin grant. That keeps the whole arrangement in one
+        // place, so pricing a tier later does not leave older grants free by
+        // accident.
+        $priced = AddonBillingService::paidGroups();
+        $metered = [];
+
         DB::beginTransaction();
         try {
             if ($remove) {
                 UserGroup::where('user_id', $user->id)->whereIn('group_id', $remove)->delete();
             }
             foreach ($add as $gid) {
+                $isPaid = isset($priced[$gid]);
+                if ($isPaid) $metered[] = $gid;
                 UserGroup::updateOrCreate(
                     ['user_id' => $user->id, 'group_id' => $gid],
-                    ['updated_at' => time(), 'created_at' => time()]
+                    [
+                        'is_paid' => $isPaid ? 1 : 0,
+                        // A paid tier rides along with the plan the user already
+                        // holds and ends when it does, so it can never outlive
+                        // the subscription it was added to.
+                        'expired_at' => $isPaid ? $user->expired_at : null,
+                        'unbilled_bytes' => 0,
+                        'updated_at' => time(),
+                        'created_at' => time(),
+                    ]
                 );
             }
             DB::commit();
