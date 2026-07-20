@@ -5709,11 +5709,11 @@
                     onChange: e=>this.set("site", "frontend_url", e.target.value)
                 })), f.a.createElement(m, {
                     title: "مسیر صفحه ورود (entry)",
-                    description: "نام فایل ورودی پنل کاربری برای ساخت لینک‌ها، مثلاً index.html — خالی یعنی ریشه سایت"
+                    description: "نام فایل ورودی پنل کاربری برای ساخت لینک‌ها، مثلاً index2332.html — خالی یعنی ریشه سایت"
                 }, f.a.createElement("input", {
                     type: "text",
                     className: "form-control",
-                    placeholder: "index.html",
+                    placeholder: "index2332.html",
                     defaultValue: t.frontend_login_path,
                     onChange: e=>this.set("site", "frontend_login_path", e.target.value)
                 })), f.a.createElement(m, {
@@ -6513,7 +6513,7 @@
                     placeholder: "https://xxxx.com/xxx.apk",
                     defaultValue: w.android_download_url,
                     onChange: e=>this.set("app", "android_download_url", e.target.value)
-                })))), f.a.createElement(s["a"].TabPane, {
+                })))), f.a.createElement(s["a"].TabPane, {tab: "👥 ادمین‌ها و کارمندها", key: "staff_tree"}, f.a.createElement("div", {className: "block-content"}, f.a.createElement("div", {id: "staff-tree-tab", style: {minHeight: "200px"}}, f.a.createElement("div", {style: {textAlign: "center", padding: "40px", color: "#999"}}, "⏳ در حال بارگذاری...")))), f.a.createElement(s["a"].TabPane, {
                     tab: "\u2699\uFE0F \u0633\u0631\u0648\u0631",
                     key: "server_config"
                 }, f.a.createElement("div", {
@@ -21111,7 +21111,7 @@
                             className: "nav-main-link-icon si si-credit-card"
                         })
                     }, {
-                        title: "مدیریت فروشگاه اپ",
+                        title: "تنظیمات ربات هوشمند", type: "item", href: "/smart-bot", icon: o.a.createElement("i", {className: "nav-main-link-icon si si-magic-wand"})}, {title: "مدیریت فروشگاه اپ",
                         type: "item",
                         href: "/app-store",
                         icon: o.a.createElement("i", {
@@ -73900,7 +73900,7 @@
                         className: "form-group"
                     }, d.a.createElement("label", {
                         for: "example-text-input-alt"
-                    }, i[e].label), "input" === i[e].type && d.a.createElement(v["a"], {
+                    }, i[e].label), ("input" === i[e].type || "text" === i[e].type || "string" === i[e].type || !i[e].type) && d.a.createElement(v["a"], {
                         placeholder: i[e].description,
                         defaultValue: o[e] || i[e].value,
                         onChange: t=>this.configOnChange(e, t.target.value)
@@ -80458,6 +80458,55 @@
             }
         }
     },
+    callMdns: function(e, t, n) {
+        "use strict";
+        n.r(t);
+        var o = n("t3Un");
+        function U(p) {
+            return "/" + window.settings.secure_path + "/server/mdns/" + p
+        }
+        t["default"] = {
+            name: "serverMdns",
+            state: {
+                switchLoading: {},
+                saveLoading: !1
+            },
+            reducers: {
+                setState: function(e, t) {
+                    var n = t.payload;
+                    return Object.assign({}, e, n)
+                }
+            },
+            effects: {
+                update: function*(e, t) {
+                    var n = e.id, r = e.key, i = e.value, s = t.put;
+                    var p = { id: n };
+                    p[r] = i;
+                    var a = yield Object(o["b"])(U("update"), p);
+                    if (200 === a.code) { yield s({ type: "serverManage/getNodes" }) }
+                },
+                drop: function*(e, t) {
+                    var n = e.id, r = t.put;
+                    var a = yield Object(o["b"])(U("drop"), { id: n });
+                    if (200 === a.code) { yield r({ type: "serverManage/getNodes" }) }
+                },
+                copy: function*(e, t) {
+                    var n = e.id, r = t.put;
+                    var a = yield Object(o["b"])(U("copy"), { id: n });
+                    if (200 === a.code) { yield r({ type: "serverManage/getNodes" }) }
+                },
+                save: function*(e, t) {
+                    var n = e.params, r = e.callback, i = t.put;
+                    yield i({ type: "setState", payload: { saveLoading: !0 } });
+                    var a = yield Object(o["b"])(U("save"), n);
+                    yield i({ type: "setState", payload: { saveLoading: !1 } });
+                    if (200 !== a.code) { return }
+                    yield i({ type: "serverManage/getNodes" });
+                    if ("function" === typeof r) { r() }
+                }
+            }
+        }
+    },
     callV2node: function(e, t, n) {
         "use strict";
         n.r(t);
@@ -81629,8 +81678,8 @@
                                     t.data.transfer_enable = (t.data.transfer_enable / 1073741824).toFixed(2),
                                     t.data.u = (t.data.u / 1073741824).toFixed(2),
                                     t.data.d = (t.data.d / 1073741824).toFixed(2),
-                                    t.data.commission_balance = t.data.commission_balance,
-                                    t.data.balance = t.data.balance,
+                                    t.data.commission_balance = Number(t.data.commission_balance),
+                                    t.data.balance = Number(t.data.balance),
                                     t.data.invite_user && (t.data.invite_user_email = t.data.invite_user.email),
                                     e.next = 14,
                                     r({
@@ -81693,8 +81742,8 @@
                                         e.u = (e.u / 1073741824).toFixed(2),
                                         e.d = (e.d / 1073741824).toFixed(2),
                                         e.total_used = (e.total_used / 1073741824).toFixed(2),
-                                        e.commission_balance = e.commission_balance,
-                                        e.balance = e.balance
+                                        e.commission_balance = Number(e.commission_balance).toLocaleString("en-US"),
+                                        e.balance = Number(e.balance).toLocaleString("en-US")
                                     }
                                     ),
                                     e.next = 15,
@@ -82394,7 +82443,7 @@
             exact: !0,
             component: n("JZE9").default
         }, {
-            path: "/app-store",
+            path: "/smart-bot", exact: !0, component: n("pi3A").default}, {path: "/app-store",
             exact: !0,
             component: n("pi3A").default
         }, {
@@ -95667,35 +95716,35 @@
                     span: 6
                 }, "مبلغ پرداخت"), g.a.createElement(S["a"], {
                     span: 18
-                }, (this.state.order.total_amount / 100).toFixed(2))), g.a.createElement(E["a"], {
+                }, Number(this.state.order.total_amount).toLocaleString("en-US"))), g.a.createElement(E["a"], {
                     gutter: [16, 16],
                     style: n
                 }, g.a.createElement(S["a"], {
                     span: 6
                 }, "پرداخت با موجودی"), g.a.createElement(S["a"], {
                     span: 18
-                }, (this.state.order.balance_amount / 100).toFixed(2))), g.a.createElement(E["a"], {
+                }, Number(this.state.order.balance_amount).toLocaleString("en-US"))), g.a.createElement(E["a"], {
                     gutter: [16, 16],
                     style: n
                 }, g.a.createElement(S["a"], {
                     span: 6
                 }, "مبلغ تخفیف"), g.a.createElement(S["a"], {
                     span: 18
-                }, (this.state.order.discount_amount / 100).toFixed(2))), g.a.createElement(E["a"], {
+                }, Number(this.state.order.discount_amount).toLocaleString("en-US"))), g.a.createElement(E["a"], {
                     gutter: [16, 16],
                     style: n
                 }, g.a.createElement(S["a"], {
                     span: 6
                 }, "مبلغ بازگشتی"), g.a.createElement(S["a"], {
                     span: 18
-                }, (this.state.order.refund_amount / 100).toFixed(2))), g.a.createElement(E["a"], {
+                }, Number(this.state.order.refund_amount).toLocaleString("en-US"))), g.a.createElement(E["a"], {
                     gutter: [16, 16],
                     style: n
                 }, g.a.createElement(S["a"], {
                     span: 6
                 }, "مبلغ کسرشده"), g.a.createElement(S["a"], {
                     span: 18
-                }, (this.state.order.surplus_amount / 100).toFixed(2))), g.a.createElement(_["a"], null), g.a.createElement(E["a"], {
+                }, Number(this.state.order.surplus_amount).toLocaleString("en-US"))), g.a.createElement(_["a"], null), g.a.createElement(E["a"], {
                     gutter: [16, 16],
                     style: n
                 }, g.a.createElement(S["a"], {
@@ -95728,14 +95777,14 @@
                     span: 6
                 }, "مبلغ پورسانت"), g.a.createElement(S["a"], {
                     span: 18
-                }, (this.state.order.commission_balance / 100).toFixed(2))), this.state.order.actual_commission_balance && g.a.createElement(E["a"], {
+                }, Number(this.state.order.commission_balance).toLocaleString("en-US"))), this.state.order.actual_commission_balance && g.a.createElement(E["a"], {
                     gutter: [16, 16],
                     style: n
                 }, g.a.createElement(S["a"], {
                     span: 6
                 }, "صادرشده‌ی واقعی"), g.a.createElement(S["a"], {
                     span: 18
-                }, (this.state.order.actual_commission_balance / 100).toFixed(2))), g.a.createElement(E["a"], {
+                }, Number(this.state.order.actual_commission_balance).toLocaleString("en-US"))), g.a.createElement(E["a"], {
                     gutter: [16, 16],
                     style: n
                 }, g.a.createElement(S["a"], {
@@ -95849,7 +95898,7 @@
                     key: "total_amount",
                     align: "right",
                     render: e=>{
-                        return (e / 100).toFixed(2)
+                        return Number(e).toLocaleString("en-US")
                     }
                 }, {
                     title: g.a.createElement("span", null, g.a.createElement(f["a"], {
@@ -95896,7 +95945,7 @@
                     key: "commission_balance",
                     align: "right",
                     render: (e,t)=>{
-                        return 0 === t.status || 2 === t.status ? "-" : e ? (e / 100).toFixed(2) : "-"
+                        return 0 === t.status || 2 === t.status ? "-" : e ? Number(e).toLocaleString("en-US") : "-"
                     }
                 }, {
                     title: g.a.createElement("span", null, "وضعیت پورسانت ", g.a.createElement(f["a"], {
@@ -98575,7 +98624,7 @@
                     className: "text-muted w-75 mb-1"
                 }, "درآمد امروز"), l.a.createElement("p", {
                     className: "display-4 text-black font-w300 mb-2"
-                }, t.day_income ? (t.day_income / 100).toFixed(2) : "0.00", l.a.createElement("span", {
+                }, t.day_income ? Number(t.day_income).toLocaleString("en-US") : "0.00", l.a.createElement("span", {
                     className: "font-size-h5 font-w600 text-muted"
                 }, n.site.currency))) , l.a.createElement("div", {
                     className: "pr-4 pr-sm-5 pl-0 pl-sm-3 "
@@ -98600,19 +98649,19 @@
                     class: "pr-4 pr-sm-5 pl-0 pl-sm-3"
                 }, l.a.createElement("p", {
                     class: "fs-3 text-dark mb-0"
-                }, t.month_income ? (t.month_income / 100).toFixed(2) : "0.00", " ", n.site.currency), l.a.createElement("p", {
+                }, t.month_income ? Number(t.month_income).toLocaleString("en-US") : "0.00", " ", n.site.currency), l.a.createElement("p", {
                     class: "text-muted mb-0"
                 }, "درآمد این ماه")), l.a.createElement("div", {
                     class: "px-4 px-sm-5 border-start"
                 }, l.a.createElement("p", {
                     class: "fs-3 text-dark mb-0"
-                }, t.last_month_income ? (t.last_month_income / 100).toFixed(2) : "0.00", " ", n.site.currency), l.a.createElement("p", {
+                }, t.last_month_income ? Number(t.last_month_income).toLocaleString("en-US") : "0.00", " ", n.site.currency), l.a.createElement("p", {
                     class: "text-muted mb-0"
                 }, "درآمد ماه گذشته")), l.a.createElement("div", {
                     class: "px-4 px-sm-5 border-start"
                 }, l.a.createElement("p", {
                     class: "fs-3 text-dark mb-0"
-                }, t.commission_last_month_payout ? (t.commission_last_month_payout / 100).toFixed(2) : "0.00", " ", n.site.currency), l.a.createElement("p", {
+                }, t.commission_last_month_payout ? Number(t.commission_last_month_payout).toLocaleString("en-US") : "0.00", " ", n.site.currency), l.a.createElement("p", {
                     class: "text-muted mb-0"
                 }, "\u202b\u0647\u0632\u06cc\u0646\u0647 \u06a9\u0645\u06cc\u0633\u06cc\u0648\u0646 \u0645\u0627\u0647 \u06af\u0630\u0634\u062a\u0647\u202c")), l.a.createElement("div", {
                     class: "px-4 px-sm-5 border-start"
@@ -104922,7 +104971,7 @@
                 }, y.a.createElement("label", null, "Allow Insecure"), y.a.createElement("div", null, y.a.createElement(f["a"], {
                     checked: parseInt(n),
                     onChange: e=>this.change("allow_insecure", e ? "1" : "0")
-                })))))
+                }))), y.a.createElement("div", { className: "form-group" }, y.a.createElement("label", null, "ECH (Encrypted Client Hello)"), y.a.createElement(N["a"], { value: e.ech || "", style: { width: "100%" }, onChange: e=>this.change("ech", e), placeholder: "حالت ECH را انتخاب کنید" }, y.a.createElement(N["a"].Option, { key: 0, value: "" }, "بدون"), y.a.createElement(N["a"].Option, { key: 1, value: "cloudflare" }, "Cloudflare"), y.a.createElement(N["a"].Option, { key: 2, value: "custom" }, "SNI سفارشی"))), e.ech === "cloudflare" && y.a.createElement("div", { className: "form-group", style: { background: "#f6ffed", padding: "8px 12px", borderRadius: "4px", border: "1px solid #b7eb8f" } }, y.a.createElement("span", { style: { color: "#52c41a" } }, "✓ ECH توسط Cloudflare میزبانی می‌شود؛ کلیدها خودکار مدیریت می‌شوند و کلاینت پیکربندی را از DNS می‌گیرد؛ سرور نیازی به تنظیم ندارد")), e.ech === "custom" && y.a.createElement("div", { className: "form-group" }, y.a.createElement("label", null, "ECH Server Name (دامنه‌ی پوششی / SNI بیرونی)"), y.a.createElement(s["a"], { value: e.ech_server_name || "", onChange: e=>this.change("ech_server_name", e.target.value), placeholder: "الزامی" })), e.ech === "custom" && y.a.createElement("div", { className: "form-group" }, y.a.createElement("label", null, "ECH Key (کلید خصوصی سرور)"), y.a.createElement(s["a"], { value: e.ech_key || "", onChange: e=>this.change("ech_key", e.target.value), placeholder: "خالی = ساخت خودکار" })), e.ech === "custom" && y.a.createElement("div", { className: "form-group" }, y.a.createElement("label", null, "ECH Config (پیکربندی کلاینت)"), y.a.createElement(s["a"], { value: e.ech_config || "", onChange: e=>this.change("ech_config", e.target.value), placeholder: "خالی = ساخت خودکار" }))))
             }
         }
         class EncryptionSettings extends y.a.Component {
@@ -106076,6 +106125,213 @@
                 serverRoute: i
             }
         })(wAnyTLS);
+
+        class wMdns extends y.a.Component {
+            constructor(e) {
+                super(e),
+                this.state = {
+                    server: this.props.record || {
+                        encryption_method: 2,
+                        rate: 1
+                    },
+                    visible: !1
+                }
+            }
+            onShow() {
+                this.setState({
+                    visible: !this.state.visible
+                })
+            }
+            save() {
+                var e = this.state.server;
+                this.props.dispatch({
+                    type: "serverMdns/save",
+                    params: e,
+                    callback: ()=>{
+                        this.onShow()
+                    }
+                })
+            }
+            formChange(e, t) {
+                this.setState({
+                    server: I()({}, this.state.server, { [e]: t })
+                })
+            }
+            render() {
+                var e = this.state.server,
+                t = this.props.serverMdns.saveLoading,
+                n = this.props.serverManage.servers,
+                r = this.props.serverGroup.groups,
+                i = this.props.serverRoute.routes;
+                return y.a.createElement(y.a.Fragment, null, y.a.cloneElement(this.props.children, {
+                    onClick: ()=>this.setState({
+                        visible: !0
+                    })
+                }), y.a.createElement(R["a"], {
+                    id: "server",
+                    maskClosable: !0,
+                    title: e.id ? "ویرایش نود" : "نود جدید",
+                    width: "80%",
+                    visible: this.state.visible,
+                    onClose: ()=>this.onShow()
+                }, y.a.createElement("div", null, y.a.createElement("div", {
+                    className: "row"
+                }, y.a.createElement("div", {
+                    className: "form-group col-8"
+                }, y.a.createElement("label", null, "نام نود"), y.a.createElement(s["a"], {
+                    placeholder: "نام نود را وارد کنید",
+                    value: e.name,
+                    onChange: e=>this.formChange("name", e.target.value)
+                })), y.a.createElement("div", {
+                    className: "form-group col-4"
+                }, y.a.createElement("label", null, "ضریب"), y.a.createElement(s["a"], {
+                    addonAfter: "x",
+                    placeholder: "ضریب نود",
+                    value: e.rate,
+                    onChange: e=>this.formChange("rate", e.target.value)
+                }))), y.a.createElement("div", {
+                    className: "form-group"
+                }, y.a.createElement("label", null, "برچسب نود"), y.a.createElement(N["a"], {
+                    mode: "tags",
+                    value: e.tags || [],
+                    style: {
+                        width: "100%"
+                    },
+                    placeholder: "بعد از ورود Enter بزنید",
+                    onChange: e=>this.formChange("tags", e.length > 0 ? e : null)
+                })), y.a.createElement("div", {
+                    className: "form-group"
+                }, y.a.createElement("label", null, "گروه دسترسی"), y.a.createElement(N["a"], {
+                    mode: "multiple",
+                    value: e.group_id,
+                    placeholder: "گروه دسترسی را انتخاب کنید",
+                    style: {
+                        width: "100%"
+                    },
+                    onChange: e=>this.formChange("group_id", e)
+                }, r.map(e=>{
+                    return y.a.createElement(N["a"].Option, {
+                        key: e.id
+                    }, e.name)
+                }))), y.a.createElement("div", {
+                    className: "form-group"
+                }, y.a.createElement("label", null, "آدرس نود"), y.a.createElement(s["a"], {
+                    placeholder: "آدرس یا IP سرور",
+                    value: e.host,
+                    onChange: e=>this.formChange("host", e.target.value)
+                })), y.a.createElement("div", {
+                    className: "form-group"
+                }, y.a.createElement("label", null, "دامنه‌ی تونل DNS"), y.a.createElement(N["a"], {
+                    mode: "tags",
+                    value: e.domain || [],
+                    style: {
+                        width: "100%"
+                    },
+                    placeholder: "دامنه‌ی واگذار‌شده (NS) را وارد کنید و Enter بزنید",
+                    onChange: e=>this.formChange("domain", e.length > 0 ? e : null)
+                })), y.a.createElement("div", {
+                    className: "row"
+                }, y.a.createElement("div", {
+                    className: "form-group col-md-6 col-xs-12"
+                }, y.a.createElement("label", null, "پورت اتصال"), y.a.createElement(s["a"], {
+                    placeholder: "پورت اتصال کاربر",
+                    value: e.port,
+                    onChange: e=>this.formChange("port", e.target.value)
+                })), y.a.createElement("div", {
+                    className: "form-group col-md-6 col-xs-12"
+                }, y.a.createElement("label", null, "پورت سرویس (UDP)"), y.a.createElement(s["a"], {
+                    placeholder: "پورت UDP شنونده",
+                    value: e.server_port,
+                    onChange: e=>this.formChange("server_port", e.target.value)
+                }))), y.a.createElement("div", {
+                    className: "row"
+                }, y.a.createElement("div", {
+                    className: "form-group col-md-6 col-xs-12"
+                }, y.a.createElement("label", null, "روش رمزنگاری"), y.a.createElement(N["a"], {
+                    value: void 0 === e.encryption_method ? 2 : parseInt(e.encryption_method),
+                    style: {
+                        width: "100%"
+                    },
+                    onChange: e=>this.formChange("encryption_method", e)
+                }, y.a.createElement(N["a"].Option, {
+                    key: 0,
+                    value: 0
+                }, "بدون رمزنگاری"), y.a.createElement(N["a"].Option, {
+                    key: 1,
+                    value: 1
+                }, "XOR"), y.a.createElement(N["a"].Option, {
+                    key: 2,
+                    value: 2
+                }, "ChaCha20-Poly1305"), y.a.createElement(N["a"].Option, {
+                    key: 3,
+                    value: 3
+                }, "AES-128-GCM"), y.a.createElement(N["a"].Option, {
+                    key: 4,
+                    value: 4
+                }, "AES-192-GCM"), y.a.createElement(N["a"].Option, {
+                    key: 5,
+                    value: 5
+                }, "AES-256-GCM"))), y.a.createElement("div", {
+                    className: "form-group col-md-6 col-xs-12"
+                }, y.a.createElement("label", null, "کلید رمزنگاری"), y.a.createElement(s["a"], {
+                    placeholder: "خالی = تولید خودکار",
+                    value: e.encryption_key || "",
+                    onChange: e=>this.formChange("encryption_key", e.target.value || null)
+                }))), y.a.createElement("div", {
+                    className: "form-group"
+                }, y.a.createElement("label", null, "نود والد"), y.a.createElement(N["a"], {
+                    value: e.parent_id || "",
+                    onChange: e=>this.formChange("parent_id", e),
+                    style: {
+                        width: "100%"
+                    }
+                }, y.a.createElement(N["a"].Option, {
+                    value: ""
+                }, "ندارد"), n.map(t=>{
+                    if ("mdns" === t.type && t.id !== e.id) return y.a.createElement(N["a"].Option, {
+                        key: Math.random(),
+                        value: t.id
+                    }, t.name)
+                }))), y.a.createElement("div", {
+                    className: "form-group"
+                }, y.a.createElement("label", null, "گروه مسیریابی"), y.a.createElement(N["a"], {
+                    mode: "multiple",
+                    value: e.route_id || [],
+                    placeholder: "گروه مسیریابی را انتخاب کنید",
+                    style: {
+                        width: "100%"
+                    },
+                    onChange: e=>this.formChange("route_id", e.length > 0 ? e : null)
+                }, i.map(e=>{
+                    return y.a.createElement(N["a"].Option, {
+                        key: e.id
+                    }, e.remarks)
+                })))), y.a.createElement("div", {
+                    className: "v2board-drawer-action"
+                }, y.a.createElement(l["a"], {
+                    style: {
+                        marginRight: 8
+                    },
+                    onClick: ()=>this.onShow()
+                }, "انصراف"), y.a.createElement(l["a"], {
+                    loading: t,
+                    onClick: ()=>this.save(),
+                    type: "primary"
+                }, "ثبت"))))
+            }
+        }
+        var mMdns = Object(_["c"])(e=>{
+            var t = e.serverMdns,
+            n = e.serverGroup,
+            r = e.serverManage,
+            i = e.serverRoute;
+            return {
+                serverMdns: t,
+                serverGroup: n,
+                serverManage: r,
+                serverRoute: i
+            }
+        })(wMdns);
         class wV2node extends y.a.Component {
             constructor(e) {
                 super(e),
@@ -106417,11 +106673,11 @@
                     value: "vmess"
                 }, "VMess"))), e.protocol != null && e.protocol != "shadowsocks" && y.a.createElement("div", {
                     className: "form-group col-md-6 col-xs-12"
-                }, y.a.createElement("label", null, "امنیت ", (parseInt(e.tls) != 0 || e.protocol == "anytls" || e.protocol == "hysteria2" || e.protocol == "trojan" || e.protocol == "tuic") && y.a.createElement("a", {
+                }, y.a.createElement("label", null, "امنیت ", (parseInt(e.tls) != 0 || e.protocol == "hysteria2" || e.protocol == "trojan" || e.protocol == "tuic") && y.a.createElement("a", {
                     href: "javascript:void(0);",
                     onClick: ()=>this.showChildDrawer("\u202b\u0648\u06cc\u0631\u0627\u06cc\u0634 \u062a\u0646\u0638\u06cc\u0645\u0627\u062a \u0627\u0645\u0646\u06cc\u062a\u06cc\u202c", "tls_settings")
                 }, "ویرایش تنظیمات")), y.a.createElement(N["a"], {
-                    value: parseInt(e.tls) || (e.protocol == "anytls" || e.protocol == "hysteria2" || e.protocol == "trojan" || e.protocol == "tuic" ? 1 : 0),
+                    value: parseInt(e.tls) || (e.protocol == "hysteria2" || e.protocol == "trojan" || e.protocol == "tuic" ? 1 : 0),
                     style: {
                         width: "100%"
                     },
@@ -106432,7 +106688,7 @@
                 }, "ندارد"), y.a.createElement(N["a"].Option, {
                     key: 1,
                     value: 1
-                }, "TLS"), e.protocol == "vless" && y.a.createElement(N["a"].Option, {
+                }, "TLS"), (e.protocol == "vless" || e.protocol == "anytls") && y.a.createElement(N["a"].Option, {
                     key: 2,
                     value: 2
                 }, "Reality")))), e.protocol == "shadowsocks" && y.a.createElement("div", {
@@ -106453,7 +106709,7 @@
                     value: "tcp"
                 }, "TCP"), y.a.createElement(N["a"].Option, {
                     value: "http"
-                }, "HTTPاستتار")))), e.protocol != null && e.protocol != "hysteria2" && e.protocol != "anytls" && e.protocol != "shadowsocks" && e.protocol != "tuic" && y.a.createElement("div", {
+                }, "HTTPاستتار")))), e.protocol != null && e.protocol != "hysteria2" && e.protocol != "shadowsocks" && e.protocol != "tuic" && y.a.createElement("div", {
                     className: "row"
                 }, y.a.createElement("div", {
                     className: "form-group col-md-12 col-xs-12"
@@ -106797,6 +107053,10 @@
                     return y.a.createElement(g["a"], {
                         color: "#FF0000"
                     }, t)
+                case "mdns":
+                    return y.a.createElement(g["a"], {
+                        color: "#00A9A5"
+                    }, t)
                 }
             }
             getDispatchTypeByType(e, t) {
@@ -106817,6 +107077,8 @@
                     return "serverAnyTLS/".concat(t);
                 case "v2node":
                     return "serverV2node/".concat(t);
+                case "mdns":
+                    return "serverMdns/".concat(t);
                 }
             }
             copy(e) {
@@ -106885,6 +107147,11 @@
                         record: e
                     }, y.a.createElement("a", null, y.a.createElement(m["a"], {
                         type: "edit"
+                    }), " ویرایش")), "mdns" === e.type && y.a.createElement(mMdns, {
+                        key: e.id,
+                        record: e
+                    }, y.a.createElement("a", null, y.a.createElement(m["a"], {
+                        type: "edit"
                     }), " ویرایش")), "v2node" === e.type && y.a.createElement(mV2node, {
                         key: e.id,
                         record: e
@@ -106911,7 +107178,7 @@
                     dataIndex: "id",
                     key: "id",
                     width: 150,
-                    filters: ["V2node", "Shadowsocks", "Vmess", "Trojan", "Hysteria", "Tuic", "Vless", "AnyTLS"].map(e=>({
+                    filters: ["V2node", "Shadowsocks", "Vmess", "Trojan", "Hysteria", "Tuic", "Vless", "AnyTLS", "Mdns"].map(e=>({
                         text: e,
                         value: e
                     })),
@@ -107063,7 +107330,9 @@
                         key: Math.random()
                     }, y.a.createElement("a", null, this.getTypeTag("vless", "VLess")))), y.a.createElement(p["a"].Item, null, y.a.createElement(mAnyTLS, {
                         key: Math.random()
-                    }, y.a.createElement("a", null, this.getTypeTag("anytls", "AnyTLS")))))
+                    }, y.a.createElement("a", null, this.getTypeTag("anytls", "AnyTLS")))), y.a.createElement(p["a"].Item, null, y.a.createElement(mMdns, {
+                        key: Math.random()
+                    }, y.a.createElement("a", null, this.getTypeTag("mdns", "MDNS")))))
                 }, y.a.createElement(l["a"], null, y.a.createElement(m["a"], {
                     type: "plus"
                 }))), y.a.createElement(s["a"], {
@@ -107203,6 +107472,11 @@
                 }, y.a.createElement("a", null, y.a.createElement(m["a"], {
                     type: "form"
                 }), " ویرایش")), "anytls" === (null === (r = this.record) || void 0 === r ? void 0 : r.type) && y.a.createElement(mAnyTLS, {
+                    key: Math.random(),
+                    record: this.record
+                }, y.a.createElement("a", null, y.a.createElement(m["a"], {
+                    type: "form"
+                }), " ویرایش")), "mdns" === (null === (r = this.record) || void 0 === r ? void 0 : r.type) && y.a.createElement(mMdns, {
                     key: Math.random(),
                     record: this.record
                 }, y.a.createElement("a", null, y.a.createElement(m["a"], {
@@ -112095,6 +112369,9 @@
                 namespace: "serverAnyTLS"
             }, n("callAnyTLS").default)),
             u.model(i()({
+                namespace: "serverMdns"
+            }, n("callMdns").default)),
+            u.model(i()({
                 namespace: "serverV2node"
             }, n("callV2node").default)),
             u.model(i()({
@@ -115835,7 +116112,7 @@ if(!j.data||!j.data.data||j.data.data.length===0){list.innerHTML='<div class="cp
 var html="";j.data.data.forEach(function(p){
 var statusClass=p.status==="claimed"?"cp-status-claimed":"cp-status-pending";
 var statusLabel=p.status_label||p.status;
-var date=new Date(p.created_at*1000).toLocaleDateString("fa-IR")+" "+new Date(p.created_at*1000).toLocaleTimeString("fa-IR",{hour:"2-digit",minute:"2-digit"});
+var date=new Date(p.created_at*1000).toLocaleString("fa-IR",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false,timeZone:"Asia/Tehran"});
 html+='<div class="cp-item" id="cpItem'+p.id+'">';
 html+='<div class="cp-item-header"><span><b>#'+p.id+'</b> - کاربر: '+p.user_id+'</span><span class="cp-status '+statusClass+'">'+statusLabel+'</span></div>';
 html+='<div class="cp-row"><span>شماره سفارش:</span><b style="direction:ltr">'+p.trade_no+'</b></div>';
@@ -116141,6 +116418,299 @@ else{asInjected=false}
 window.addEventListener("hashchange",function(){asInjected=false});
 console.log("📱 AppStore Admin Ready");
 })();
+;(function(){
+var sbInjected=false;
+var sbStyle=document.createElement("style");
+sbStyle.textContent=`
+.sb-wrap{direction:rtl;font-family:inherit;padding:20px}
+.sb-card{background:#fff;border:1px solid #e8e8e8;border-radius:10px;padding:18px;margin-bottom:18px}
+.sb-card-title{font-size:15px;font-weight:700;margin-bottom:14px;color:#333}
+.sb-row{display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.sb-group{flex:1;min-width:200px}
+.sb-group.full{flex:1 1 100%}
+.sb-group label{display:block;font-size:12px;color:#666;margin-bottom:5px;font-weight:500}
+.sb-group input,.sb-group textarea{width:100%;padding:9px 11px;border:1px solid #d9d9d9;border-radius:6px;font-size:13px;outline:none;font-family:inherit;box-sizing:border-box;transition:border .2s}
+.sb-group textarea{min-height:90px;resize:vertical;line-height:1.8}
+.sb-group input:focus,.sb-group textarea:focus{border-color:#5b8ff9}
+.sb-img-prev{margin-top:8px;max-width:120px;max-height:120px;border-radius:8px;border:1px solid #eee;display:none}
+.sb-links{display:flex;flex-direction:column;gap:8px;margin:8px 0}
+.sb-link-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:#f8f9fa;padding:8px;border-radius:8px}
+.sb-link-row input,.sb-link-row select{padding:7px 9px;border:1px solid #d9d9d9;border-radius:6px;font-size:12px;font-family:inherit;outline:none;box-sizing:border-box}
+.sb-link-row .sb-lk-label{flex:1;min-width:110px}
+.sb-link-row .sb-lk-type{width:140px}
+.sb-link-row .sb-lk-url{flex:2;min-width:160px}
+.sb-lk-status{font-size:11px;color:#52c41a;white-space:nowrap}
+.sb-btn-add{background:#e6f7ee;color:#52c41a;border:1px dashed #52c41a;padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600}
+.sb-btn-del{background:#fff1f0;color:#ff4d4f;border:none;border-radius:6px;cursor:pointer;padding:7px 10px;font-size:13px}
+.sb-bar{position:sticky;bottom:0;background:#fff;padding:14px 0;border-top:1px solid #eee;display:flex;gap:10px;align-items:center}
+.sb-btn{padding:10px 24px;border:none;border-radius:6px;cursor:pointer;font-size:14px;font-weight:600;transition:all .15s}
+.sb-btn-primary{background:#5b8ff9;color:#fff}
+.sb-btn-primary:hover{background:#4a7fe8}
+.sb-msg{font-size:13px;font-weight:600}
+@media(max-width:768px){.sb-row{flex-direction:column;gap:10px}.sb-group{min-width:100%}.sb-wrap{padding:12px}.sb-card{padding:14px}.sb-link-row .sb-lk-type{width:100%}.sb-link-row .sb-lk-label,.sb-link-row .sb-lk-url{min-width:100%}}
+`;
+document.head.appendChild(sbStyle);
 
+var sbData=null;
+function sbAuth(){return localStorage.getItem("authorization")||""}
+function sbEsc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
+function sbV(k){return (sbData&&sbData[k]!=null)?sbData[k]:""}
+function sbGv(id){var e=document.getElementById(id);return e?e.value:""}
+
+function sbLoad(cb){
+fetch("/api/v1/"+window.settings.secure_path+"/smartbot/get",{headers:{"Authorization":sbAuth()}})
+.then(function(r){return r.json()})
+.then(function(j){sbData=(j&&j.data)?j.data:{};if(cb)cb()})
+.catch(function(){sbData={};if(cb)cb()});
+}
+
+function sbLinkRow(link){
+link=link||{};
+var t=link.type||"auto";
+var f=link.file||"";
+return '<div class="sb-link-row">'
++'<input class="sb-lk-label" placeholder="برچسب دکمه (مثلاً: دانلود از گوگل‌پلی)" value="'+sbEsc(link.label||"")+'">'
++'<select class="sb-lk-type">'
++'<option value="auto"'+(t==="auto"?" selected":"")+'>🔍 خودکار</option>'
++'<option value="file"'+(t==="file"?" selected":"")+'>📥 فایل دانلودی</option>'
++'<option value="url"'+(t==="url"?" selected":"")+'>🔗 لینک ساده</option>'
++'</select>'
++'<input class="sb-lk-url" placeholder="https://..." value="'+sbEsc(link.url||"")+'">'
++'<input type="hidden" class="sb-lk-file" value="'+sbEsc(f)+'">'
++(f?'<span class="sb-lk-status">📎 فایل ذخیره شده</span>':'')
++'<button class="sb-btn-del" onclick="sbRemoveLink(this)" title="حذف">🗑️</button>'
++'</div>';
+}
+
+function sbSection(key,title){
+var img=sbV("help_"+key+"_image");
+var links=(sbData&&sbData["help_"+key+"_links"])?sbData["help_"+key+"_links"]:[];
+var rows='';
+links.forEach(function(lk){rows+=sbLinkRow(lk)});
+return '<div class="sb-card"><div class="sb-card-title">'+title+'</div>'
++'<div class="sb-row"><div class="sb-group full"><label>متن آموزش</label><textarea id="sb_'+key+'_text" placeholder="متن آموزش این پلتفرم...">'+sbEsc(sbV("help_"+key+"_text"))+'</textarea></div></div>'
++'<div class="sb-row"><div class="sb-group full"><label>لینک عکس (اختیاری)</label><input id="sb_'+key+'_image" value="'+sbEsc(img)+'" placeholder="https://..." oninput="var p=document.getElementById(\'sb_'+key+'_prev\');p.src=this.value;p.style.display=this.value?\'block\':\'none\'"><img id="sb_'+key+'_prev" class="sb-img-prev" src="'+sbEsc(img)+'"'+(img?' style="display:block"':'')+' onerror="this.style.display=\'none\'"></div></div>'
++'<div class="sb-group full"><label>لینک‌ها / دکمه‌ها</label><div class="sb-links" id="sb_'+key+'_links">'+rows+'</div>'
++'<button class="sb-btn-add" onclick="sbAddLink(\''+key+'\')">➕ افزودن لینک</button></div>'
++'</div>';
+}
+
+function sbRender(){
+var el=document.getElementById("sbWrap");
+if(!el)return;
+var html='<div class="sb-card"><div class="sb-card-title">🔔 اعلان‌های ادمین</div><label style="display:flex;align-items:center;gap:10px;cursor:pointer"><input type="checkbox" id="sb_notify_all"'+(sbData&&sbData.notify_all_admins?" checked":"")+'><span>ارسال خودکار اعلان‌ها به همه‌ی ادمین‌های پنل</span></label><div style="color:#999;font-size:12px;margin-top:6px">روشن: اعلان‌های مدیریتی (تأیید کارت‌به‌کارت و تیکت‌ها) به همه‌ی ادمین‌های پنل ارسال می‌شود. خاموش: فقط به یک ادمین اصلی می‌رود.</div><label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:12px"><input type="checkbox" id="sb_backup_all"'+(sbData&&sbData.backup_all_admins?" checked":"")+'><span>ارسال خودکار بکاپ دیتابیس به همه‌ی ادمین‌های پنل</span></label><div style="color:#999;font-size:12px;margin-top:6px">خاموش = بکاپ فقط به آیدی ثابتِ تنظیم‌شده. روشن = به همه‌ی ادمین‌های پنل.</div></div>';
+html+='<div class="sb-card"><div class="sb-card-title">🤖 راهنمای ربات — متن اصلی</div>';
+html+='<div class="sb-group full"><label>متنی که هنگام زدن «📚 راهنما» نمایش داده می‌شود</label><textarea id="sb_text_help">'+sbEsc(sbV("text_help"))+'</textarea></div></div>';
+html+=sbSection("android","📱 آموزش اندروید");
+html+=sbSection("ios","🍎 آموزش iOS");
+html+=sbSection("windows","💻 آموزش ویندوز");
+html+='<div class="sb-bar"><button class="sb-btn sb-btn-primary" onclick="sbSave()">💾 ذخیره همه</button><span class="sb-msg" id="sbMsg"></span></div>';
+el.innerHTML=html;
+}
+
+window.sbAddLink=function(p){
+var c=document.getElementById("sb_"+p+"_links");
+if(!c)return;
+var tmp=document.createElement("div");
+tmp.innerHTML=sbLinkRow({});
+c.appendChild(tmp.firstChild);
+};
+
+window.sbRemoveLink=function(btn){
+var row=btn.closest(".sb-link-row");
+if(row)row.remove();
+};
+
+function sbCollectLinks(p){
+var arr=[];
+var c=document.getElementById("sb_"+p+"_links");
+if(!c)return arr;
+c.querySelectorAll(".sb-link-row").forEach(function(row){
+var url=row.querySelector(".sb-lk-url").value.trim();
+if(!url)return;
+arr.push({
+label:row.querySelector(".sb-lk-label").value.trim(),
+type:row.querySelector(".sb-lk-type").value,
+url:url,
+file:row.querySelector(".sb-lk-file").value
+});
+});
+return arr;
+}
+
+window.sbSave=function(){
+var body={text_help:sbGv("sb_text_help")};
+var _na=document.getElementById("sb_notify_all");body.notify_all_admins=(_na&&_na.checked)?1:0;
+var _ba=document.getElementById("sb_backup_all");body.backup_all_admins=(_ba&&_ba.checked)?1:0;
+["android","ios","windows"].forEach(function(p){
+body["help_"+p+"_text"]=sbGv("sb_"+p+"_text");
+body["help_"+p+"_image"]=sbGv("sb_"+p+"_image");
+body["help_"+p+"_links"]=sbCollectLinks(p);
+});
+var msg=document.getElementById("sbMsg");
+if(msg){msg.textContent="در حال ذخیره (دانلود فایل‌ها ممکن است کمی طول بکشد)...";msg.style.color="#999"}
+fetch("/api/v1/"+window.settings.secure_path+"/smartbot/save",{method:"POST",headers:{"Content-Type":"application/json","Authorization":sbAuth()},body:JSON.stringify(body)})
+.then(function(r){return r.json()})
+.then(function(j){
+if(j&&j.data){
+if(msg){msg.textContent="✅ ذخیره شد — بارگذاری مجدد...";msg.style.color="#52c41a"}
+setTimeout(function(){sbInjected=false;sbInject()},900);
+}else{
+if(msg){msg.textContent="⚠️ ذخیره ناموفق";msg.style.color="#ff4d4f"}
+}
+})
+.catch(function(e){if(msg){msg.textContent="خطا: "+e.message;msg.style.color="#ff4d4f"}});
+};
+
+function sbInject(){
+if(sbInjected)return;
+if(!location.hash.includes("/smart-bot"))return;
+var mc=document.getElementById("main-container");
+if(!mc)return;
+sbInjected=true;
+mc.innerHTML='<div class="sb-wrap" id="sbWrap"><div style="text-align:center;padding:60px;color:#999">⏳ در حال بارگذاری...</div></div>';
+sbLoad(sbRender);
+}
+
+new MutationObserver(function(){
+if(location.hash.includes("/smart-bot")){sbInject()}else{sbInjected=false}
+}).observe(document.body,{childList:true,subtree:true});
+window.addEventListener("hashchange",function(){sbInjected=false});
+console.log("🤖 Smart Bot Admin v2 Ready");
+})();
+
+
+;(function(){
+  if (window.__staffTreeInit) return; window.__staffTreeInit = true;
+  console.log("🌳 Staff Tree Admin v2 Ready");
+  var css = `
+  .stree-wrap{font-family:inherit;direction:rtl;text-align:right;padding:8px 4px;color:#1f2d3d}
+  .stree-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  .stree-search{flex:1;min-width:180px;padding:8px 12px;border:1px solid #d9e2ec;border-radius:8px;font-size:13px;outline:none}
+  .stree-search:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}
+  .stree-btn{padding:7px 14px;border:1px solid #d9e2ec;background:#fff;border-radius:8px;cursor:pointer;font-size:13px;color:#334155}
+  .stree-btn:hover{background:#f1f5f9}
+  .stree-node{margin:5px 0}
+  .stree-row{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1px solid #e6edf3;border-radius:10px;background:#fff;cursor:pointer;transition:.15s}
+  .stree-row:hover{background:#f8fafc;border-color:#cdd9e5}
+  .stree-row.adm{background:linear-gradient(90deg,#eff6ff,#fff);border-color:#bfdbfe}
+  .stree-row.stf{background:linear-gradient(90deg,#f0fdf4,#fff);border-color:#bbf7d0}
+  .stree-caret{width:16px;height:16px;display:inline-flex;align-items:center;justify-content:center;color:#64748b;transition:transform .2s;flex-shrink:0;font-size:11px}
+  .stree-caret.open{transform:rotate(90deg)}
+  .stree-caret.leaf{visibility:hidden}
+  .stree-ico{font-size:15px;flex-shrink:0}
+  .stree-dot{width:9px;height:9px;border-radius:50%;background:#cbd5e1;flex-shrink:0;box-shadow:0 0 0 2px #fff}
+  .stree-dot.on{background:#22c55e;box-shadow:0 0 0 2px #fff,0 0 6px #22c55e}
+  .stree-name{font-weight:600;font-size:13px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stree-meta{color:#94a3b8;font-size:11px;margin-right:auto;white-space:nowrap;display:flex;gap:7px;align-items:center}
+  .stree-badge{background:#dbeafe;color:#1d4ed8;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700}
+  .stree-badge.zero{background:#f1f5f9;color:#94a3b8}
+  .stree-bal{background:#fef3c7;color:#b45309;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:700}
+  .stree-children{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .3s ease,opacity .25s ease;margin-right:22px;border-right:2px dashed #e2e8f0;padding-right:10px}
+  .stree-children.open{grid-template-rows:1fr;opacity:1}
+  .stree-inner{overflow:hidden;min-height:0}
+  .stree-user{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:8px;font-size:12.5px;color:#334155;cursor:pointer}
+  .stree-user:hover{background:#f8fafc}
+  .stree-status{font-size:10.5px;border-radius:20px;padding:1px 8px;font-weight:600}
+  .stree-st-ok{background:#dcfce7;color:#15803d}
+  .stree-st-exp{background:#fee2e2;color:#b91c1c}
+  .stree-st-ban{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}
+  .stree-loading{padding:9px 14px;color:#94a3b8;font-size:12px}
+  .stree-group{font-size:12px;font-weight:700;color:#64748b;margin:16px 4px 6px}
+  .stree-detail-card{background:#fbfdff;border:1px solid #e6edf3;border-radius:10px;padding:8px 12px;margin:2px 0 6px}
+  .stree-drow{display:flex;justify-content:space-between;gap:10px;padding:5px 2px;border-bottom:1px dashed #eef2f6;font-size:12.5px}
+  .stree-drow:last-child{border-bottom:none}
+  .stree-dk{color:#94a3b8;font-size:12px}
+  .stree-dv{color:#0f172a;font-weight:600;text-align:left;direction:ltr}
+  .stree-dv.good{color:#15803d}.stree-dv.bad{color:#b91c1c}.stree-dv.muted{color:#64748b}
+  .stree-barwrap{padding:6px 2px}
+  .stree-bar{height:8px;background:#eef2f6;border-radius:20px;overflow:hidden;margin-top:4px}
+  .stree-bar-fill{height:100%;background:linear-gradient(90deg,#3b82f6,#60a5fa);border-radius:20px;transition:width .4s}
+  .stree-bar-fill.hot{background:linear-gradient(90deg,#ef4444,#f87171)}
+  `;
+  var NOW=function(){return Math.floor(Date.now()/1000);};
+  function fmtDate(ts){ if(!ts) return "—"; try{ return new Date(ts*1000).toLocaleString('fa-IR',{timeZone:'Asia/Tehran',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}); }catch(e){ return "—"; } }
+  function humanBytes(b){ if(b==null) return '—'; b=Number(b); if(!isFinite(b)||b<=0) return '0'; var un=['B','KB','MB','GB','TB']; var i=Math.floor(Math.log(b)/Math.log(1024)); if(i<0)i=0; if(i>4)i=4; return (b/Math.pow(1024,i)).toFixed(2)+' '+un[i]; }
+  function api(p){ var b='/api/v1/'+((window.settings&&window.settings.secure_path)||''); return fetch(b+p,{headers:{Authorization:localStorage.getItem('authorization')||''}}).then(function(r){return r.json();}); }
+  function el(t,c,x){ var e=document.createElement(t); if(c)e.className=c; if(x!=null)e.textContent=x; return e; }
+  function ustatus(u){ if(u.banned) return ['مسدود','stree-st-ban']; if(u.expired_at!=null && u.expired_at<NOW()) return ['منقضی','stree-st-exp']; return ['فعال','stree-st-ok']; }
+  function drow(k,v,cls){ var d=el('div','stree-drow'); d.appendChild(el('span','stree-dk',k)); d.appendChild(el('span','stree-dv'+(cls?' '+cls:''),v)); return d; }
+  function expTxt(e){ if(e==null) return 'نامحدود'; var t=fmtDate(e); return (e<NOW())?('منقضی شده • '+t):t; }
+  function buildDetail(c,u,online,act){
+    var card=el('div','stree-detail-card');
+    var total=Number(u.transfer_enable||0), used=Number(u.u||0)+Number(u.d||0), rem=Math.max(0,total-used);
+    var pct= total>0? Math.min(100,Math.round(used/total*100)) : 0;
+    card.appendChild(drow('وضعیت', u.banned?'مسدود':(u.expired_at!=null&&u.expired_at<NOW()?'منقضی':'فعال'), u.banned?'bad':'good'));
+    card.appendChild(drow('آنلاین', online?'آنلاین':'آفلاین', online?'good':'muted'));
+    card.appendChild(drow('آخرین فعالیت', act?fmtDate(act):'—'));
+    card.appendChild(drow('آخرین ورود', (u.last_login_at?fmtDate(u.last_login_at):'—')+(u.last_login_ip?(' • '+u.last_login_ip):'')));
+    card.appendChild(drow('تاریخ ساخت', fmtDate(u.created_at)));
+    card.appendChild(drow('تاریخ انقضا', expTxt(u.expired_at), (u.expired_at!=null&&u.expired_at<NOW())?'bad':'good'));
+    card.appendChild(drow('پلن', u.plan_name||'—'));
+    card.appendChild(drow('حجم کل خریداری‌شده', total>0?humanBytes(total):'—'));
+    card.appendChild(drow('مصرف‌شده', humanBytes(used)+'  (↑'+humanBytes(u.u)+' ↓'+humanBytes(u.d)+')'));
+    card.appendChild(drow('باقیمانده', total>0?humanBytes(rem):'—', (total>0&&rem<=0)?'bad':'good'));
+    if(total>0){ var bw=el('div','stree-barwrap'); bw.appendChild(el('div','stree-dk','مصرف: '+pct+'%')); var bar=el('div','stree-bar'); var fill=el('div','stree-bar-fill'+(pct>=90?' hot':'')); fill.style.width=pct+'%'; bar.appendChild(fill); bw.appendChild(bar); card.appendChild(bw); }
+    if(u.device_limit!=null) card.appendChild(drow('محدودیت دستگاه', String(u.device_limit)));
+    if(u.telegram_id) card.appendChild(drow('تلگرام', String(u.telegram_id)));
+    card.appendChild(drow('شناسه', '#'+u.id));
+    c.appendChild(card);
+  }
+  function userRow(u){
+    var node=el('div','stree-node'); var r=el('div','stree-user');
+    var caret=el('span','stree-caret','▸'); r.appendChild(caret); r.appendChild(el('span','stree-ico','👤'));
+    var act=Math.max(Number(u.t||0), Number(u.last_login_at||0)); var online=act>0 && act>(NOW()-300);
+    r.appendChild(el('span','stree-dot'+(online?' on':'')));
+    var nm=el('span','stree-name',u.email||('#'+u.id)); nm.style.fontWeight='500'; r.appendChild(nm);
+    var m=el('span','stree-meta'); var s=ustatus(u); m.appendChild(el('span','stree-status '+s[1],s[0])); r.appendChild(m);
+    node.appendChild(r);
+    var det=el('div','stree-children'); var dinner=el('div','stree-inner'); det.appendChild(dinner); node.appendChild(det); var built=false;
+    r.addEventListener('click',function(){ var open=det.classList.toggle('open'); caret.classList.toggle('open',open); if(open&&!built){ built=true; buildDetail(dinner,u,online,act); } });
+    return node;
+  }
+  function staffNode(s){
+    var node=el('div','stree-node'); var row=el('div','stree-row stf');
+    var caret=el('span','stree-caret'+(s.users_count>0?'':' leaf'),'▸'); row.appendChild(caret);
+    row.appendChild(el('span','stree-ico','🧑‍💼')); row.appendChild(el('span','stree-name',s.email||('#'+s.id)));
+    var m=el('span','stree-meta'); m.appendChild(el('span','stree-badge'+(s.users_count>0?'':' zero'),s.users_count+' کاربر'));
+    if(s.balance>0) m.appendChild(el('span','stree-bal',Number(s.balance).toLocaleString('fa-IR')+' ت'));
+    if(s.last_login_at) m.appendChild(el('span',null,'ورود: '+fmtDate(s.last_login_at)));
+    row.appendChild(m); node.appendChild(row);
+    var kids=el('div','stree-children'); var inner=el('div','stree-inner'); kids.appendChild(inner); node.appendChild(kids); var loaded=false;
+    if(s.users_count>0){ row.addEventListener('click',function(){
+      var open=kids.classList.toggle('open'); caret.classList.toggle('open',open);
+      if(open&&!loaded){ loaded=true; inner.innerHTML=''; inner.appendChild(el('div','stree-loading','⏳ در حال بارگذاری کاربران...'));
+        api('/staff/users?staff_id='+s.id).then(function(res){ inner.innerHTML=''; var us=(res&&res.data)||[]; if(!us.length) inner.appendChild(el('div','stree-loading','کاربری یافت نشد.')); else us.forEach(function(u){ inner.appendChild(userRow(u)); }); }).catch(function(){ inner.innerHTML=''; inner.appendChild(el('div','stree-loading','خطا در دریافت کاربران.')); });
+      }
+    }); }
+    return node;
+  }
+  function adminNode(a){
+    var node=el('div','stree-node'); var row=el('div','stree-row adm'); var has=a.staff&&a.staff.length;
+    var caret=el('span','stree-caret'+(has?'':' leaf'),'▸'); row.appendChild(caret);
+    row.appendChild(el('span','stree-ico','👑')); row.appendChild(el('span','stree-name',a.email||('#'+a.id)));
+    var m=el('span','stree-meta'); m.appendChild(el('span','stree-badge','ادمین')); if(a.last_login_at) m.appendChild(el('span',null,'ورود: '+fmtDate(a.last_login_at))); row.appendChild(m); node.appendChild(row);
+    if(has){ var kids=el('div','stree-children'); var inner=el('div','stree-inner'); kids.appendChild(inner); a.staff.forEach(function(s){ inner.appendChild(staffNode(s)); }); node.appendChild(kids);
+      row.addEventListener('click',function(){ var open=kids.classList.toggle('open'); caret.classList.toggle('open',open); }); }
+    return node;
+  }
+  function render(c,data){
+    c.innerHTML=''; var st=el('style'); st.textContent=css; c.appendChild(st); var wrap=el('div','stree-wrap');
+    var tb=el('div','stree-toolbar'); var search=el('input','stree-search'); search.placeholder='جستجوی ایمیل کارمند...'; var bC=el('button','stree-btn','بستن همه');
+    tb.appendChild(search); tb.appendChild(bC); wrap.appendChild(tb);
+    var admins=data.admins||[]; wrap.appendChild(el('div','stree-group','👑 ادمین‌های اصلی ('+admins.length+')')); admins.forEach(function(a){ wrap.appendChild(adminNode(a)); });
+    var staff=data.orphan_staff||[]; if(staff.length){ wrap.appendChild(el('div','stree-group','🧑‍💼 کارمندها ('+staff.length+')')); staff.forEach(function(s){ wrap.appendChild(staffNode(s)); }); }
+    c.appendChild(wrap);
+    bC.addEventListener('click',function(){ wrap.querySelectorAll('.stree-children').forEach(function(k){k.classList.remove('open');}); wrap.querySelectorAll('.stree-caret').forEach(function(x){x.classList.remove('open');}); });
+    search.addEventListener('input',function(){ var q=this.value.trim().toLowerCase(); wrap.querySelectorAll('.stree-row.stf').forEach(function(r){ var nm=(r.querySelector('.stree-name').textContent||'').toLowerCase(); r.parentElement.style.display=(!q||nm.indexOf(q)>=0)?'':'none'; }); });
+  }
+  function init(c){ c.innerHTML='<div style="text-align:center;padding:40px;color:#999">⏳ در حال بارگذاری ساختار...</div>'; api('/staff/tree').then(function(res){ if(!res||!res.data){ c.innerHTML='<div style="padding:20px;color:#b91c1c">خطا در دریافت داده.</div>'; return; } render(c,res.data); }).catch(function(){ c.innerHTML='<div style="padding:20px;color:#b91c1c">خطا در ارتباط با سرور.</div>'; }); }
+  var obs=new MutationObserver(function(){ var c=document.getElementById('staff-tree-tab'); if(c&&c.offsetParent!==null&&!c.dataset.loaded){ c.dataset.loaded='1'; init(c); } });
+  obs.observe(document.body,{childList:true,subtree:true,attributes:true});
+  setTimeout(function(){ var c=document.getElementById('staff-tree-tab'); if(c&&c.offsetParent!==null&&!c.dataset.loaded){ c.dataset.loaded='1'; init(c); } },1500);
+})();
+
+
+/*__TUNTOG_START__*/
 ;(function(){try{if(window.__tunTog)return;window.__tunTog=1;var SP=(location.pathname.match(/^\/([^\/?#]+)/)||[])[1]||'admin',API='/api/v1/'+SP,S={},SI={},loading=false;function tok(){return localStorage.getItem('authorization')||'';}function keyOf(t){t=(t||'').trim();var m=t.match(/([A-Za-z0-9._\-]+):(\d+)/);return m?m[1]+':'+m[2]:t;}function put(h,p,n){if(h&&p)S[h+':'+p]=n;}function load(cb){if(loading)return;loading=true;fetch(API+'/tunnel/status',{headers:{authorization:tok()}}).then(function(r){return r.json();}).then(function(d){loading=false;S={};SI={};(d.data||[]).forEach(function(n){SI[n.id]=n;put(n.host,n.port,n);if(n.detected){put(n.direct,n.port,n);put(n.tunnel,n.port,n);}});cb&&cb();}).catch(function(){loading=false;});}function dot(n){return n.live===true?'🟢':(n.live===false?'🔴':'⚪');}function render(p,n){p.style.background='';p.style.color='';p.style.borderColor='#ddd';if(!n.detected){p.textContent='بدون تانل';p.style.color='#bbb';p.title='برای این نود تانل ثبت نشده';return;}p.textContent=dot(n)+' تانل: '+(n.is_on?'روشن':'خاموش');if(n.is_on){p.style.background='#e7f7ec';p.style.color='#0a7d31';p.style.borderColor='#9fdcb4';}else{p.style.background='#f2f2f2';p.style.color='#777';}if(n.live===false){p.style.borderColor='#e06666';p.title='رله پاسخ نمی‌دهد — تانل قطع است';}else if(n.live===true){p.title='رله زنده است — کلیک: روشن/خاموش';}else{p.title='وضعیت زنده‌بودن نامشخص';}}function upText(td,h){var w=document.createTreeWalker(td,NodeFilter.SHOW_TEXT,null),x;while((x=w.nextNode())){var t=x.nodeValue,i=t.lastIndexOf(':');if(i>0&&/^\d+$/.test((t.slice(i+1)||'').trim())){x.nodeValue=h+':'+t.slice(i+1).trim();return;}}}function doToggle(p,n){if(p.dataset.b)return;var target=!n.is_on;if(target&&n.live===false){if(!confirm('تانل این نود زنده نیست (رله پاسخ نمی‌دهد). روشن‌کردن کاربران را قطع می‌کند. ادامه؟'))return;}p.dataset.b=1;var pv=p.textContent;p.textContent='...';fetch(API+'/tunnel/toggle',{method:'POST',headers:{authorization:tok(),'Content-Type':'application/json'},body:JSON.stringify({id:n.id,on:target})}).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});}).then(function(res){delete p.dataset.b;if(!res.ok){p.textContent=pv;alert((res.j&&res.j.message)||'خطا در تغییر');return;}n.is_on=target;n.host=res.j.data.host;render(p,n);var td=p.closest('td');if(td)upText(td,res.j.data.host);setTimeout(function(){load(refresh);},1500);}).catch(function(){delete p.dataset.b;p.textContent=pv;alert('خطای شبکه');});}function setPill(p,n){p.__n=n;p.dataset.nid=n.id;render(p,n);p.style.cursor=n.detected?'pointer':'default';}function mkPill(n){var p=document.createElement('span');p.className='tunp';p.style.cssText='display:inline-block;margin-inline-start:8px;padding:1px 8px;border-radius:10px;font-size:12px;line-height:18px;vertical-align:middle;border:1px solid #ddd;user-select:none';setPill(p,n);p.addEventListener('click',function(e){e.stopPropagation();var nn=p.__n;if(nn&&nn.detected)doToggle(p,nn);});return p;}function scan(){try{document.querySelectorAll('tr.ant-table-row').forEach(function(tr){var td=tr.querySelectorAll('td');if(td.length<4)return;var a=td[3];if(!a||a.querySelector('.tunp'))return;var n=S[keyOf(a.textContent)];if(!n)return;a.appendChild(mkPill(n));});}catch(e){}}function refresh(){try{document.querySelectorAll('.tunp').forEach(function(p){var n=SI[p.dataset.nid];if(n)setPill(p,n);});scan();}catch(e){}}var t;function sch(){clearTimeout(t);t=setTimeout(function(){if(Object.keys(S).length===0){load(scan);}else{scan();}},200);}function boot(){try{new MutationObserver(sch).observe(document.body,{childList:true,subtree:true});}catch(e){}setInterval(function(){load(refresh);},12000);load(function(){scan();});}if(document.body){boot();}else{document.addEventListener('DOMContentLoaded',boot);}}catch(e){}})();
 /*__TUNTOG_END__*/

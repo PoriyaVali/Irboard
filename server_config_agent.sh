@@ -43,7 +43,15 @@ update_status() {
     local hasFcgiParam="false"
 
     grep -q "listen 8443" "$CONF" 2>/dev/null && has8443="true"
-    grep -q 'request_uri ~ ^/api/' "$CONF" 2>/dev/null && hasCond="true"
+    # The /api exception only means anything when this vhost actually forces
+    # HTTP->HTTPS. A vhost with no forced-redirect block already serves plain
+    # HTTP /api - which is exactly what the tunnel needs - so report it OK
+    # instead of a red cross the operator can never clear.
+    if grep -q 'request_uri ~ ^/api/' "$CONF" 2>/dev/null; then
+        hasCond="true"
+    elif ! grep -q '#HTTP_TO_HTTPS_START' "$CONF" 2>/dev/null; then
+        hasCond="true"
+    fi
     grep -qP 'fastcgi_param\s+HTTPS\s+on;' "$FASTCGI" 2>/dev/null && httpsOn="true"
     # NOTE: this only proves nginx is listening locally. It cannot tell whether
     # 8443 is reachable from outside - a cloud security group or a host firewall
@@ -88,7 +96,15 @@ while true; do
                         fi
                         ;;
                     http_to_https)
-                        if ! grep -q 'request_uri ~ ^/api/' "$CONF"; then
+                        if grep -q 'request_uri ~ ^/api/' "$CONF"; then
+                            echo "[$(date)] HTTP_TO_HTTPS already conditional" >> "$LOG"
+                        elif ! grep -q '#HTTP_TO_HTTPS_START' "$CONF"; then
+                            # There is no forced-redirect block to carve an exception
+                            # out of, so plain-HTTP /api already works. Doing the sed
+                            # below would match no lines and change nothing - saying so
+                            # beats logging a success that never happened.
+                            echo "[$(date)] HTTP_TO_HTTPS: vhost has no forced redirect - nothing to fix" >> "$LOG"
+                        else
                             sed -i '/#HTTP_TO_HTTPS_START/,/#HTTP_TO_HTTPS_END/c\
     #HTTP_TO_HTTPS_START\
     set $do_redirect 0;\
@@ -102,8 +118,13 @@ while true; do
         rewrite ^(/.*)$ https://$host$1 permanent;\
     }\
     #HTTP_TO_HTTPS_END' "$CONF"
-                            echo "[$(date)] HTTP_TO_HTTPS made conditional" >> "$LOG"
-                            RELOAD=1
+                            # Verify the edit landed before claiming it did.
+                            if grep -q 'request_uri ~ ^/api/' "$CONF"; then
+                                echo "[$(date)] HTTP_TO_HTTPS made conditional" >> "$LOG"
+                                RELOAD=1
+                            else
+                                echo "[$(date)] HTTP_TO_HTTPS: edit did not apply - inspect $CONF by hand" >> "$LOG"
+                            fi
                         fi
                         ;;
                     fastcgi_https)
