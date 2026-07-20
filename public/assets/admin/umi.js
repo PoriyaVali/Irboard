@@ -116812,42 +116812,54 @@ function launcher(){
 
 /* Per-row buttons.
 
-   Two things about this table decide where the button can go.
+   Three things about this table decide how the button has to work.
 
-   A fixed column is drawn by antd as a SEPARATE overlay table stacked on top
-   of the main one. The main table still renders its own copy of that cell, so
-   a button placed there sits in the DOM, reports itself visible to script, and
-   is completely hidden from the operator behind the overlay - the row read
-   "عملیات گروه‌ها" while the screen showed only "عملیات". The button therefore
-   goes on the copy that lives inside the overlay.
+   1. A fixed column is drawn by antd as a SEPARATE overlay table stacked on
+      the main one, and the main table still renders its own copy of that
+      cell. A button placed there sits in the DOM, reports itself visible to
+      script, and is hidden on screen behind the overlay - the row read
+      "عملیات گروه‌ها" while the panel showed only "عملیات". So the button
+      goes on the copy inside the overlay.
 
-   And the email is read from a single cell, never from the row's text: cells
-   concatenate without separators, so the row reads "3226tg_...@telegram.user"
-   and a loose match swallows the id column into the address. That address then
-   either fails to resolve or, worse, resolves to somebody else - the same
-   class of wrong-target bug that once wrote groups onto two unrelated
-   accounts. An anchored match against one cell cannot do that.             */
+   2. The address is matched anchored against ONE cell. Cell text
+      concatenates without separators, so a row reads
+      "3226tg_...@telegram.user" and a loose match swallows the id column into
+      the address - which then fails, or worse resolves to somebody else.
+
+   3. The address is looked up FRESH on every click, never captured when the
+      button is created. data-row-key here is the array index, so React reuses
+      the same <tr> when the page, sort or search changes and only swaps the
+      cell contents. A button carrying a captured address survives that and
+      quietly edits whoever was in that position before - the same
+      wrong-target failure that once wrote groups onto two unrelated
+      accounts.                                                             */
 var EMAIL_RE=/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+function emailForKey(k){
+  var out=null;
+  var sel='tr[data-row-key="'+String(k).replace(/"/g,'\\"')+'"]';
+  [].forEach.call(document.querySelectorAll(sel),function(tr){
+    if(out)return;
+    [].forEach.call(tr.querySelectorAll('td'),function(td){
+      var t=(td.textContent||'').trim();
+      if(!out&&EMAIL_RE.test(t))out=t;
+    });
+  });
+  return out;
+}
 function decorate(){
   var rows=document.querySelectorAll('tr[data-row-key]');
   if(!rows.length)return;
   var byKey={};
-  rows.forEach(function(tr){
+  [].forEach.call(rows,function(tr){
     var k=tr.getAttribute('data-row-key');
     (byKey[k]=byKey[k]||[]).push(tr);
   });
   Object.keys(byKey).forEach(function(k){
-    var copies=byKey[k], email=null, target=null;
+    if(!emailForKey(k))return;                   // not a user row
+    var copies=byKey[k], target=null;
     copies.forEach(function(tr){
-      if(!email){
-        [].forEach.call(tr.querySelectorAll('td'),function(td){
-          var t=(td.textContent||'').trim();
-          if(!email&&EMAIL_RE.test(t))email=t;
-        });
-      }
       if(tr.closest('.ant-table-fixed-right,.ant-table-fixed-left,.ant-table-body-inner'))target=tr;
     });
-    if(!email)return;                            // not a user row
     if(!target)target=copies[copies.length-1];   // table without fixed columns
     copies.forEach(function(tr){                 // drop any button on a covered copy
       if(tr!==target){var old=tr.querySelector('.xgrp-btn'); if(old)old.remove();}
@@ -116859,13 +116871,18 @@ function decorate(){
     b.className='ant-btn ant-btn-sm xgrp-btn';
     b.style.cssText='margin-inline-start:6px';
     b.textContent='گروه‌ها';
-    b.title='گروه‌های دسترسی اضافه — '+email;
-    b.onclick=function(ev){ev.stopPropagation();openFor(true,email);};
+    b.onmouseenter=function(){b.title='گروه‌های دسترسی اضافه — '+(emailForKey(k)||'?');};
+    b.onclick=function(ev){
+      ev.stopPropagation();
+      var email=emailForKey(k);                  // read now, not when created
+      if(!email){alert('ایمیل این ردیف خوانده نشد؛ از دکمه شناور استفاده کنید.');return;}
+      openFor(true,email);
+    };
     tds[tds.length-1].appendChild(b);
   });
 }
 function tick(){launcher();decorate();}
 new MutationObserver(tick).observe(document.documentElement,{childList:true,subtree:true});
 setTimeout(tick,800); setTimeout(tick,2500);
-console.log('👥 Extra Groups Admin v1.6 — verified in-page: button in the fixed-column overlay, email read per-cell; _xgrpOpen("email") also works');
+console.log('👥 Extra Groups Admin v1.7 — verified in-page: overlay placement, per-cell email, re-read on every click; _xgrpOpen("email") also works');
 })();
