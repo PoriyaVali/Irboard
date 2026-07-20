@@ -116810,24 +116810,48 @@ function launcher(){
   document.body.appendChild(b);
 }
 
-/* Best-effort per-row buttons. If the markup is not what we expect this
-   simply adds nothing - the launcher above is the guaranteed path.     */
+/* Per-row buttons.
+
+   A table with fixed columns makes antd render every row TWICE, in two
+   separate tables: the scrollable copy carries the email, while the copy
+   holding the visible action column carries only the fixed cells. Looking for
+   the email and the action cell in the same <tr> therefore never matched, and
+   no button was produced. Both copies share the same data-row-key, so the
+   email is collected by key first and the button then goes on the copy that
+   actually shows the action column.                                        */
+var EMAIL_RE=/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
 function decorate(){
-  document.querySelectorAll('tr[data-row-key]').forEach(function(tr){
+  var rows=document.querySelectorAll('tr[data-row-key]');
+  if(!rows.length)return;
+  var mailByKey={}, best={};
+  rows.forEach(function(tr){
+    var k=tr.getAttribute('data-row-key');
+    var m=(tr.textContent||'').match(EMAIL_RE);
+    if(m&&!mailByKey[k])mailByKey[k]=m[0];
+    var tds=tr.querySelectorAll('td');
+    if(!tds.length)return;
+    var lastCls=tds[tds.length-1].className||'';
+    // prefer the copy whose final cell is a fixed column - that is the one
+    // the operator can actually see and click
+    if(!best[k]||/fixed-columns/.test(lastCls))best[k]=tr;
+  });
+  Object.keys(best).forEach(function(k){
+    var email=mailByKey[k];
+    if(!email)return;                       // not a user row
+    var tr=best[k];
     if(tr.querySelector('.xgrp-btn'))return;
-    var cells=tr.querySelectorAll('td'); if(!cells.length)return;
-    var em=(tr.textContent||'').match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
-    if(!em)return;
+    var tds=tr.querySelectorAll('td');
     var b=document.createElement('button');
     b.className='ant-btn ant-btn-sm xgrp-btn';
     b.style.cssText='margin-inline-start:6px';
     b.textContent='گروه‌ها';
-    b.onclick=function(ev){ev.stopPropagation();openFor(true,em[0]);};
-    cells[cells.length-1].appendChild(b);
+    b.title='گروه‌های دسترسی اضافه — '+email;
+    b.onclick=function(ev){ev.stopPropagation();openFor(true,email);};
+    tds[tds.length-1].appendChild(b);
   });
 }
 function tick(){launcher();decorate();}
 new MutationObserver(tick).observe(document.documentElement,{childList:true,subtree:true});
 setTimeout(tick,800); setTimeout(tick,2500);
-console.log('👥 Extra Groups Admin v1.3 — floating launcher + per-row buttons; _xgrpOpen("email") also works');
+console.log('👥 Extra Groups Admin v1.4 — row buttons handle fixed-column tables; _xgrpOpen("email") also works');
 })();
