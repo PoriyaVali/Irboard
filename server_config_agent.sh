@@ -60,6 +60,13 @@ update_status() {
     grep -q 'location ~ ^/api/' "$REWRITE" 2>/dev/null && hasApiLoc="true"
     grep -q 'fastcgi_param HTTPS on' "$REWRITE" 2>/dev/null && hasFcgiParam="true"
 
+    # updated_at carries its own UTC offset on purpose. The panel decides whether
+    # this agent is alive with (time() - strtotime(updated_at)) < 30, and PHP's
+    # strtotime() reads a bare "Y-m-d H:i:s" in PHP's OWN timezone. This panel
+    # ships date.timezone=PRC (UTC+8) while the box runs UTC, so a bare stamp read
+    # 8 hours stale and the agent showed as permanently offline while it was
+    # writing this file every 5 seconds. With the offset the reader cannot
+    # misinterpret it, whatever either side's timezone is set to.
     cat > "$STATUS" << STATUSEOF
 {
     "nginx_port_8443": $has8443,
@@ -68,7 +75,7 @@ update_status() {
     "firewall_8443": $fw8443,
     "nginx_rewrite_api": $hasApiLoc,
     "nginx_rewrite_fcgi": $hasFcgiParam,
-    "updated_at": "$(date '+%Y-%m-%d %H:%M:%S')"
+    "updated_at": "$(date '+%Y-%m-%d %H:%M:%S%z')"
 }
 STATUSEOF
     chmod 644 "$STATUS"
