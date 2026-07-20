@@ -116792,24 +116792,6 @@ function openFor(query, label){
 }
 window._xgrpOpen=function(q){openFor(!!q,q||'');};
 
-/* ---------- a launcher that cannot be hidden by the table -------------
-   Earlier versions only injected a button into each row, which silently
-   produced nothing whenever the table's markup differed from what was
-   expected. This floating button is attached to <body>, so it is there
-   regardless of how the user list happens to be rendered.              */
-function launcher(){
-  if(document.getElementById('xgrp-fab'))return;
-  if(!document.body)return;
-  var b=document.createElement('button');
-  b.id='xgrp-fab';
-  b.textContent='👥 گروه‌های کاربر';
-  b.style.cssText='position:fixed;inset-inline-start:16px;bottom:16px;z-index:2147482000;'
-    +'padding:8px 14px;border-radius:20px;border:1px solid #d9d9d9;background:#fff;'
-    +'box-shadow:0 2px 8px rgba(0,0,0,.15);cursor:pointer;font-size:13px;font-family:inherit';
-  b.onclick=function(){openFor(false,'');};
-  document.body.appendChild(b);
-}
-
 /* Per-row buttons.
 
    Three things about this table decide how the button has to work.
@@ -116875,14 +116857,14 @@ function decorate(){
     b.onclick=function(ev){
       ev.stopPropagation();
       var email=emailForKey(k);                  // read now, not when created
-      if(!email){alert('ایمیل این ردیف خوانده نشد؛ از دکمه شناور استفاده کنید.');return;}
+      if(!email){alert('ایمیل این ردیف خوانده نشد. صفحه را تازه کنید.');return;}
       openFor(true,email);
     };
     tds[tds.length-1].appendChild(b);
   });
 }
-function tick(){launcher();decorate();}
+function tick(){decorate();}
 new MutationObserver(tick).observe(document.documentElement,{childList:true,subtree:true});
 setTimeout(tick,800); setTimeout(tick,2500);
-console.log('👥 Extra Groups Admin v1.7 — verified in-page: overlay placement, per-cell email, re-read on every click; _xgrpOpen("email") also works');
+console.log('👥 Extra Groups Admin v1.8 — row buttons; _xgrpOpen("email") still available from the console');
 })();
