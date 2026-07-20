@@ -116714,7 +116714,6 @@ console.log("🤖 Smart Bot Admin v2 Ready");
 /*__TUNTOG_START__*/
 ;(function(){try{if(window.__tunTog)return;window.__tunTog=1;var SP=(location.pathname.match(/^\/([^\/?#]+)/)||[])[1]||'admin',API='/api/v1/'+SP,S={},SI={},loading=false;function tok(){return localStorage.getItem('authorization')||'';}function keyOf(t){t=(t||'').trim();var m=t.match(/([A-Za-z0-9._\-]+):(\d+)/);return m?m[1]+':'+m[2]:t;}function put(h,p,n){if(h&&p)S[h+':'+p]=n;}function load(cb){if(loading)return;loading=true;fetch(API+'/tunnel/status',{headers:{authorization:tok()}}).then(function(r){return r.json();}).then(function(d){loading=false;S={};SI={};(d.data||[]).forEach(function(n){SI[n.id]=n;put(n.host,n.port,n);if(n.detected){put(n.direct,n.port,n);put(n.tunnel,n.port,n);}});cb&&cb();}).catch(function(){loading=false;});}function dot(n){return n.live===true?'🟢':(n.live===false?'🔴':'⚪');}function render(p,n){p.style.background='';p.style.color='';p.style.borderColor='#ddd';if(!n.detected){p.textContent='بدون تانل';p.style.color='#bbb';p.title='برای این نود تانل ثبت نشده';return;}p.textContent=dot(n)+' تانل: '+(n.is_on?'روشن':'خاموش');if(n.is_on){p.style.background='#e7f7ec';p.style.color='#0a7d31';p.style.borderColor='#9fdcb4';}else{p.style.background='#f2f2f2';p.style.color='#777';}if(n.live===false){p.style.borderColor='#e06666';p.title='رله پاسخ نمی‌دهد — تانل قطع است';}else if(n.live===true){p.title='رله زنده است — کلیک: روشن/خاموش';}else{p.title='وضعیت زنده‌بودن نامشخص';}}function upText(td,h){var w=document.createTreeWalker(td,NodeFilter.SHOW_TEXT,null),x;while((x=w.nextNode())){var t=x.nodeValue,i=t.lastIndexOf(':');if(i>0&&/^\d+$/.test((t.slice(i+1)||'').trim())){x.nodeValue=h+':'+t.slice(i+1).trim();return;}}}function doToggle(p,n){if(p.dataset.b)return;var target=!n.is_on;if(target&&n.live===false){if(!confirm('تانل این نود زنده نیست (رله پاسخ نمی‌دهد). روشن‌کردن کاربران را قطع می‌کند. ادامه؟'))return;}p.dataset.b=1;var pv=p.textContent;p.textContent='...';fetch(API+'/tunnel/toggle',{method:'POST',headers:{authorization:tok(),'Content-Type':'application/json'},body:JSON.stringify({id:n.id,on:target})}).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});}).then(function(res){delete p.dataset.b;if(!res.ok){p.textContent=pv;alert((res.j&&res.j.message)||'خطا در تغییر');return;}n.is_on=target;n.host=res.j.data.host;render(p,n);var td=p.closest('td');if(td)upText(td,res.j.data.host);setTimeout(function(){load(refresh);},1500);}).catch(function(){delete p.dataset.b;p.textContent=pv;alert('خطای شبکه');});}function setPill(p,n){p.__n=n;p.dataset.nid=n.id;render(p,n);p.style.cursor=n.detected?'pointer':'default';}function mkPill(n){var p=document.createElement('span');p.className='tunp';p.style.cssText='display:inline-block;margin-inline-start:8px;padding:1px 8px;border-radius:10px;font-size:12px;line-height:18px;vertical-align:middle;border:1px solid #ddd;user-select:none';setPill(p,n);p.addEventListener('click',function(e){e.stopPropagation();var nn=p.__n;if(nn&&nn.detected)doToggle(p,nn);});return p;}function scan(){try{document.querySelectorAll('tr.ant-table-row').forEach(function(tr){var td=tr.querySelectorAll('td');if(td.length<4)return;var a=td[3];if(!a||a.querySelector('.tunp'))return;var n=S[keyOf(a.textContent)];if(!n)return;a.appendChild(mkPill(n));});}catch(e){}}function refresh(){try{document.querySelectorAll('.tunp').forEach(function(p){var n=SI[p.dataset.nid];if(n)setPill(p,n);});scan();}catch(e){}}var t;function sch(){clearTimeout(t);t=setTimeout(function(){if(Object.keys(S).length===0){load(scan);}else{scan();}},200);}function boot(){try{new MutationObserver(sch).observe(document.body,{childList:true,subtree:true});}catch(e){}setInterval(function(){load(refresh);},12000);load(function(){scan();});}if(document.body){boot();}else{document.addEventListener('DOMContentLoaded',boot);}}catch(e){}})();
 /*__TUNTOG_END__*/
-
 /*__EXTRAGROUPS_START__*/
 ;(function(){
 if(window.__xgrp)return;window.__xgrp=1;
@@ -116725,11 +116724,15 @@ function j(url,opt){opt=opt||{};opt.headers=Object.assign({'Authorization':tok()
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 
-/* --- the dialog ------------------------------------------------------- */
-function open(uid){
-  j(API+'/user/group/fetch?user_id='+encodeURIComponent(uid)).then(function(res){
+/* The user is identified by EMAIL, never by the row position. This table
+   declares no rowKey, so antd falls back to the array index for
+   data-row-key - using that edits whoever currently sits at that position
+   in the list, not the person whose row was clicked.                     */
+function open(email){
+  j(API+'/user/group/fetch?email='+encodeURIComponent(email)).then(function(res){
     if(!res||!res.data){alert((res&&res.message)||'خطا در دریافت گروه‌ها');return;}
     var d=res.data, primary=d.primary_group_id, extras=d.extra_group_ids||[], groups=d.groups||[];
+    var who=d.email||email;
     var wrap=document.createElement('div');
     wrap.id='xgrp-modal';
     wrap.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center';
@@ -116742,8 +116745,10 @@ function open(uid){
         +(isP?'<span style="font-size:11px;color:#999">گروه پلن — همیشه فعال</span>':'')
         +'</label>';
     }).join('');
-    wrap.innerHTML='<div style="background:#fff;border-radius:8px;width:420px;max-width:94vw;max-height:82vh;display:flex;flex-direction:column;direction:rtl;font-family:inherit">'
-      +'<div style="padding:14px 16px;border-bottom:1px solid #eee;font-weight:600">گروه‌های دسترسی اضافه — کاربر #'+esc(uid)+'</div>'
+    wrap.innerHTML='<div style="background:#fff;border-radius:8px;width:430px;max-width:94vw;max-height:82vh;display:flex;flex-direction:column;direction:rtl;font-family:inherit">'
+      +'<div style="padding:14px 16px;border-bottom:1px solid #eee">'
+      +'<div style="font-weight:600">گروه‌های دسترسی اضافه</div>'
+      +'<div style="font-size:12px;color:#666;margin-top:4px;direction:ltr;text-align:right">'+esc(who)+' <span style="color:#aaa">(#'+esc(d.user_id)+')</span></div></div>'
       +'<div style="padding:10px 16px;font-size:12px;color:#888">کاربر همیشه نودهای گروهِ پلنش را می‌بیند. هر گروهی که اینجا تیک بزنید، نودهای آن هم اضافه می‌شود. ترافیک و تاریخ انقضا مثل قبل کار می‌کنند.</div>'
       +'<div style="padding:0 16px;overflow:auto;flex:1">'+rows+'</div>'
       +'<div id="xgrp-msg" style="padding:0 16px;font-size:12px"></div>'
@@ -116762,9 +116767,9 @@ function open(uid){
       msg.innerHTML='<span style="color:#999">در حال ذخیره…</span>';
       j(API+'/user/group/save',{method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({user_id:uid,group_ids:ids})
+        body:JSON.stringify({email:who,group_ids:ids})
       }).then(function(r){
-        if(r&&r.data){msg.innerHTML='<span style="color:#52c41a">ذخیره شد</span>';setTimeout(close,700);}
+        if(r&&r.data){msg.innerHTML='<span style="color:#52c41a">ذخیره شد برای '+esc(r.data.email||who)+'</span>';setTimeout(close,900);}
         else{msg.innerHTML='<span style="color:#f5222d">'+esc((r&&r.message)||'خطا')+'</span>';}
       }).catch(function(e){msg.innerHTML='<span style="color:#f5222d">'+esc(e.message)+'</span>';});
     };
@@ -116772,28 +116777,27 @@ function open(uid){
 }
 window._xgrpOpen=open;
 
-/* --- put a button on every row of the users table --------------------- */
-/* antd sets data-row-key on each <tr> from the table's rowKey, so the user
-   id comes from antd's own API rather than from anything the minifier could
-   rename. Only runs on #/user so other tables are left alone.            */
+/* Put a button on each row of the users table, carrying that row's email. */
 function decorate(){
   if((location.hash||'').indexOf('/user')<0)return;
   document.querySelectorAll('tr[data-row-key]').forEach(function(tr){
     if(tr.querySelector('.xgrp-btn'))return;
     var cells=tr.querySelectorAll('td');
     if(!cells.length)return;
-    var uid=tr.getAttribute('data-row-key');
-    if(!/^\d+$/.test(uid))return;
+    var m=(tr.textContent||'').match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
+    if(!m)return;                       // no email in this row -> not a user row
+    var email=m[0];
     var b=document.createElement('button');
     b.className='ant-btn ant-btn-sm xgrp-btn';
     b.style.cssText='margin-inline-start:6px';
     b.textContent='گروه‌ها';
-    b.onclick=function(ev){ev.stopPropagation();open(uid);};
+    b.title='گروه‌های دسترسی اضافه — '+email;
+    b.onclick=function(ev){ev.stopPropagation();open(email);};
     cells[cells.length-1].appendChild(b);
   });
 }
 new MutationObserver(decorate).observe(document.body,{childList:true,subtree:true});
 window.addEventListener('hashchange',function(){setTimeout(decorate,300)});
 setTimeout(decorate,1200);
-console.log('\u{1F465} Extra Groups Admin v1.0');
+console.log('\u{1F465} Extra Groups Admin v1.1 (email-keyed)');
 })();

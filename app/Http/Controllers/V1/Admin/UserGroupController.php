@@ -22,15 +22,32 @@ use Illuminate\Support\Facades\DB;
  */
 class UserGroupController extends Controller
 {
+    /**
+     * Resolve the target user from either an id or an email.
+     *
+     * The web panel identifies the row by email on purpose: its user table
+     * declares no rowKey, so the data-row-key antd falls back to is the row
+     * INDEX, not the user id - reading it would edit whoever happens to sit at
+     * that position. The email is on screen, unique, and cannot drift.
+     */
+    private function target(Request $request): User
+    {
+        $email = trim((string)$request->input('email', ''));
+        $user = $email !== ''
+            ? User::where('email', $email)->first()
+            : User::find((int)$request->input('user_id'));
+        if (!$user) abort(500, 'کاربر یافت نشد');
+        return $user;
+    }
+
     public function fetch(Request $request)
     {
-        $userId = (int)$request->input('user_id');
-        $user = User::find($userId);
-        if (!$user) abort(500, 'کاربر یافت نشد');
+        $user = $this->target($request);
 
         return response([
             'data' => [
                 'user_id'         => $user->id,
+                'email'           => $user->email,
                 'primary_group_id' => $user->group_id,        // from their plan
                 'extra_group_ids' => UserGroup::where('user_id', $user->id)
                     ->pluck('group_id')
@@ -47,9 +64,7 @@ class UserGroupController extends Controller
      */
     public function save(Request $request)
     {
-        $userId = (int)$request->input('user_id');
-        $user = User::find($userId);
-        if (!$user) abort(500, 'کاربر یافت نشد');
+        $user = $this->target($request);
 
         $wanted = $request->input('group_ids', []);
         if (!is_array($wanted)) abort(500, 'group_ids باید آرایه باشد');
@@ -87,6 +102,8 @@ class UserGroupController extends Controller
 
         return response([
             'data' => [
+                'user_id' => $user->id,
+                'email'   => $user->email,   // so the caller can prove it hit the right row
                 'added'   => array_values($add),
                 'removed' => array_values($remove),
                 'extra_group_ids' => $wanted,
