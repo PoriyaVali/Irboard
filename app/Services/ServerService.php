@@ -303,6 +303,7 @@ class ServerService
         );
         $tmp = array_column($servers, 'sort');
         array_multisort($tmp, SORT_ASC, $servers);
+        $servers = $this->dropDuplicateServers($servers);
         return array_map(function ($server) {
             if (strpos($server['port'], '-')) {
                 $server['mport'] = (string)$server['port'];
@@ -313,6 +314,38 @@ class ServerService
             $server['cache_key'] = "{$server['type']}-{$server['id']}-{$server['updated_at']}-{$server['is_online']}";
             return $server;
         }, $servers);
+    }
+
+    /**
+     * Send each server to the client once.
+     *
+     * The same machine is often registered as more than one node so it can be
+     * tagged into different groups. With one group per user only one of those
+     * rows was ever reachable, but a user who now holds several groups would
+     * receive the same host and port several times, and clients react badly to
+     * that - duplicate entries, duplicate remarks, and connections bouncing
+     * between identical targets.
+     *
+     * Identity is protocol + host + port, so genuinely different endpoints on
+     * one machine (a second port, a different protocol) are kept. The list has
+     * already been sorted, so the first copy of a duplicate is the one with the
+     * lowest sort - the operator's preferred row survives.
+     */
+    private function dropDuplicateServers(array $servers): array
+    {
+        $seen = [];
+        $unique = [];
+        foreach ($servers as $server) {
+            $key = strtolower(
+                ($server['type'] ?? '') . '|' .
+                ($server['host'] ?? '') . '|' .
+                ($server['port'] ?? '')
+            );
+            if (isset($seen[$key])) continue;
+            $seen[$key] = true;
+            $unique[] = $server;
+        }
+        return $unique;
     }
 
     public function getAvailableUsers($groupId)
