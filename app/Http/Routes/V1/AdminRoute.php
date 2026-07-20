@@ -135,6 +135,10 @@ class AdminRoute
             // Extra access groups granted on top of the one the plan gives
             $router->get ('/user/group/fetch', 'V1\\Admin\\UserGroupController@fetch');
             $router->post('/user/group/save', 'V1\\Admin\\UserGroupController@save');
+            // Pricing for groups sold as metered add-ons
+            $router->get ('/group-pricing/fetch', 'V1\\Admin\\GroupPricingController@fetch');
+            $router->post('/group-pricing/save', 'V1\\Admin\\GroupPricingController@save');
+            $router->get ('/group-pricing/usage', 'V1\\Admin\\GroupPricingController@usage');
             // Card Payment Routes
             $router->get ('/card-payment/list', 'V1\\Admin\\CardPaymentController@list');
             $router->get ('/card-payment/detail', 'V1\\Admin\\CardPaymentController@detail');

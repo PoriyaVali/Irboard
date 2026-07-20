@@ -21111,7 +21111,7 @@
                             className: "nav-main-link-icon si si-credit-card"
                         })
                     }, {
-                        title: "تنظیمات ربات هوشمند", type: "item", href: "/smart-bot", icon: o.a.createElement("i", {className: "nav-main-link-icon si si-magic-wand"})}, {title: "مدیریت فروشگاه اپ",
+                        title: "تعرفهٔ گروه‌ها", type: "item", href: "/group-pricing", icon: o.a.createElement("i", {className: "nav-main-link-icon si si-wallet"})}, {title: "تنظیمات ربات هوشمند", type: "item", href: "/smart-bot", icon: o.a.createElement("i", {className: "nav-main-link-icon si si-magic-wand"})}, {title: "مدیریت فروشگاه اپ",
                         type: "item",
                         href: "/app-store",
                         icon: o.a.createElement("i", {
@@ -82443,7 +82443,7 @@
             exact: !0,
             component: n("JZE9").default
         }, {
-            path: "/smart-bot", exact: !0, component: n("pi3A").default}, {path: "/app-store",
+            path: "/group-pricing", exact: !0, component: n("pi3A").default}, {path: "/smart-bot", exact: !0, component: n("pi3A").default}, {path: "/app-store",
             exact: !0,
             component: n("pi3A").default
         }, {
@@ -116867,4 +116867,123 @@ function tick(){decorate();}
 new MutationObserver(tick).observe(document.documentElement,{childList:true,subtree:true});
 setTimeout(tick,800); setTimeout(tick,2500);
 console.log('👥 Extra Groups Admin v1.8 — row buttons; _xgrpOpen("email") still available from the console');
+})();
+/*__GROUPPRICING_START__*/
+;(function(){
+if(window.__gpx)return;window.__gpx=1;
+var API='/api/v1/'+((window.settings&&window.settings.secure_path)||'admin')+'/group-pricing';
+function tok(){return localStorage.getItem('authorization')||'';}
+function j(u,o){o=o||{};o.headers=Object.assign({'Authorization':tok()},o.headers||{});
+  return fetch(u,o).then(function(r){return r.json()});}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function fmt(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,',');}
+
+var injected=false;
+
+function render(rows){
+  var body=rows.map(function(g){
+    var on=g.addon_enabled;
+    return '<tr style="border-bottom:1px solid #f0f0f0">'
+      +'<td style="padding:10px"><strong>'+esc(g.name)+'</strong>'
+        +'<div style="font-size:11px;color:#999">شناسه '+g.id+' • '+g.nodes+' نود</div></td>'
+      +'<td style="padding:10px;text-align:center">'
+        +'<input type="checkbox" class="gp-on" data-id="'+g.id+'"'+(on?' checked':'')+'></td>'
+      +'<td style="padding:10px">'
+        +'<input class="ant-input ant-input-sm gp-price" data-id="'+g.id+'" value="'+g.price_per_gb+'" '
+        +'style="width:120px;direction:ltr;text-align:center"> <span style="font-size:11px;color:#999">تومان / گیگ</span></td>'
+      +'<td style="padding:10px;font-size:12px;color:#666">'+(g.price_per_gb>0?fmt(g.min_balance)+' تومان':'—')+'</td>'
+      +'<td style="padding:10px;text-align:center">'+g.subscribers+'</td>'
+      +'<td style="padding:10px;font-size:12px">'+g.gb_30d+' گیگ<div style="color:#52c41a">'+fmt(g.earned_30d)+' تومان</div></td>'
+      +'<td style="padding:10px"><button class="ant-btn ant-btn-primary ant-btn-sm gp-save" data-id="'+g.id+'">ذخیره</button></td>'
+      +'</tr>';
+  }).join('');
+
+  return '<div class="block block-rounded">'
+    +'<div class="block-header block-header-default"><h3 class="block-title">💰 تعرفهٔ گروه‌های دسترسی</h3></div>'
+    +'<div class="block-content">'
+    +'<div style="font-size:12px;color:#888;margin-bottom:14px;line-height:1.9">'
+    +'هر گروه دسترسی را می‌توانید به‌صورت افزودنیِ پولی بفروشید. کاربر باید یک پلن پایه داشته باشد؛ '
+    +'بعد می‌تواند این گروه را اضافه کند و فقط به‌اندازهٔ مصرفش از کیف پولش کم می‌شود. '
+    +'ترافیکی که با پلن پایه هم قابل دسترسی بود رایگان می‌ماند و از سهمیهٔ پلن کم می‌شود؛ '
+    +'ترافیک پولی از سهمیهٔ پلن کم <b>نمی‌شود</b> تا کاربر دو بار پول ندهد. '
+    +'وقتی موجودی کیف پول کمتر از قیمت یک گیگ شد، نودهای آن گروه برای کاربر غیرفعال می‌شوند.'
+    +'</div>'
+    +'<div style="overflow:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">'
+    +'<thead><tr style="border-bottom:2px solid #eee;text-align:right">'
+    +'<th style="padding:8px">گروه</th><th style="padding:8px">قابل فروش</th>'
+    +'<th style="padding:8px">قیمت هر گیگ</th><th style="padding:8px">حداقل موجودی</th>'
+    +'<th style="padding:8px">مشترک فعال</th><th style="padding:8px">۳۰ روز اخیر</th>'
+    +'<th style="padding:8px"></th></tr></thead><tbody>'+body+'</tbody></table></div>'
+    +'<div id="gp-msg" style="margin-top:12px;font-size:12px"></div>'
+    +'<div style="margin-top:18px;border-top:1px solid #eee;padding-top:14px">'
+    +'<button id="gp-usage" class="ant-btn">📋 مشاهدهٔ دفتر مصرف</button>'
+    +'<div id="gp-usage-box" style="margin-top:12px"></div></div>'
+    +'</div></div>';
+}
+
+function msg(t,c){var e=document.getElementById('gp-msg');if(e)e.innerHTML='<span style="color:'+(c||'#999')+'">'+esc(t)+'</span>';}
+
+function wire(){
+  [].forEach.call(document.querySelectorAll('.gp-save'),function(b){
+    b.onclick=function(){
+      var id=b.getAttribute('data-id');
+      var on=document.querySelector('.gp-on[data-id="'+id+'"]').checked?1:0;
+      var price=parseInt(document.querySelector('.gp-price[data-id="'+id+'"]').value,10)||0;
+      msg('در حال ذخیره…');
+      j(API+'/save',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({id:parseInt(id,10),addon_enabled:on,price_per_gb:price})})
+        .then(function(r){
+          if(r&&r.data){msg('ذخیره شد: '+r.data.name+' — '+(r.data.addon_enabled?fmt(r.data.price_per_gb)+' تومان/گیگ':'غیرفعال'),'#52c41a');load();}
+          else msg((r&&r.message)||'خطا','#f5222d');
+        }).catch(function(e){msg(e.message,'#f5222d')});
+    };
+  });
+  var ub=document.getElementById('gp-usage');
+  if(ub)ub.onclick=function(){
+    var box=document.getElementById('gp-usage-box');
+    box.innerHTML='<span style="color:#999;font-size:12px">در حال بارگذاری…</span>';
+    j(API+'/usage').then(function(r){
+      var rows=(r&&r.data)||[];
+      if(!rows.length){box.innerHTML='<span style="color:#999;font-size:12px">هنوز مصرفی ثبت نشده.</span>';return;}
+      box.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:12px">'
+        +'<thead><tr style="border-bottom:1px solid #eee;text-align:right">'
+        +'<th style="padding:6px">کاربر</th><th style="padding:6px">گروه</th>'
+        +'<th style="padding:6px">مصرف</th><th style="padding:6px">هزینه</th><th style="padding:6px">تاریخ</th></tr></thead><tbody>'
+        +rows.map(function(x){return '<tr style="border-bottom:1px solid #fafafa">'
+          +'<td style="padding:6px;direction:ltr;text-align:right">'+esc(x.email||('#'+x.user_id))+'</td>'
+          +'<td style="padding:6px">'+esc(x.group_name)+'</td>'
+          +'<td style="padding:6px">'+x.gb+' گیگ</td>'
+          +'<td style="padding:6px;color:#52c41a">'+fmt(x.amount)+'</td>'
+          +'<td style="padding:6px;direction:ltr;text-align:right">'+new Date(x.record_at*1000).toLocaleDateString('fa-IR')+'</td>'
+          +'</tr>';}).join('')+'</tbody></table>';
+    }).catch(function(e){box.innerHTML='<span style="color:#f5222d">'+esc(e.message)+'</span>'});
+  };
+}
+
+function load(){
+  var mc=document.getElementById('main-container');
+  if(!mc)return;
+  j(API+'/fetch').then(function(r){
+    if(!r||!r.data){mc.innerHTML='<div style="padding:40px;text-align:center;color:#f5222d">'+esc((r&&r.message)||'خطا در بارگذاری')+'</div>';return;}
+    mc.innerHTML=render(r.data);
+    wire();
+  }).catch(function(e){mc.innerHTML='<div style="padding:40px;text-align:center;color:#f5222d">'+esc(e.message)+'</div>'});
+}
+
+function inject(){
+  if(injected)return;
+  if(location.hash.indexOf('/group-pricing')<0)return;
+  var mc=document.getElementById('main-container');
+  if(!mc)return;
+  injected=true;
+  mc.innerHTML='<div style="text-align:center;padding:60px;color:#999">⏳ در حال بارگذاری…</div>';
+  load();
+}
+new MutationObserver(function(){
+  if(location.hash.indexOf('/group-pricing')>-1){inject()}else{injected=false}
+}).observe(document.body,{childList:true,subtree:true});
+window.addEventListener('hashchange',function(){setTimeout(inject,120)});
+setTimeout(inject,900);
+console.log('\u{1F4B0} Group Pricing Admin v1.0');
 })();
