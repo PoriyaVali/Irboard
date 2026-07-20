@@ -116724,97 +116724,110 @@ function j(url,opt){opt=opt||{};opt.headers=Object.assign({'Authorization':tok()
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 
-/* Identify the row's user by what the table actually shows: its ID column and
-   its email. NOT by data-row-key - this table declares no rowKey, so antd puts
-   the array INDEX there and using it edits whoever sits at that position.     */
-function rowIdentity(tr){
-  var email=(tr.textContent||'').match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
-  var id=null;
-  var tds=tr.querySelectorAll('td');
-  for(var i=0;i<tds.length;i++){
-    var t=(tds[i].textContent||'').trim();
-    if(/^\d+$/.test(t)){id=t;break;}      // the ID column is the first plain integer
-  }
-  return {id:id, email:email?email[0]:null};
+/* ---------- the dialog ------------------------------------------------ */
+function render(d, who){
+  var primary=d.primary_group_id, extras=d.extra_group_ids||[], groups=d.groups||[];
+  var rows=groups.map(function(g){
+    var isP=String(g.id)===String(primary);
+    var on=isP||extras.map(String).indexOf(String(g.id))>-1;
+    return '<label style="display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid #f0f0f0;'+(isP?'opacity:.65':'cursor:pointer')+'">'
+      +'<input type="checkbox" class="xgrp-cb" value="'+esc(g.id)+'"'+(on?' checked':'')+(isP?' disabled':'')+'>'
+      +'<span style="flex:1">'+esc(g.name)+'</span>'
+      +(isP?'<span style="font-size:11px;color:#999">گروه پلن — همیشه فعال</span>':'')+'</label>';
+  }).join('');
+  return '<div style="font-size:12px;color:#666;margin:6px 0 10px;direction:ltr;text-align:right">'
+    +esc(d.email||who)+' <span style="color:#aaa">(#'+esc(d.user_id)+')</span></div>'
+    +'<div style="max-height:40vh;overflow:auto">'+rows+'</div>';
 }
 
-function open(idt){
-  var q = idt.email ? 'email='+encodeURIComponent(idt.email)
-        : (idt.id ? 'user_id='+encodeURIComponent(idt.id) : null);
-  if(!q){alert('این ردیف شناسه یا ایمیل کاربر ندارد؛ نمی‌توان گروه‌ها را باز کرد.');return;}
-  j(API+'/user/group/fetch?'+q).then(function(res){
-    if(!res||!res.data){alert((res&&res.message)||'خطا در دریافت گروه‌ها');return;}
-    var d=res.data, primary=d.primary_group_id, extras=d.extra_group_ids||[], groups=d.groups||[];
-    var who=d.email||idt.email||('#'+idt.id);
-    var wrap=document.createElement('div');
-    wrap.id='xgrp-modal';
-    wrap.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center';
-    var rows=groups.map(function(g){
-      var isP = String(g.id)===String(primary);
-      var on  = isP || extras.map(String).indexOf(String(g.id))>-1;
-      return '<label style="display:flex;align-items:center;gap:8px;padding:7px 4px;border-bottom:1px solid #f0f0f0;'+(isP?'opacity:.65':'cursor:pointer')+'">'
-        +'<input type="checkbox" class="xgrp-cb" value="'+esc(g.id)+'"'+(on?' checked':'')+(isP?' disabled':'')+'>'
-        +'<span style="flex:1">'+esc(g.name)+'</span>'
-        +(isP?'<span style="font-size:11px;color:#999">گروه پلن — همیشه فعال</span>':'')
-        +'</label>';
-    }).join('');
-    wrap.innerHTML='<div style="background:#fff;border-radius:8px;width:430px;max-width:94vw;max-height:82vh;display:flex;flex-direction:column;direction:rtl;font-family:inherit">'
-      +'<div style="padding:14px 16px;border-bottom:1px solid #eee">'
-      +'<div style="font-weight:600">گروه‌های دسترسی اضافه</div>'
-      +'<div style="font-size:12px;color:#666;margin-top:4px;direction:ltr;text-align:right">'+esc(who)+' <span style="color:#aaa">(#'+esc(d.user_id)+')</span></div></div>'
-      +'<div style="padding:10px 16px;font-size:12px;color:#888">کاربر همیشه نودهای گروهِ پلنش را می‌بیند. هر گروهی که اینجا تیک بزنید، نودهای آن هم اضافه می‌شود. ترافیک و تاریخ انقضا مثل قبل کار می‌کنند.</div>'
-      +'<div style="padding:0 16px;overflow:auto;flex:1">'+rows+'</div>'
-      +'<div id="xgrp-msg" style="padding:0 16px;font-size:12px"></div>'
-      +'<div style="padding:12px 16px;border-top:1px solid #eee;display:flex;gap:8px;justify-content:flex-start">'
-      +'<button id="xgrp-save" class="ant-btn ant-btn-primary">ذخیره</button>'
-      +'<button id="xgrp-cancel" class="ant-btn">انصراف</button></div></div>';
+function openFor(query, label){
+  var wrap=document.getElementById('xgrp-modal');
+  if(!wrap){
+    wrap=document.createElement('div'); wrap.id='xgrp-modal';
+    wrap.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2147483000;display:flex;align-items:center;justify-content:center';
     document.body.appendChild(wrap);
-    function close(){var n=document.getElementById('xgrp-modal');if(n)n.remove();}
-    wrap.addEventListener('click',function(e){if(e.target===wrap)close();});
-    document.getElementById('xgrp-cancel').onclick=close;
-    document.getElementById('xgrp-save').onclick=function(){
-      var ids=[].slice.call(wrap.querySelectorAll('.xgrp-cb'))
-        .filter(function(c){return c.checked && !c.disabled})
-        .map(function(c){return parseInt(c.value,10)});
-      var msg=document.getElementById('xgrp-msg');
-      msg.innerHTML='<span style="color:#999">در حال ذخیره…</span>';
-      var body={group_ids:ids};
-      if(d.email) body.email=d.email; else body.user_id=d.user_id;
-      j(API+'/user/group/save',{method:'POST',
-        headers:{'Content-Type':'application/json'},body:JSON.stringify(body)
-      }).then(function(r){
-        if(r&&r.data){msg.innerHTML='<span style="color:#52c41a">ذخیره شد برای '+esc(r.data.email||who)+'</span>';setTimeout(close,900);}
-        else{msg.innerHTML='<span style="color:#f5222d">'+esc((r&&r.message)||'خطا')+'</span>';}
-      }).catch(function(e){msg.innerHTML='<span style="color:#f5222d">'+esc(e.message)+'</span>';});
-    };
-  }).catch(function(e){alert('خطا: '+e.message)});
+    wrap.addEventListener('click',function(e){if(e.target===wrap)wrap.remove();});
+  }
+  wrap.innerHTML='<div style="background:#fff;border-radius:8px;width:440px;max-width:94vw;display:flex;flex-direction:column;direction:rtl;font-family:inherit;padding:16px">'
+    +'<div style="font-weight:600;margin-bottom:6px">گروه‌های دسترسی اضافه</div>'
+    +'<div style="display:flex;gap:6px;margin-bottom:8px">'
+    +'<input id="xgrp-q" class="ant-input" placeholder="ایمیل یا شناسه کاربر" value="'+esc(label||'')+'" style="flex:1;direction:ltr">'
+    +'<button id="xgrp-load" class="ant-btn">بارگذاری</button></div>'
+    +'<div id="xgrp-body" style="font-size:12px;color:#999">شناسه یا ایمیل کاربر را وارد و «بارگذاری» را بزنید.</div>'
+    +'<div id="xgrp-msg" style="font-size:12px;margin-top:6px"></div>'
+    +'<div style="margin-top:12px;display:flex;gap:8px">'
+    +'<button id="xgrp-save" class="ant-btn ant-btn-primary" disabled>ذخیره</button>'
+    +'<button id="xgrp-cancel" class="ant-btn">بستن</button></div></div>';
+  var cur=null;
+  function msg(t,c){document.getElementById('xgrp-msg').innerHTML='<span style="color:'+(c||'#999')+'">'+esc(t)+'</span>';}
+  function load(){
+    var q=(document.getElementById('xgrp-q').value||'').trim();
+    if(!q){msg('چیزی وارد نشده','#f5222d');return;}
+    msg('در حال بارگذاری…');
+    var p=/@/.test(q)?'email='+encodeURIComponent(q):'user_id='+encodeURIComponent(q);
+    j(API+'/user/group/fetch?'+p).then(function(r){
+      if(!r||!r.data){msg((r&&r.message)||'کاربر یافت نشد','#f5222d');return;}
+      cur=r.data;
+      document.getElementById('xgrp-body').innerHTML=render(r.data,q);
+      document.getElementById('xgrp-save').disabled=false;
+      msg('');
+    }).catch(function(e){msg(e.message,'#f5222d')});
+  }
+  document.getElementById('xgrp-load').onclick=load;
+  document.getElementById('xgrp-q').addEventListener('keydown',function(e){if(e.key==='Enter')load();});
+  document.getElementById('xgrp-cancel').onclick=function(){wrap.remove();};
+  document.getElementById('xgrp-save').onclick=function(){
+    if(!cur)return;
+    var ids=[].slice.call(wrap.querySelectorAll('.xgrp-cb'))
+      .filter(function(c){return c.checked&&!c.disabled}).map(function(c){return parseInt(c.value,10)});
+    msg('در حال ذخیره…');
+    var body={group_ids:ids};
+    if(cur.email) body.email=cur.email; else body.user_id=cur.user_id;
+    j(API+'/user/group/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      .then(function(r){ r&&r.data ? msg('ذخیره شد برای '+(r.data.email||cur.user_id),'#52c41a')
+                                   : msg((r&&r.message)||'خطا','#f5222d'); })
+      .catch(function(e){msg(e.message,'#f5222d')});
+  };
+  if(query) load();
+}
+window._xgrpOpen=function(q){openFor(!!q,q||'');};
+
+/* ---------- a launcher that cannot be hidden by the table -------------
+   Earlier versions only injected a button into each row, which silently
+   produced nothing whenever the table's markup differed from what was
+   expected. This floating button is attached to <body>, so it is there
+   regardless of how the user list happens to be rendered.              */
+function launcher(){
+  if(document.getElementById('xgrp-fab'))return;
+  if(!document.body)return;
+  var b=document.createElement('button');
+  b.id='xgrp-fab';
+  b.textContent='👥 گروه‌های کاربر';
+  b.style.cssText='position:fixed;inset-inline-start:16px;bottom:16px;z-index:2147482000;'
+    +'padding:8px 14px;border-radius:20px;border:1px solid #d9d9d9;background:#fff;'
+    +'box-shadow:0 2px 8px rgba(0,0,0,.15);cursor:pointer;font-size:13px;font-family:inherit';
+  b.onclick=function(){openFor(false,'');};
+  document.body.appendChild(b);
 }
 
-/* Decorate every row of the users table. The button is added whenever the row
-   has cells - if the identity cannot be read the button still appears and says
-   so on click, because a silently missing button is impossible to diagnose.  */
+/* Best-effort per-row buttons. If the markup is not what we expect this
+   simply adds nothing - the launcher above is the guaranteed path.     */
 function decorate(){
-  if((location.hash||'').indexOf('/user')<0)return;
   document.querySelectorAll('tr[data-row-key]').forEach(function(tr){
     if(tr.querySelector('.xgrp-btn'))return;
-    var cells=tr.querySelectorAll('td');
-    if(!cells.length)return;
-    var idt=rowIdentity(tr);
-    if(!idt.id && !idt.email)return;      // header/summary rows carry neither
+    var cells=tr.querySelectorAll('td'); if(!cells.length)return;
+    var em=(tr.textContent||'').match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
+    if(!em)return;
     var b=document.createElement('button');
     b.className='ant-btn ant-btn-sm xgrp-btn';
     b.style.cssText='margin-inline-start:6px';
     b.textContent='گروه‌ها';
-    b.title='گروه‌های دسترسی اضافه — '+(idt.email||('#'+idt.id));
-    b.onclick=function(ev){ev.stopPropagation();open(idt);};
+    b.onclick=function(ev){ev.stopPropagation();openFor(true,em[0]);};
     cells[cells.length-1].appendChild(b);
   });
 }
-new MutationObserver(decorate).observe(document.body,{childList:true,subtree:true});
-window.addEventListener('hashchange',function(){setTimeout(decorate,300)});
-setTimeout(decorate,1200);
-window._xgrpOpen=function(emailOrId){
-  open(/@/.test(String(emailOrId))?{email:String(emailOrId),id:null}:{id:String(emailOrId),email:null});
-};
-console.log('\u{1F465} Extra Groups Admin v1.2 — call _xgrpOpen("email or id") if a button is missing');
+function tick(){launcher();decorate();}
+new MutationObserver(tick).observe(document.documentElement,{childList:true,subtree:true});
+setTimeout(tick,800); setTimeout(tick,2500);
+console.log('👥 Extra Groups Admin v1.3 — floating launcher + per-row buttons; _xgrpOpen("email") also works');
 })();
