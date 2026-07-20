@@ -15,6 +15,7 @@ use App\Models\ServerTuic;
 use App\Models\ServerAnytls;
 use App\Models\ServerMdns;
 use App\Models\UserGroup;
+use App\Services\AddonBillingService;
 use App\Utils\CacheKey;
 use App\Utils\Helper;
 use Illuminate\Support\Facades\Cache;
@@ -41,10 +42,36 @@ class ServerService
         if ($user->group_id !== null) {
             $ids[] = (string)$user->group_id;
         }
-        foreach (UserGroup::where('user_id', $user->id)->pluck('group_id') as $extra) {
-            $ids[] = (string)$extra;
+        foreach ($this->activeGrants($user) as $grant) {
+            $ids[] = (string)$grant->group_id;
         }
         return $this->groupIdsCache[$user->id] = array_values(array_unique($ids));
+    }
+
+    /**
+     * Grants that are still in force: not past their end date, and - for the
+     * metered ones - still backed by enough wallet to pay for a GB. A tier the
+     * user can no longer pay for simply stops being listed, which is also what
+     * takes them off its nodes.
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    private function activeGrants(User $user)
+    {
+        $now = time();
+        $grants = UserGroup::where('user_id', $user->id)
+            ->where(function ($q) use ($now) {
+                $q->whereNull('expired_at')->orWhere('expired_at', '>', $now);
+            })
+            ->get(['group_id', 'is_paid']);
+
+        $paid = AddonBillingService::paidGroups();
+        return $grants->filter(function ($grant) use ($user, $paid) {
+            if (!$grant->is_paid) return true;
+            $group = $paid[$grant->group_id] ?? null;
+            if (!$group) return false;
+            return (int)$user->balance >= AddonBillingService::minimumBalance($group);
+        });
     }
 
     /**
@@ -361,7 +388,20 @@ class ServerService
                     ->orWhereIn('id', function ($sub) use ($groupId) {
                         $sub->select('user_id')
                             ->from('v2_user_group')
-                            ->whereIn('group_id', $groupId);
+                            ->whereIn('group_id', $groupId)
+                            // a grant only counts while it is still in force
+                            ->where(function ($g) {
+                                $g->whereNull('expired_at')->orWhere('expired_at', '>', time());
+                            })
+                            // and a metered one only while the wallet can pay
+                            // for the next GB; below that the user drops off
+                            // this node at its next poll
+                            ->where(function ($g) use ($groupId) {
+                                $g->where('is_paid', 0)
+                                  ->orWhereRaw(
+                                      'v2_user.balance >= (SELECT price_per_gb FROM v2_server_group WHERE id = v2_user_group.group_id)'
+                                  );
+                            });
                     });
             })
             ->whereRaw('u + d < transfer_enable')

@@ -2,6 +2,9 @@
 
 namespace App\Jobs;
 
+use App\Models\User;
+use App\Models\UserGroup;
+use App\Services\AddonBillingService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -39,9 +42,66 @@ class TrafficFetchJob implements ShouldQueue
      */
     public function handle()
     {
+        $billable = $this->billableUsers();
+
         foreach(array_keys($this->data) as $userId){
-            Redis::hincrby('v2board_upload_traffic', $userId, $this->data[$userId][0] * $this->server['rate']);
-            Redis::hincrby('v2board_download_traffic', $userId, $this->data[$userId][1] * $this->server['rate']);
+            $up   = $this->data[$userId][0] * $this->server['rate'];
+            $down = $this->data[$userId][1] * $this->server['rate'];
+
+            if (isset($billable[$userId])) {
+                $groupId = $billable[$userId];
+                $amount = AddonBillingService::charge($userId, $groupId, (int)($up + $down));
+                AddonBillingService::record($userId, $groupId, (int)$up, (int)$down, $amount);
+                // Deliberately NOT added to the counters below. These bytes
+                // were paid for from the wallet; taking them out of the plan's
+                // quota as well would charge for one download twice.
+                continue;
+            }
+
+            Redis::hincrby('v2board_upload_traffic', $userId, $up);
+            Redis::hincrby('v2board_download_traffic', $userId, $down);
         }
+    }
+
+    /**
+     * Users whose access to THIS node exists only because they bought it,
+     * mapped to the group they bought. Anyone entitled to the node through
+     * their own plan is not charged.
+     *
+     * @return array<int,int> user id => group id
+     */
+    private function billableUsers(): array
+    {
+        if (!AddonBillingService::paidGroups()) return [];
+
+        $nodeGroups = $this->server['group_id'] ?? [];
+        if (is_string($nodeGroups)) $nodeGroups = json_decode($nodeGroups, true) ?: [];
+        if (!is_array($nodeGroups) || !$nodeGroups) return [];
+
+        $userIds = array_map('intval', array_keys($this->data));
+        if (!$userIds) return [];
+
+        $now = time();
+        $grants = UserGroup::whereIn('user_id', $userIds)
+            ->where('is_paid', 1)
+            ->where(function ($q) use ($now) {
+                $q->whereNull('expired_at')->orWhere('expired_at', '>', $now);
+            })
+            ->get(['user_id', 'group_id']);
+        if ($grants->isEmpty()) return [];
+
+        $baseGroups = User::whereIn('id', $grants->pluck('user_id')->unique()->all())
+            ->pluck('group_id', 'id');
+
+        $out = [];
+        foreach ($grants->groupBy('user_id') as $userId => $rows) {
+            $groupId = AddonBillingService::chargeableGroupId(
+                $nodeGroups,
+                [$baseGroups[$userId] ?? null],
+                $rows->pluck('group_id')->all()
+            );
+            if ($groupId !== null) $out[(int)$userId] = $groupId;
+        }
+        return $out;
     }
 }

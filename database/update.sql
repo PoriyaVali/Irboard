@@ -915,3 +915,21 @@ CREATE TABLE IF NOT EXISTS `v2_user_group` (
   UNIQUE KEY `uniq_user_group` (`user_id`,`group_id`),
   KEY `idx_group` (`group_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='extra access groups an admin granted on top of v2_user.group_id';
+ALTER TABLE `v2_server_group` ADD COLUMN `addon_enabled` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'sellable as a paid add-on on top of a plan';
+ALTER TABLE `v2_server_group` ADD COLUMN `price_per_gb` int(11) NOT NULL DEFAULT '0' COMMENT 'wallet cost per GB, same unit as v2_user.balance';
+ALTER TABLE `v2_user_group` ADD COLUMN `expired_at` int(11) DEFAULT NULL COMMENT 'NULL means a permanent admin grant, otherwise it ends with the base plan';
+ALTER TABLE `v2_user_group` ADD COLUMN `is_paid` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'charge this grant to the wallet per GB';
+ALTER TABLE `v2_user_group` ADD COLUMN `unbilled_bytes` bigint(20) NOT NULL DEFAULT '0' COMMENT 'traffic carried to the next charge so nothing is rounded up';
+CREATE TABLE IF NOT EXISTS `v2_user_group_usage` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `group_id` int(11) NOT NULL,
+  `u` bigint(20) NOT NULL DEFAULT '0',
+  `d` bigint(20) NOT NULL DEFAULT '0',
+  `amount` int(11) NOT NULL DEFAULT '0' COMMENT 'charged to the wallet, same unit as v2_user.balance',
+  `record_at` int(11) NOT NULL,
+  `created_at` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_user_group_day` (`user_id`,`group_id`,`record_at`),
+  KEY `idx_group_day` (`group_id`,`record_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='per-day ledger of paid add-on traffic and what it cost';
