@@ -463,6 +463,18 @@ CREATE TABLE `v2_server_group` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+DROP TABLE IF EXISTS `v2_user_group`;
+CREATE TABLE `v2_user_group` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `group_id` int(11) NOT NULL,
+  `created_at` int(11) DEFAULT NULL,
+  `updated_at` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_user_group` (`user_id`,`group_id`),
+  KEY `idx_group` (`group_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='extra access groups an admin granted on top of v2_user.group_id';
+
 DROP TABLE IF EXISTS `v2_server_hysteria`;
 CREATE TABLE `v2_server_hysteria` (
   `id` int(11) NOT NULL AUTO_INCREMENT,

@@ -132,6 +132,9 @@ class AdminRoute
             $router->post('/user/resetSecret', 'V1\\Admin\\UserController@resetSecret');
             $router->post('/user/delUser', 'V1\\Admin\\UserController@delUser');
             $router->post('/user/deleteReservedPlan', 'V1\\Admin\\UserController@deleteReservedPlan');
+            // Extra access groups granted on top of the one the plan gives
+            $router->get ('/user/group/fetch', 'V1\\Admin\\UserGroupController@fetch');
+            $router->post('/user/group/save', 'V1\\Admin\\UserGroupController@save');
             // Card Payment Routes
             $router->get ('/card-payment/list', 'V1\\Admin\\CardPaymentController@list');
             $router->get ('/card-payment/detail', 'V1\\Admin\\CardPaymentController@detail');

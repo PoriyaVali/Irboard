@@ -840,7 +840,7 @@ jobs:
             v2_server_route v2_server_shadowsocks v2_server_trojan v2_server_tuic \
             v2_server_v2node v2_server_v2ray v2_server_vless v2_server_vmess v2_sms_log \
             v2_stat v2_stat_server v2_stat_user v2_ticket v2_ticket_message v2_tunnel_map \
-            v2_tutorial v2_user v2_user_banned_backup"
+            v2_tutorial v2_user v2_user_banned_backup v2_user_group"
           for t in $EXPECTED; do
             $MYSQL irboard -N -e "SELECT 1 FROM \`$t\` LIMIT 0" >/dev/null \
               || { echo "::error::missing or broken table: $t"; exit 1; }

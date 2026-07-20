@@ -905,3 +905,13 @@ ALTER TABLE `v2_user` ADD COLUMN `bot_referrer_id` bigint(20) unsigned DEFAULT N
 ALTER TABLE `v2_user` ADD COLUMN `phone` varchar(15) DEFAULT NULL;
 ALTER TABLE `v2_user` ADD COLUMN `phone_verified` tinyint(1) NOT NULL DEFAULT '0';
 ALTER TABLE `v2_user` ADD COLUMN `phone_verified_at` int(11) DEFAULT NULL;
+CREATE TABLE IF NOT EXISTS `v2_user_group` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `group_id` int(11) NOT NULL,
+  `created_at` int(11) DEFAULT NULL,
+  `updated_at` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uniq_user_group` (`user_id`,`group_id`),
+  KEY `idx_group` (`group_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='extra access groups an admin granted on top of v2_user.group_id';

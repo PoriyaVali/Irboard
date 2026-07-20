@@ -14,21 +14,59 @@ use App\Models\ServerTrojan;
 use App\Models\ServerTuic;
 use App\Models\ServerAnytls;
 use App\Models\ServerMdns;
+use App\Models\UserGroup;
 use App\Utils\CacheKey;
 use App\Utils\Helper;
 use Illuminate\Support\Facades\Cache;
 
 class ServerService
 {
+    /** Memoised: getAvailableServers asks for the same user's groups nine times. */
+    private $groupIdsCache = [];
+
+    /**
+     * Every group this user can reach: the one their plan gave them
+     * (v2_user.group_id) plus any an admin granted on top of it.
+     *
+     * Returned as strings because a node stores its own group_id as a JSON
+     * array of strings; keeping both sides strings avoids "1" vs 1 surprises
+     * in the comparison below.
+     */
+    public function getUserGroupIds(User $user): array
+    {
+        if (isset($this->groupIdsCache[$user->id])) {
+            return $this->groupIdsCache[$user->id];
+        }
+        $ids = [];
+        if ($user->group_id !== null) {
+            $ids[] = (string)$user->group_id;
+        }
+        foreach (UserGroup::where('user_id', $user->id)->pluck('group_id') as $extra) {
+            $ids[] = (string)$extra;
+        }
+        return $this->groupIdsCache[$user->id] = array_values(array_unique($ids));
+    }
+
+    /**
+     * True when at least one of the user's groups is listed on the node.
+     * A user with no groups at all reaches nothing, which is what we want.
+     */
+    private function groupCanReach(array $userGroupIds, $serverGroupIds): bool
+    {
+        if (!is_array($serverGroupIds) || !$userGroupIds) return false;
+        return (bool)array_intersect($userGroupIds, array_map('strval', $serverGroupIds));
+    }
+
     public function getAvailableVless(User $user): array
     {
+        $userGroupIds = $this->getUserGroupIds($user);
         $servers = [];
         $model = ServerVless::orderBy('sort', 'ASC');
         $server = $model->get();
         foreach ($server as $key => $v) {
             if (!$v['show']) continue;
             $server[$key]['type'] = 'vless';
-            if (!in_array($user->group_id, $server[$key]['group_id'])) continue;
+            if (!$this->groupCanReach($userGroupIds, $server[$key]['group_id'])) continue;
             if (strpos($server[$key]['port'], '-') !== false) {
                 $server[$key]['port'] = Helper::randomPort($server[$key]['port']);
             }
@@ -59,13 +97,14 @@ class ServerService
 
     public function getAvailableVmess(User $user): array
     {
+        $userGroupIds = $this->getUserGroupIds($user);
         $servers = [];
         $model = ServerVmess::orderBy('sort', 'ASC');
         $vmess = $model->get();
         foreach ($vmess as $key => $v) {
             if (!$v['show']) continue;
             $vmess[$key]['type'] = 'vmess';
-            if (!in_array($user->group_id, $vmess[$key]['group_id'])) continue;
+            if (!$this->groupCanReach($userGroupIds, $vmess[$key]['group_id'])) continue;
             if (strpos($vmess[$key]['port'], '-') !== false) {
                 $vmess[$key]['port'] = Helper::randomPort($vmess[$key]['port']);
             }
@@ -83,13 +122,14 @@ class ServerService
 
     public function getAvailableTrojan(User $user): array
     {
+        $userGroupIds = $this->getUserGroupIds($user);
         $servers = [];
         $model = ServerTrojan::orderBy('sort', 'ASC');
         $trojan = $model->get();
         foreach ($trojan as $key => $v) {
             if (!$v['show']) continue;
             $trojan[$key]['type'] = 'trojan';
-            if (!in_array($user->group_id, $trojan[$key]['group_id'])) continue;
+            if (!$this->groupCanReach($userGroupIds, $trojan[$key]['group_id'])) continue;
             if (strpos($trojan[$key]['port'], '-') !== false) {
                 $trojan[$key]['port'] = Helper::randomPort($trojan[$key]['port']);
             }
@@ -105,6 +145,7 @@ class ServerService
 
     public function getAvailableTuic(User $user)
     {
+        $userGroupIds = $this->getUserGroupIds($user);
         $availableServers = [];
         $model = ServerTuic::orderBy('sort', 'ASC');
         $servers = $model->get()->keyBy('id');
@@ -112,7 +153,7 @@ class ServerService
             if (!$v['show']) continue;
             $servers[$key]['type'] = 'tuic';
             $servers[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_TUIC_LAST_CHECK_AT', $v['id']));
-            if (!in_array($user->group_id, $v['group_id'])) continue;
+            if (!$this->groupCanReach($userGroupIds, $v['group_id'])) continue;
             if (isset($servers[$v['parent_id']])) {
                 $servers[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_TUIC_LAST_CHECK_AT', $v['parent_id']));
                 $servers[$key]['created_at'] = $servers[$v['parent_id']]['created_at'];
@@ -124,6 +165,7 @@ class ServerService
 
     public function getAvailableHysteria(User $user)
     {
+        $userGroupIds = $this->getUserGroupIds($user);
         $availableServers = [];
         $model = ServerHysteria::orderBy('sort', 'ASC');
         $servers = $model->get()->keyBy('id');
@@ -131,7 +173,7 @@ class ServerService
             if (!$v['show']) continue;
             $servers[$key]['type'] = 'hysteria';
             $servers[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_HYSTERIA_LAST_CHECK_AT', $v['id']));
-            if (!in_array($user->group_id, $v['group_id'])) continue;
+            if (!$this->groupCanReach($userGroupIds, $v['group_id'])) continue;
             if (isset($servers[$v['parent_id']])) {
                 $servers[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_HYSTERIA_LAST_CHECK_AT', $v['parent_id']));
                 $servers[$key]['created_at'] = $servers[$v['parent_id']]['created_at'];
@@ -144,6 +186,7 @@ class ServerService
 
     public function getAvailableShadowsocks(User $user)
     {
+        $userGroupIds = $this->getUserGroupIds($user);
         $servers = [];
         $model = ServerShadowsocks::orderBy('sort', 'ASC');
         $shadowsocks = $model->get()->keyBy('id');
@@ -151,7 +194,7 @@ class ServerService
             if (!$v['show']) continue;
             $shadowsocks[$key]['type'] = 'shadowsocks';
             $shadowsocks[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_SHADOWSOCKS_LAST_CHECK_AT', $v['id']));
-            if (!in_array($user->group_id, $v['group_id'])) continue;
+            if (!$this->groupCanReach($userGroupIds, $v['group_id'])) continue;
             if (strpos($v['port'], '-') !== false) {
                 $shadowsocks[$key]['port'] = Helper::randomPort($v['port']);
             }
@@ -171,6 +214,7 @@ class ServerService
 
     public function getAvailableAnyTLS(User $user)
     {
+        $userGroupIds = $this->getUserGroupIds($user);
         $servers = [];
         $model = ServerAnytls::orderBy('sort', 'ASC');
         $anytls = $model->get()->keyBy('id');
@@ -178,7 +222,7 @@ class ServerService
             if (!$v['show']) continue;
             $anytls[$key]['type'] = 'anytls';
             $anytls[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_ANYTLS_LAST_CHECK_AT', $v['id']));
-            if (!in_array($user->group_id, $v['group_id'])) continue;
+            if (!$this->groupCanReach($userGroupIds, $v['group_id'])) continue;
             if (strpos($v['port'], '-') !== false) {
                 $anytls[$key]['port'] = Helper::randomPort($v['port']);
             }
@@ -193,6 +237,7 @@ class ServerService
 
     public function getAvailableV2node(User $user)
     {
+        $userGroupIds = $this->getUserGroupIds($user);
         $servers = [];
         $model = ServerV2node::orderBy('sort', 'ASC');
         $v2node = $model->get()->keyBy('id');
@@ -200,7 +245,7 @@ class ServerService
             if (!$v['show']) continue;
             $v2node[$key]['type'] = 'v2node';
             $v2node[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_V2NODE_LAST_CHECK_AT', $v['id']));
-            if (!in_array($user->group_id, $v['group_id'])) continue;
+            if (!$this->groupCanReach($userGroupIds, $v['group_id'])) continue;
             if (isset($v2node[$v['parent_id']])) {
                 $v2node[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_V2NODE_LAST_CHECK_AT', $v['parent_id']));
                 $v2node[$key]['created_at'] = $v2node[$v['parent_id']]['created_at'];
@@ -225,6 +270,7 @@ class ServerService
 
     public function getAvailableMdns(User $user)
     {
+        $userGroupIds = $this->getUserGroupIds($user);
         $servers = [];
         $model = ServerMdns::orderBy('sort', 'ASC');
         $mdns = $model->get()->keyBy('id');
@@ -232,7 +278,7 @@ class ServerService
             if (!$v['show']) continue;
             $mdns[$key]['type'] = 'mdns';
             $mdns[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_MDNS_LAST_CHECK_AT', $v['id']));
-            if (!in_array($user->group_id, $v['group_id'])) continue;
+            if (!$this->groupCanReach($userGroupIds, $v['group_id'])) continue;
             if (isset($mdns[$v['parent_id']])) {
                 $mdns[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_MDNS_LAST_CHECK_AT', $v['parent_id']));
                 $mdns[$key]['created_at'] = $mdns[$v['parent_id']]['created_at'];
@@ -271,7 +317,20 @@ class ServerService
 
     public function getAvailableUsers($groupId)
     {
-        return User::whereIn('group_id', $groupId)
+        return User::where(function ($query) use ($groupId) {
+                // Reachable either through the plan's group or through one an
+                // admin granted. This OR *must* stay wrapped in its own closure:
+                // at the top level it would break the AND-chain below, and every
+                // user with an extra group would then bypass the traffic, expiry
+                // and ban checks entirely - i.e. keep connecting after running
+                // out of data or after their subscription ended.
+                $query->whereIn('group_id', $groupId)
+                    ->orWhereIn('id', function ($sub) use ($groupId) {
+                        $sub->select('user_id')
+                            ->from('v2_user_group')
+                            ->whereIn('group_id', $groupId);
+                    });
+            })
             ->whereRaw('u + d < transfer_enable')
             ->where(function ($query) {
                 $query->where('expired_at', '>=', time())
