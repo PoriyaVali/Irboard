@@ -116724,15 +116724,28 @@ function j(url,opt){opt=opt||{};opt.headers=Object.assign({'Authorization':tok()
 function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
   return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 
-/* The user is identified by EMAIL, never by the row position. This table
-   declares no rowKey, so antd falls back to the array index for
-   data-row-key - using that edits whoever currently sits at that position
-   in the list, not the person whose row was clicked.                     */
-function open(email){
-  j(API+'/user/group/fetch?email='+encodeURIComponent(email)).then(function(res){
+/* Identify the row's user by what the table actually shows: its ID column and
+   its email. NOT by data-row-key - this table declares no rowKey, so antd puts
+   the array INDEX there and using it edits whoever sits at that position.     */
+function rowIdentity(tr){
+  var email=(tr.textContent||'').match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
+  var id=null;
+  var tds=tr.querySelectorAll('td');
+  for(var i=0;i<tds.length;i++){
+    var t=(tds[i].textContent||'').trim();
+    if(/^\d+$/.test(t)){id=t;break;}      // the ID column is the first plain integer
+  }
+  return {id:id, email:email?email[0]:null};
+}
+
+function open(idt){
+  var q = idt.email ? 'email='+encodeURIComponent(idt.email)
+        : (idt.id ? 'user_id='+encodeURIComponent(idt.id) : null);
+  if(!q){alert('این ردیف شناسه یا ایمیل کاربر ندارد؛ نمی‌توان گروه‌ها را باز کرد.');return;}
+  j(API+'/user/group/fetch?'+q).then(function(res){
     if(!res||!res.data){alert((res&&res.message)||'خطا در دریافت گروه‌ها');return;}
     var d=res.data, primary=d.primary_group_id, extras=d.extra_group_ids||[], groups=d.groups||[];
-    var who=d.email||email;
+    var who=d.email||idt.email||('#'+idt.id);
     var wrap=document.createElement('div');
     wrap.id='xgrp-modal';
     wrap.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center';
@@ -116765,9 +116778,10 @@ function open(email){
         .map(function(c){return parseInt(c.value,10)});
       var msg=document.getElementById('xgrp-msg');
       msg.innerHTML='<span style="color:#999">در حال ذخیره…</span>';
+      var body={group_ids:ids};
+      if(d.email) body.email=d.email; else body.user_id=d.user_id;
       j(API+'/user/group/save',{method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({email:who,group_ids:ids})
+        headers:{'Content-Type':'application/json'},body:JSON.stringify(body)
       }).then(function(r){
         if(r&&r.data){msg.innerHTML='<span style="color:#52c41a">ذخیره شد برای '+esc(r.data.email||who)+'</span>';setTimeout(close,900);}
         else{msg.innerHTML='<span style="color:#f5222d">'+esc((r&&r.message)||'خطا')+'</span>';}
@@ -116775,29 +116789,32 @@ function open(email){
     };
   }).catch(function(e){alert('خطا: '+e.message)});
 }
-window._xgrpOpen=open;
 
-/* Put a button on each row of the users table, carrying that row's email. */
+/* Decorate every row of the users table. The button is added whenever the row
+   has cells - if the identity cannot be read the button still appears and says
+   so on click, because a silently missing button is impossible to diagnose.  */
 function decorate(){
   if((location.hash||'').indexOf('/user')<0)return;
   document.querySelectorAll('tr[data-row-key]').forEach(function(tr){
     if(tr.querySelector('.xgrp-btn'))return;
     var cells=tr.querySelectorAll('td');
     if(!cells.length)return;
-    var m=(tr.textContent||'').match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/);
-    if(!m)return;                       // no email in this row -> not a user row
-    var email=m[0];
+    var idt=rowIdentity(tr);
+    if(!idt.id && !idt.email)return;      // header/summary rows carry neither
     var b=document.createElement('button');
     b.className='ant-btn ant-btn-sm xgrp-btn';
     b.style.cssText='margin-inline-start:6px';
     b.textContent='گروه‌ها';
-    b.title='گروه‌های دسترسی اضافه — '+email;
-    b.onclick=function(ev){ev.stopPropagation();open(email);};
+    b.title='گروه‌های دسترسی اضافه — '+(idt.email||('#'+idt.id));
+    b.onclick=function(ev){ev.stopPropagation();open(idt);};
     cells[cells.length-1].appendChild(b);
   });
 }
 new MutationObserver(decorate).observe(document.body,{childList:true,subtree:true});
 window.addEventListener('hashchange',function(){setTimeout(decorate,300)});
 setTimeout(decorate,1200);
-console.log('\u{1F465} Extra Groups Admin v1.1 (email-keyed)');
+window._xgrpOpen=function(emailOrId){
+  open(/@/.test(String(emailOrId))?{email:String(emailOrId),id:null}:{id:String(emailOrId),email:null});
+};
+console.log('\u{1F465} Extra Groups Admin v1.2 — call _xgrpOpen("email or id") if a button is missing');
 })();

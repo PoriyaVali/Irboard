@@ -49,7 +49,17 @@ Route::get('/' . config('v2board.secure_path', config('v2board.frontend_admin_pa
         'theme_header' => config('v2board.frontend_theme_header', 'dark'),
         'theme_color' => config('v2board.frontend_theme_color', 'default'),
         'background_url' => config('v2board.frontend_background_url'),
-        'version' => config('app.version'),
+        // Cache-bust on the bundle itself, not on the app version. nginx serves
+        // these assets with max-age=3600 while the admin bundle is edited
+        // independently of releases, so a version that only moves on release
+        // left every admin on an hour-stale bundle after each change - which
+        // makes a shipped fix look like it simply did not work.
+        'version' => (function () {
+            $bundle = public_path('assets/admin/umi.js');
+            return is_file($bundle)
+                ? config('app.version') . '.' . filemtime($bundle)
+                : config('app.version');
+        })(),
         'logo' => config('v2board.logo'),
         'secure_path' => config('v2board.secure_path', config('v2board.frontend_admin_path', hash('crc32b', config('app.key'))))
     ]);
