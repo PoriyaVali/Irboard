@@ -50,9 +50,9 @@ class ServerService
 
     /**
      * Grants that are still in force: not past their end date, and - for the
-     * metered ones - still backed by enough wallet to pay for a GB. A tier the
-     * user can no longer pay for simply stops being listed, which is also what
-     * takes them off its nodes.
+     * metered ones - still backed by a wallet with something left in it. A tier
+     * the user can no longer pay for simply stops being listed, which is also
+     * what takes them off its nodes.
      *
      * @return \Illuminate\Support\Collection
      */
@@ -70,7 +70,13 @@ class ServerService
             if (!$grant->is_paid) return true;
             $group = $paid[$grant->group_id] ?? null;
             if (!$group) return false;
-            return (int)$user->balance >= AddonBillingService::minimumBalance($group);
+            // Serve for as long as ANY credit is left. The customer paid for every
+            // rial of it and charging is proportional per byte, so 50 toman simply
+            // buys the last ~50 MB. Demanding a full GB's worth here stranded
+            // whatever sat below that line - a wallet on 999 lost access while
+            // holding almost a gigabyte of credit. The one-GB floor is an entry
+            // requirement only, enforced when the tier is switched on.
+            return (int)$user->balance > 0;
         });
     }
 
@@ -399,7 +405,7 @@ class ServerService
                             ->where(function ($g) use ($groupId) {
                                 $g->where('is_paid', 0)
                                   ->orWhereRaw(
-                                      'v2_user.balance >= (SELECT price_per_gb FROM v2_server_group WHERE id = v2_user_group.group_id)'
+                                      'v2_user.balance > 0'
                                   );
                             });
                     });

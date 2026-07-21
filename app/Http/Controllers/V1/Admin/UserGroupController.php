@@ -111,7 +111,21 @@ class UserGroupController extends Controller
             }
             foreach ($add as $gid) {
                 $isPaid = isset($priced[$gid]);
-                if ($isPaid) $metered[] = $gid;
+                // Switching a metered tier ON needs a gigabyte's worth in the
+                // wallet. Once it is on the user spends down to their last rial
+                // (see ServerService::activeGrants) - this floor only stops a
+                // tier being handed to somebody who cannot pay for any of it.
+                if ($isPaid) {
+                    $need = AddonBillingService::minimumBalance($priced[$gid]);
+                    if ((int)$user->balance < $need) {
+                        DB::rollBack();
+                        abort(500, sprintf(
+                            'برای فعال‌سازی «%s» حداقل %s تومان موجودی لازم است (موجودی فعلی: %s)',
+                            $priced[$gid]->name, number_format($need), number_format((int)$user->balance)
+                        ));
+                    }
+                    $metered[] = $gid;
+                }
                 UserGroup::updateOrCreate(
                     ['user_id' => $user->id, 'group_id' => $gid],
                     [
