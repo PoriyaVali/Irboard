@@ -37,6 +37,12 @@ class UserRoute
             $router->post('/order/cancel', 'V1\\User\\OrderController@cancel');
             // Plan
             $router->get ('/plan/fetch', 'V1\\User\\PlanController@fetch');
+            // Metered add-on tiers the customer switches on for themselves.
+            // The user is always taken from the session, never from the request.
+            $router->get ('/addon/list', 'V1\\User\\AddonController@list');
+            $router->post('/addon/enable', 'V1\\User\\AddonController@enable');
+            $router->post('/addon/disable', 'V1\\User\\AddonController@disable');
+            $router->get ('/addon/usage', 'V1\\User\\AddonController@usage');
             // Invite
             $router->get ('/invite/save', 'V1\\User\\InviteController@save');
             $router->get ('/invite/fetch', 'V1\\User\\InviteController@fetch');
