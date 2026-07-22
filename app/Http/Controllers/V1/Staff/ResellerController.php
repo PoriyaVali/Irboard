@@ -202,6 +202,12 @@ class ResellerController extends Controller
             $user->expired_at = time() + ($days * 86400);
             $user->save();
 
+            // A reseller re-assigning or renewing a plan moves the user's expiry
+            // just like a normal purchase does, so carry any paid add-on grant
+            // with it - otherwise the tier the customer paid for would keep the
+            // old plan's expiry and be cut off early.
+            \App\Services\AddonBillingService::syncGrantExpiry($user->id, $user->expired_at);
+
             // ثبت لاگ تراکنش
             DB::table('v2_reseller_log')->insert([
                 'staff_id' => $staffId,

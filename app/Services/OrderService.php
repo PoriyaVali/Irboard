@@ -105,6 +105,12 @@ class OrderService
             abort(500, 'فعال‌سازی ناموفق بود');
         }
 
+        // The plan's expiry just moved (renew, or a change to a different plan).
+        // Carry any paid add-on grant to the same date so a tier the customer
+        // paid to ride on this plan does not die on the plan's previous expiry.
+        // A first purchase simply has no grants and this updates nothing.
+        AddonBillingService::syncGrantExpiry($this->user->id, $this->user->expired_at);
+
         DB::commit();
     }
 

@@ -49,6 +49,35 @@ class AddonBillingService
     }
 
     /**
+     * Keep a user's paid grants ending exactly when their plan does.
+     *
+     * A paid grant stores its own expired_at, snapshotted from the plan the
+     * moment it was switched on. Every place that changes a user's plan expiry
+     * - a renewal, a reseller re-assigning a plan, the renewal cron - moves
+     * v2_user.expired_at but leaves the grant on its old date, so a renewed
+     * plan would quietly outlive the tier the customer paid to ride on it, and
+     * the access and billing gates (both keyed on the grant's expired_at) would
+     * cut the tier off early. Call this right after writing the new plan expiry
+     * and the grants move with it.
+     *
+     * Only paid grants are touched. A free admin grant may deliberately carry a
+     * null (never-expiring) expiry, and matching it to the plan would be wrong.
+     *
+     * @param int      $userId
+     * @param int|null $planExpiredAt the user's new expired_at (null = a
+     *                                 one-time plan that never expires)
+     */
+    public static function syncGrantExpiry(int $userId, $planExpiredAt): void
+    {
+        UserGroup::where('user_id', $userId)
+            ->where('is_paid', 1)
+            ->update([
+                'expired_at' => $planExpiredAt,
+                'updated_at' => time(),
+            ]);
+    }
+
+    /**
      * Which sellable group, if any, this node is reachable through *only*
      * because of a paid grant. Returns null when the traffic is free.
      *
