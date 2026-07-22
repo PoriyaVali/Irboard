@@ -338,6 +338,10 @@ class CheckRenewal extends Command
         $user->transfer_enable = $this->convertTransferEnable($plan->transfer_enable);
         $user->save();
 
+        // Auto-renewal extended the plan; move any paid add-on grant to the new
+        // expiry so the tier the customer paid for is not cut off on the old one.
+        \App\Services\AddonBillingService::syncGrantExpiry($user->id, $newExpiredAt);
+
         $this->logRenewal($user, $plan, $renewalInfo, [
             'old_expired_at' => $oldExpiredAt,
             'new_expired_at' => $newExpiredAt,

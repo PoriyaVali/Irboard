@@ -121,7 +121,14 @@ class AddonController extends Controller
             abort(500, 'برای فعال‌سازی این افزودنی، ابتدا باید یک پلن پایه داشته باشید.');
         }
 
-        if (UserGroup::where('user_id', $user->id)->where('group_id', $gid)->exists()) {
+        // A grant that is still live means it really is already on. But a grant
+        // whose expired_at has passed is a dead row - left behind when a plan
+        // lapsed and was renewed without the grant following (see
+        // syncGrantExpiry) - and refusing on its mere existence would trap the
+        // customer: the tier is dead, yet they cannot switch it back on. So an
+        // expired grant is treated as re-activatable, not as "already active".
+        $existing = UserGroup::where('user_id', $user->id)->where('group_id', $gid)->first();
+        if ($existing && ($existing->expired_at === null || (int)$existing->expired_at > time())) {
             abort(500, 'این افزودنی از قبل فعال است');
         }
 
@@ -137,9 +144,12 @@ class AddonController extends Controller
                 ['user_id' => $user->id, 'group_id' => $gid],
                 [
                     'is_paid' => 1,
-                    // Tied to the plan it was bought on top of, so it can never
-                    // outlive the subscription that justifies it.
+                    // Snapshotted from the plan it rides on. Renewals keep this
+                    // in step through AddonBillingService::syncGrantExpiry; on a
+                    // re-activation here it is simply taken fresh.
                     'expired_at' => $user->expired_at,
+                    // Reset the carry so a revived grant does not inherit a
+                    // fraction of a gigabyte left over from its previous life.
                     'unbilled_bytes' => 0,
                     'created_at' => time(),
                     'updated_at' => time(),
