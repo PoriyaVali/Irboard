@@ -197,6 +197,13 @@ class UserController extends Controller
         try {
             AuthService::invalidateUserAuthCache($user->id);
             $user->update($params);
+            // If this edit moved the plan expiry or switched the plan, carry any
+            // paid add-on grant to the new date, keeping the invariant that a
+            // paid grant ends exactly when the plan it rides on does. Guarded so
+            // a partial update (ban, edit email) does not touch grants at all.
+            if ($request->exists('expired_at') || $request->exists('plan_id')) {
+                \App\Services\AddonBillingService::syncGrantExpiry($user->id, $user->expired_at);
+            }
         } catch (\Exception $e) {
             abort(500, 'ذخیره ناموفق بود');
         }

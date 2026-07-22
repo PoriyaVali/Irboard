@@ -227,6 +227,10 @@ class UserController extends Controller
                 )) {
                     throw new \Exception(__('Save failed'));
                 }
+                // This shortens the plan expiry, so pull any paid add-on grant
+                // in with it - a grant left on the longer date would keep the
+                // tier alive past the plan it is meant to ride on.
+                \App\Services\AddonBillingService::syncGrantExpiry($user->id, $user->expired_at);
             } else {
                 abort(500, __('You do not have enough time to renew your subscription'));
             }
