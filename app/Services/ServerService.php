@@ -67,15 +67,21 @@ class ServerService
 
         $paid = AddonBillingService::paidGroups();
         return $grants->filter(function ($grant) use ($user, $paid) {
-            if (!$grant->is_paid) return true;
-            $group = $paid[$grant->group_id] ?? null;
-            if (!$group) return false;
-            // Serve for as long as ANY credit is left. The customer paid for every
-            // rial of it and charging is proportional per byte, so 50 toman simply
-            // buys the last ~50 MB. Demanding a full GB's worth here stranded
-            // whatever sat below that line - a wallet on 999 lost access while
-            // holding almost a gigabyte of credit. The one-GB floor is an entry
-            // requirement only, enforced when the tier is switched on.
+            // Whether a grant costs money is decided by the GROUP'S CURRENT sale
+            // status, not the is_paid flag stored when it was granted. If the
+            // group is not a currently-priced tier - it never was, or the admin
+            // has since turned its sale off - the grant is free and stays active,
+            // which is exactly what "turned the sale off => free/unlimited" means.
+            // Keying on the stale is_paid flag here silently revoked access the
+            // moment a tier's sale was switched off, so a user the admin had
+            // granted it to (now free) vanished from their own subscription while
+            // billing had already correctly stopped charging (chargeableGroupId
+            // gates on the same live paidGroups).
+            if (!isset($paid[$grant->group_id])) return true;
+            // Still a priced tier: serve for as long as ANY credit is left. The
+            // customer paid for every rial and charging is proportional per byte,
+            // so 50 toman simply buys the last ~50 MB. The one-GB floor is an
+            // entry requirement only, enforced when the tier is switched on.
             return (int)$user->balance > 0;
         });
     }
@@ -383,7 +389,13 @@ class ServerService
 
     public function getAvailableUsers($groupId)
     {
-        return User::where(function ($query) use ($groupId) {
+        // Which of this node's groups are, right now, priced tiers. A grant is
+        // free unless its group is on this list - mirrors activeGrants() so the
+        // two access directions can never disagree. Keying on the stored is_paid
+        // flag instead would drop a user from a node the moment the admin turned
+        // that tier's sale off, even though the subscription still offered it.
+        $pricedIds = array_keys(AddonBillingService::paidGroups());
+        return User::where(function ($query) use ($groupId, $pricedIds) {
                 // Reachable either through the plan's group or through one an
                 // admin granted. This OR *must* stay wrapped in its own closure:
                 // at the top level it would break the AND-chain below, and every
@@ -391,7 +403,7 @@ class ServerService
                 // and ban checks entirely - i.e. keep connecting after running
                 // out of data or after their subscription ended.
                 $query->whereIn('group_id', $groupId)
-                    ->orWhereIn('id', function ($sub) use ($groupId) {
+                    ->orWhereIn('id', function ($sub) use ($groupId, $pricedIds) {
                         $sub->select('user_id')
                             ->from('v2_user_group')
                             ->whereIn('group_id', $groupId)
@@ -399,11 +411,13 @@ class ServerService
                             ->where(function ($g) {
                                 $g->whereNull('expired_at')->orWhere('expired_at', '>', time());
                             })
-                            // and a metered one only while the wallet can pay
-                            // for the next GB; below that the user drops off
-                            // this node at its next poll
-                            ->where(function ($g) use ($groupId) {
-                                $g->where('is_paid', 0)
+                            // free unless the group is a currently-priced tier;
+                            // a priced one counts only while the wallet can pay
+                            // for the next GB, below which the user drops off this
+                            // node at its next poll. whereNotIn([]) is a no-op
+                            // (all grants free) when nothing is priced.
+                            ->where(function ($g) use ($pricedIds) {
+                                $g->whereNotIn('group_id', $pricedIds)
                                   ->orWhereRaw(
                                       'v2_user.balance > 0'
                                   );
