@@ -29,15 +29,43 @@ class AddonBillingService
     /** @var array<int,ServerGroup>|null groups that are sellable, keyed by id */
     private static $paidGroups = null;
 
-    /** Sellable groups, read once per process. */
+    /** @var int unix time the snapshot above was taken */
+    private static $paidGroupsAt = 0;
+
+    /**
+     * How long the sellable-groups snapshot may be reused, in seconds. One
+     * billing tick: traffic reports arrive about once a minute per node, so at
+     * most one report per worker is ever billed at outdated terms - the same
+     * order of lag the reports themselves already carry.
+     */
+    public const PAID_GROUPS_TTL = 60;
+
+    /**
+     * Sellable groups, re-read at most every {@see PAID_GROUPS_TTL} seconds.
+     *
+     * This must NOT be a read-once-per-process cache, because "the process" is
+     * not always a request. Every HTTP caller runs under php-fpm, where state
+     * dies with the request - but TrafficFetchJob, the only code that actually
+     * charges wallets, runs inside a Horizon worker that lives until its memory
+     * limit trips (no maxJobs/maxTime is configured, and nothing schedules a
+     * recycle). A plain static therefore froze the operator's pricing at
+     * whatever it was when each worker was born: a tier whose sale was switched
+     * off kept charging, a price change kept billing the old price, and a newly
+     * priced tier billed nothing - per worker, indefinitely, while the access
+     * gates in ServerService (fpm, always fresh) disagreed in real time. With
+     * workers of different ages the two errors even interleave minute by
+     * minute. The TTL bounds all of that to one billing tick; under fpm nothing
+     * changes, since no request outlives it.
+     */
     public static function paidGroups(): array
     {
-        if (self::$paidGroups === null) {
+        if (self::$paidGroups === null || time() - self::$paidGroupsAt > self::PAID_GROUPS_TTL) {
             self::$paidGroups = ServerGroup::where('addon_enabled', 1)
                 ->where('price_per_gb', '>', 0)
                 ->get()
                 ->keyBy('id')
                 ->all();
+            self::$paidGroupsAt = time();
         }
         return self::$paidGroups;
     }
