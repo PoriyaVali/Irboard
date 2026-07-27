@@ -78,7 +78,15 @@ class ServerService
             // billing had already correctly stopped charging (chargeableGroupId
             // gates on the same live paidGroups).
             if (!isset($paid[$grant->group_id])) return true;
-            // Still a priced tier: serve for as long as ANY credit is left. The
+            // The group is on sale, but only a grant that was BOUGHT is metered.
+            // An is_paid=0 row is the admin's own doing (a free/test grant, or
+            // one created before the group was priced) and billing never touches
+            // it - so gating it on the wallet here would strand exactly the
+            // account it was meant to serve, while charging it would be a charge
+            // nobody agreed to. Bought and priced is the one combination that
+            // costs money, the same predicate TrafficFetchJob bills by.
+            if (!$grant->is_paid) return true;
+            // Bought + priced: serve for as long as ANY credit is left. The
             // customer paid for every rial and charging is proportional per byte,
             // so 50 toman simply buys the last ~50 MB. The one-GB floor is an
             // entry requirement only, enforced when the tier is switched on.
@@ -411,13 +419,20 @@ class ServerService
                             ->where(function ($g) {
                                 $g->whereNull('expired_at')->orWhere('expired_at', '>', time());
                             })
-                            // free unless the group is a currently-priced tier;
-                            // a priced one counts only while the wallet can pay
-                            // for the next GB, below which the user drops off this
-                            // node at its next poll. whereNotIn([]) is a no-op
-                            // (all grants free) when nothing is priced.
+                            // free unless the grant is metered, and metered
+                            // means BOTH bought (is_paid) and currently priced
+                            // - the same predicate activeGrants() and the
+                            // billing job use, so access and money can never
+                            // disagree. An admin's free/test grant on a priced
+                            // group stays served regardless of the wallet,
+                            // because billing (is_paid=1 only) never charges
+                            // it. A metered one counts only while the wallet
+                            // has anything left, below which the user drops off
+                            // this node at its next poll. whereNotIn([]) is a
+                            // no-op (all grants free) when nothing is priced.
                             ->where(function ($g) use ($pricedIds) {
                                 $g->whereNotIn('group_id', $pricedIds)
+                                  ->orWhere('is_paid', 0)
                                   ->orWhereRaw(
                                       'v2_user.balance > 0'
                                   );

@@ -110,8 +110,14 @@ class AddonBillingService
      * because of a paid grant. Returns null when the traffic is free.
      *
      * @param array $serverGroupIds the node's own group tags
-     * @param array $baseGroupIds   the groups the user's plan gives them
-     * @param array $paidGrantIds   groups the user bought
+     * @param array $baseGroupIds   every group the user is entitled to WITHOUT
+     *                              per-GB charging: the plan's group plus any
+     *                              grant that is not both bought and currently
+     *                              priced (an admin's free/test grant, or a
+     *                              tier whose sale has been switched off).
+     *                              Entitlement exempts: if any of these reach
+     *                              the node, its traffic is never billed.
+     * @param array $paidGrantIds   groups the user bought that are on sale now
      */
     public static function chargeableGroupId(array $serverGroupIds, array $baseGroupIds, array $paidGrantIds): ?int
     {
@@ -170,10 +176,16 @@ class AddonBillingService
                     $user->save();
                     $charged = $take;
                 }
-                // Bytes matching what was actually taken stay settled; anything
-                // that could not be paid for is dropped rather than held as a
-                // debt the user never agreed to.
-                $grant->unbilled_bytes = $total - intdiv($amount * self::BYTES_PER_GB, $price);
+                // Settle ONLY the bytes that were actually paid for. When the
+                // wallet covered everything this is the usual remainder-carry;
+                // when it fell short, the unpaid bytes stay on the grant instead
+                // of being written off, so a top-up while the tier is still on
+                // pays for exactly what was used - no more, no less. This is
+                // bounded, not open-ended debt: the access gates cut a drained
+                // wallet off within about a minute, so at most one final tick of
+                // traffic can accumulate here, and disabling the tier discards
+                // it with the grant.
+                $grant->unbilled_bytes = $total - intdiv($take * self::BYTES_PER_GB, $price);
             } else {
                 $grant->unbilled_bytes = $total;
             }
