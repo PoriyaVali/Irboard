@@ -53,18 +53,26 @@ class AddonController extends Controller
         // and a silent loss.
         $hasPlan = (int)$user->plan_id > 0;
 
-        $active = UserGroup::where('user_id', $user->id)
-            ->where('is_paid', 1)
-            ->get()
-            ->keyBy('group_id');
+        // ALL grants, not just the bought ones. A tier the admin granted free
+        // (is_paid=0 - today that is the owner's own test account) used to be
+        // invisible here, so the screen offered it for sale and enable() then
+        // died with "already active" - a dead-end button. It is reported as its
+        // own state below instead.
+        $now = time();
+        $grants = UserGroup::where('user_id', $user->id)->get()->keyBy('group_id');
 
         $balance = (int)$user->balance;
         $items = [];
         foreach ($priced as $gid => $group) {
             $price = (int)$group->price_per_gb;
             $need  = AddonBillingService::minimumBalance($group);
-            $grant = $active->get($gid);
-            $on    = $grant !== null;
+            $grant = $grants->get($gid);
+            // Liveness mirrors enable(): a row past its expired_at is a dead
+            // leftover that enable() happily re-activates, so it must read as
+            // OFF here too - not as an active tier with a date in the past.
+            $live    = $grant !== null && ($grant->expired_at === null || (int)$grant->expired_at > $now);
+            $on      = $live && (bool)$grant->is_paid;
+            $granted = $live && !$grant->is_paid;
 
             $items[] = [
                 'group_id'     => (int)$gid,
@@ -72,11 +80,17 @@ class AddonController extends Controller
                 'price_per_gb' => $price,
                 'min_balance'  => $need,
                 'active'       => $on,
+                // An admin's free grant: served in full, never billed, and not
+                // the customer's to switch on or off. A separate flag so the
+                // app can show it as what it is; older app builds that ignore
+                // it still can't dead-end, because can_enable is false and the
+                // reason says why.
+                'granted'      => $granted,
                 // What the wallet is worth in the unit the customer thinks in.
                 'balance_gb'   => $price > 0 ? (int)floor($balance / $price) : 0,
                 'expired_at'   => $on ? $grant->expired_at : null,
-                'can_enable'   => !$on && $hasPlan && $balance >= $need,
-                'reason'       => $this->whyNot($on, $hasPlan, $balance, $need),
+                'can_enable'   => !$on && !$granted && $hasPlan && $balance >= $need,
+                'reason'       => $this->whyNot($on, $granted, $hasPlan, $balance, $need),
             ];
         }
 
@@ -94,9 +108,10 @@ class AddonController extends Controller
      * this alongside the flag keeps the app from having to re-derive the rules
      * and drift out of step with them.
      */
-    private function whyNot(bool $on, bool $hasPlan, int $balance, int $need): ?string
+    private function whyNot(bool $on, bool $granted, bool $hasPlan, int $balance, int $need): ?string
     {
         if ($on) return null;
+        if ($granted) return 'این دسترسی برای حساب شما رایگان فعال شده است.';
         if (!$hasPlan) return 'برای فعال‌سازی این افزودنی، ابتدا باید یک پلن پایه داشته باشید.';
         if ($balance < $need) {
             return sprintf('حداقل %s تومان موجودی لازم است (موجودی شما: %s).',
