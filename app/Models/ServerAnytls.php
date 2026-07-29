@@ -15,6 +15,9 @@ class ServerAnytls extends Model
         'group_id' => 'array',
         'route_id' => 'array',
         'padding_scheme' => 'array',
-        'tags' => 'array'
+        'tags' => 'array',
+        // Same cast as v2_server_v2node so both node types hand the node and
+        // the subscription builders an array rather than a JSON string.
+        'tls_settings' => 'array'
     ];
 }

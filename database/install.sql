@@ -449,6 +449,8 @@ CREATE TABLE `v2_server_anytls` (
   `server_name` varchar(64) DEFAULT NULL,
   `insecure` tinyint(1) NOT NULL DEFAULT '0',
   `padding_scheme` text,
+  `tls` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1=plain TLS, 2=REALITY. anytls is never plaintext, so 0 is not a valid value here',
+  `tls_settings` text COMMENT 'REALITY keys and/or ECH config, same shape as v2_server_v2node.tls_settings',
   `created_at` int(11) NOT NULL,
   `updated_at` int(11) NOT NULL,
   PRIMARY KEY (`id`)

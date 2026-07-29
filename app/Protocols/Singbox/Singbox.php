@@ -394,7 +394,13 @@ class Singbox
                 'h2',
                 'http/1.1',
             ],
-            'server_name' => $server['server_name'] ?? ($tlsSettings['server_name'] ?? '')
+            // Under REALITY the name on the wire must be the BORROWED site, not
+            // our own host: the client validates the real certificate that site
+            // presents, so preferring the node's own server_name here would
+            // fail the handshake outright. Plain TLS keeps the old precedence.
+            'server_name' => ((int)($server['tls'] ?? 1) === 2)
+                ? ($tlsSettings['server_name'] ?? '')
+                : ($server['server_name'] ?? ($tlsSettings['server_name'] ?? ''))
         ];
         if (!empty($tlsSettings)) {
             if ($server['tls'] == 2) {
@@ -403,6 +409,30 @@ class Singbox
                     'public_key' => $tlsSettings['public_key'],
                     'short_id' => $tlsSettings['short_id']
                 ];
+                // REALITY authenticates the borrowed site's real certificate.
+                // Leaving insecure on would throw that away and turn the whole
+                // point of it - a genuine chain a censor can verify too - into
+                // an unauthenticated tunnel.
+                $tlsConfig['insecure'] = false;
+            }
+            // ECH hides the SNI of OUR certificate, so it belongs with plain
+            // TLS; on a REALITY node the visible name is already the borrowed
+            // one and there is nothing left to hide. Same two shapes the vless
+            // and trojan builders emit, so one reading covers all three.
+            if ((int)($server['tls'] ?? 1) !== 2 && !empty($tlsSettings['ech'])) {
+                if ($tlsSettings['ech'] === 'cloudflare') {
+                    $tlsConfig['ech'] = [
+                        'enabled' => true,
+                        'query_server_name' => 'cloudflare-ech.com'
+                    ];
+                } elseif ($tlsSettings['ech'] === 'custom' && !empty($tlsSettings['ech_config'])) {
+                    $tlsConfig['ech'] = [
+                        'enabled' => true,
+                        'config' => is_array($tlsSettings['ech_config'])
+                            ? $tlsSettings['ech_config']
+                            : [$tlsSettings['ech_config']]
+                    ];
+                }
             }
             $tlsConfig['utls'] = [
                 "enabled" => true,
