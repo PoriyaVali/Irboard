@@ -417,6 +417,30 @@ class Singbox
         $array['password'] = $password;
         $array['domain_resolver'] = 'local';
 
+        // anytls multiplexes many streams over one TLS session, so the expensive
+        // part is establishing it - after that a request costs nothing. The
+        // library defaults this pool to a 30s idle life (sing-anytls
+        // session/client.go treats anything <= 5s as unset and substitutes 30s),
+        // which means a phone put down for longer pays a full TLS handshake on
+        // the next tap. On a disrupted network that handshake is exactly what
+        // fails: one client in the node logs re-handshook ~20 times in four
+        // minutes. Widening the window to 90s covers the ordinary "check, pocket,
+        // check again" gap with a warm session instead.
+        //
+        // Deliberately NOT raising min_idle_session, which is the bigger-sounding
+        // knob: it keeps N sessions alive *indefinitely*, refreshing their idle
+        // timer on every sweep. Nothing sends a keepalive - the protocol has
+        // cmdHeartRequest but session.go:334 says "Active keepalive checking is
+        // not implemented yet" - so such a session eventually loses its carrier
+        // NAT mapping silently, with no RST to notice. A session that dies
+        // *visibly* removes itself from the pool via its dieHook, but a silent
+        // drop leaves it looking healthy, and CreateStream does not fall back to
+        // a new session when OpenStream fails on it: the request just fails. A
+        // bounded 90s stays far below any plausible NAT timeout, so that window
+        // never opens. It also matters that the server sets no idle timeout of
+        // its own, so whatever the client holds, the node holds too.
+        $array['idle_session_timeout'] = '90s';
+
         $tlsSettings = $server['tls_settings'] ?? [];
         $tlsConfig = [
             'enabled' => true,
