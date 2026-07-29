@@ -510,15 +510,34 @@ class Helper
         // ECHConfig = version(0xfe0d) + length + data
         $echConfig = pack('n', 0xfe0d) . pack('n', strlen($configData)) . $configData;
 
-        // ECHConfigList for client (no outer length prefix, per Go crypto/tls)
-        $echConfigList = $echConfig;
+        // ECHConfigList = uint16 length of everything that follows, then the
+        // configs. The prefix is NOT optional: Go's crypto/tls parseECHConfigList
+        // reads it and then rejects the whole list unless it equals len(data)-2.
+        // Emitting the bare config made every client read the 0xfe0d version
+        // bytes as a 65037-byte length and fail with errMalformedECHConfigList.
+        $echConfigList = pack('n', strlen($echConfig)) . $echConfig;
 
-        // MarshalECHKeys for server: length-prefixed configs + key entries
-        $echKeys = pack('n', strlen($echConfig)) . $echConfig;
-        $echKeys .= pack('n', 1);                        // num_keys = 1
-        $echKeys .= pack('C', $configId);                // config_id
-        $echKeys .= pack('n', 32) . $privateKey;         // private key with length prefix
+        // Server keys, in the layout sing-box's UnmarshalECHKeys actually reads
+        // (common/tls/ech.go): repeat until the buffer is empty
+        //     uint16-length-prefixed PRIVATE KEY, then
+        //     uint16-length-prefixed CONFIG
+        // Note the order - private key FIRST. This used to emit the config first,
+        // followed by a num_keys and a config_id field that this format does not
+        // have at all, so the parser took the config to be the private key and
+        // then ran out of buffer: "error parsing config", and the node refused to
+        // start its inbound. Nothing else in the stack could see the problem,
+        // because the panel stores and serves the blob without ever parsing it.
+        //
+        // Config here is a single marshalled ECHConfig, not the list above -
+        // Go's EncryptedClientHelloKey pairs one config with one private key.
+        $echKeys  = pack('n', strlen($privateKey)) . $privateKey;
+        $echKeys .= pack('n', strlen($echConfig)) . $echConfig;
 
+        // Both values are bare base64. Wrapping is the consumer's business and
+        // differs between them: sing-box wants a PEM block ("ECH KEYS" server
+        // side, "ECH CONFIGS" client side) while mihomo takes the base64 as-is,
+        // so the builders wrap on the way out rather than storing one shape that
+        // is wrong for the other.
         return [
             'ech_key' => base64_encode($echKeys),
             'ech_config' => base64_encode($echConfigList),

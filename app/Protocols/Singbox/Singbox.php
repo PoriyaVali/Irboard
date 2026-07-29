@@ -95,6 +95,60 @@ class Singbox
         return $proxies;
     }
 
+    /**
+     * The `ech` block for a sing-box client outbound, or null when ECH cannot
+     * work for this node - in which case emitting nothing is the only safe
+     * answer, since a client told to use ECH against a server that cannot
+     * answer it does not degrade, it fails.
+     *
+     * $nodeHoldsKey says whether this protocol's UniProxy payload actually
+     * carries tls_settings down to the node. Custom ECH is terminated by our own
+     * node and is therefore impossible without it: UniProxyController sends
+     * tls_settings for vless and anytls, but for vmess and trojan it sends only
+     * ports and names, so those two would advertise ECH the node has no key for.
+     * The Cloudflare mode is different - the handshake is terminated by
+     * Cloudflare, which publishes its own config in DNS, so our node never sees
+     * an ECH ClientHello and every protocol may use it.
+     *
+     * sing-box wants the config as a PEM block of type "ECH CONFIGS"
+     * (common/tls/ech.go) and rejects anything else with "invalid ECH configs
+     * pem". The panel stores bare base64 because mihomo takes it that way, so
+     * the wrapping belongs here, per builder, not in the stored value.
+     */
+    protected function buildEchConfig(array $tlsSettings, bool $nodeHoldsKey): ?array
+    {
+        $mode = $tlsSettings['ech'] ?? '';
+        if (empty($mode)) return null;
+
+        if ($mode === 'cloudflare') {
+            return [
+                'enabled' => true,
+                'query_server_name' => 'cloudflare-ech.com'
+            ];
+        }
+
+        if ($mode !== 'custom' || empty($tlsSettings['ech_config']) || !$nodeHoldsKey) {
+            return null;
+        }
+
+        $config = $tlsSettings['ech_config'];
+        if (is_array($config)) $config = implode('', $config);
+        $config = preg_replace('/\s+/', '', (string)$config);
+        if ($config === '') return null;
+
+        // Already PEM (an operator pasted one in) - pass it through by lines.
+        if (strpos($config, '-----BEGIN') !== false) {
+            return ['enabled' => true, 'config' => preg_split('/\r\n|\n|\r/', trim((string)$tlsSettings['ech_config']))];
+        }
+
+        $lines = array_merge(
+            ['-----BEGIN ECH CONFIGS-----'],
+            str_split($config, 64),
+            ['-----END ECH CONFIGS-----']
+        );
+        return ['enabled' => true, 'config' => $lines];
+    }
+
     protected function addProxies($proxies)
     {
         $proxyTags = array_column($proxies, 'tag');
@@ -175,19 +229,10 @@ class Singbox
             $tlsSettings = $server['tls_settings'] ?? $server['tlsSettings'] ?? [];
             $tlsConfig['insecure'] = ($tlsSettings['allow_insecure'] ?? ($tlsSettings['allowInsecure'] ?? 0)) == 1 ? true : false;
             $tlsConfig['server_name'] = $tlsSettings['server_name'] ?? $tlsSettings['serverName'] ?? '';
-            if (!empty($tlsSettings['ech'])) {
-                if ($tlsSettings['ech'] === 'cloudflare') {
-                    $tlsConfig['ech'] = [
-                        'enabled' => true,
-                        'query_server_name' => 'cloudflare-ech.com'
-                    ];
-                } elseif ($tlsSettings['ech'] === 'custom' && !empty($tlsSettings['ech_config'])) {
-                    $tlsConfig['ech'] = [
-                        'enabled' => true,
-                        'config' => is_array($tlsSettings['ech_config']) ? $tlsSettings['ech_config'] : [$tlsSettings['ech_config']]
-                    ];
-                }
-            }
+            // false: a vmess node is served no tls_settings by UniProxy, so it
+            // can hold no ECH key and only the Cloudflare mode can apply.
+            $ech = $this->buildEchConfig($tlsSettings, false);
+            if ($ech !== null) $tlsConfig['ech'] = $ech;
             $array['tls'] = $tlsConfig;
         }
         if ($server['network'] === 'tcp') {
@@ -251,19 +296,13 @@ class Singbox
                     "enabled" => true,
                     "fingerprint" => $fingerprints
                 ];
-                if (!empty($tlsSettings['ech'])) {
-                    if ($tlsSettings['ech'] === 'cloudflare') {
-                        $tlsConfig['ech'] = [
-                            'enabled' => true,
-                            'query_server_name' => 'cloudflare-ech.com'
-                        ];
-                    } elseif ($tlsSettings['ech'] === 'custom' && !empty($tlsSettings['ech_config'])) {
-                        $tlsConfig['ech'] = [
-                            'enabled' => true,
-                            'config' => is_array($tlsSettings['ech_config']) ? $tlsSettings['ech_config'] : [$tlsSettings['ech_config']]
-                        ];
-                    }
-                }
+                // A vless node IS served tls_settings by UniProxy, so it can
+                // hold the ECH key and the custom mode is available. Skipped
+                // under REALITY, which sing-box refuses to combine with ECH
+                // ("Reality is conflict with ECH") and which already hides the
+                // name on the wire.
+                $ech = $this->buildEchConfig($tlsSettings, ((int)($server['tls'] ?? 1)) !== 2);
+                if ($ech !== null) $tlsConfig['ech'] = $ech;
             }
             $array['tls'] = $tlsConfig;
         }
@@ -311,19 +350,11 @@ class Singbox
             'insecure' => ($server['allow_insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0)) == 1 ? true : false,
             'server_name' => $server['server_name'] ?? ($tlsSettings['server_name'] ?? '')
         ];
-        if (!empty($tlsSettings['ech'])) {
-            if ($tlsSettings['ech'] === 'cloudflare') {
-                $tlsConfig['ech'] = [
-                    'enabled' => true,
-                    'query_server_name' => 'cloudflare-ech.com'
-                ];
-            } elseif ($tlsSettings['ech'] === 'custom' && !empty($tlsSettings['ech_config'])) {
-                $tlsConfig['ech'] = [
-                    'enabled' => true,
-                    'config' => is_array($tlsSettings['ech_config']) ? $tlsSettings['ech_config'] : [$tlsSettings['ech_config']]
-                ];
-            }
-        }
+        // false: a trojan node is served no tls_settings by UniProxy (its case
+        // sends host/network/port/server_name only), so it can hold no ECH key
+        // and only the Cloudflare mode can apply.
+        $ech = $this->buildEchConfig($tlsSettings, false);
+        if ($ech !== null) $tlsConfig['ech'] = $ech;
         $array['tls'] = $tlsConfig;
 
         if(isset($server['network']) && in_array($server['network'], ["grpc", "ws"])){
@@ -417,23 +448,12 @@ class Singbox
             }
             // ECH hides the SNI of OUR certificate, so it belongs with plain
             // TLS; on a REALITY node the visible name is already the borrowed
-            // one and there is nothing left to hide. Same two shapes the vless
-            // and trojan builders emit, so one reading covers all three.
-            if ((int)($server['tls'] ?? 1) !== 2 && !empty($tlsSettings['ech'])) {
-                if ($tlsSettings['ech'] === 'cloudflare') {
-                    $tlsConfig['ech'] = [
-                        'enabled' => true,
-                        'query_server_name' => 'cloudflare-ech.com'
-                    ];
-                } elseif ($tlsSettings['ech'] === 'custom' && !empty($tlsSettings['ech_config'])) {
-                    $tlsConfig['ech'] = [
-                        'enabled' => true,
-                        'config' => is_array($tlsSettings['ech_config'])
-                            ? $tlsSettings['ech_config']
-                            : [$tlsSettings['ech_config']]
-                    ];
-                }
-            }
+            // one, and sing-box refuses the combination outright ("Reality is
+            // conflict with ECH"), so a node configured with both would fail to
+            // start its inbound. An anytls node IS served tls_settings by
+            // UniProxy, so outside REALITY it can hold the key.
+            $ech = $this->buildEchConfig($tlsSettings, ((int)($server['tls'] ?? 1)) !== 2);
+            if ($ech !== null) $tlsConfig['ech'] = $ech;
             $tlsConfig['utls'] = [
                 "enabled" => true,
                 "fingerprint" => $tlsSettings['fingerprint'] ?? 'chrome'
