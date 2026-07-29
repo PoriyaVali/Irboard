@@ -277,6 +277,17 @@ class ServerService
                 $anytls[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_ANYTLS_LAST_CHECK_AT', $v['parent_id']));
                 $anytls[$key]['created_at'] = $anytls[$v['parent_id']]['created_at'];
             }
+            // tls_settings now carries SECRETS - the REALITY private_key and the
+            // ECH private key - and this array is handed straight to every
+            // customer's subscription. Strip them exactly as getAvailableVless
+            // already does. Leaving them in would publish, to every user, the
+            // key that lets anyone impersonate the node or decrypt its ECH.
+            if (isset($anytls[$key]['tls_settings']) && is_array($anytls[$key]['tls_settings'])) {
+                $anytls[$key]['tls_settings'] = array_diff_key(
+                    $anytls[$key]['tls_settings'],
+                    array_flip(['private_key', 'ech_key'])
+                );
+            }
             $servers[] = $anytls[$key]->toArray();
         }
         return $servers;

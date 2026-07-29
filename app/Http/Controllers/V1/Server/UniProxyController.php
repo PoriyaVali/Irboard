@@ -303,7 +303,17 @@ class UniProxyController extends Controller
                 $response = [
                     'server_port' => $this->nodeInfo->server_port,
                     'server_name' => $this->nodeInfo->server_name,
-                    'padding_scheme' => $this->nodeInfo->padding_scheme
+                    'padding_scheme' => $this->nodeInfo->padding_scheme,
+                    // Until now an anytls node received only the three fields
+                    // above, so it could serve nothing but plain TLS however
+                    // much the rest of the stack supported. Shaped exactly like
+                    // the vless case, because V2bX decodes both into the same
+                    // TlsSettings struct - keeping them identical is what makes
+                    // the node side a shared code path rather than a second one.
+                    // Old nodes ignore the extra keys, so this is safe to ship
+                    // before any node is upgraded.
+                    'tls' => (int)($this->nodeInfo->tls ?? 1),
+                    'tls_settings' => $this->nodeInfo->tls_settings,
                 ];
                 break;
         }

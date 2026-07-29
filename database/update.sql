@@ -933,3 +933,14 @@ CREATE TABLE IF NOT EXISTS `v2_user_group_usage` (
   UNIQUE KEY `uniq_user_group_day` (`user_id`,`group_id`,`record_at`),
   KEY `idx_group_day` (`group_id`,`record_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='per-day ledger of paid add-on traffic and what it cost';
+-- anytls TLS layer. Until now the table could describe only plain TLS, which is
+-- why neither REALITY nor ECH could be configured for an anytls node however
+-- much the rest of the stack supported them. DEFAULT 1 is deliberate: every
+-- existing row keeps behaving exactly as it does today (anytls is always TLS -
+-- the v2node validator even forces tls=1 for it - so 0 is not a valid value).
+-- tls_settings mirrors v2_server_v2node.tls_settings so the two node types stay
+-- readable with one set of eyes, and so a later migration is a copy, not a
+-- translation. `tunnel_host` is deliberately untouched: the Hedioum relay node
+-- depends on it and v2node has no equivalent.
+ALTER TABLE `v2_server_anytls` ADD COLUMN `tls` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1=plain TLS, 2=REALITY';
+ALTER TABLE `v2_server_anytls` ADD COLUMN `tls_settings` text COMMENT 'REALITY keys and/or ECH config, same shape as v2_server_v2node.tls_settings';
