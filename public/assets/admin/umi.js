@@ -116976,24 +116976,47 @@ function load(){
   if(!mc)return;
   j(API+'/fetch').then(function(r){
     if(!r||!r.data){mc.innerHTML='<div style="padding:40px;text-align:center;color:#f5222d">'+esc((r&&r.message)||'خطا در بارگذاری')+'</div>';return;}
-    mc.innerHTML=render(r.data);
+    mc.innerHTML=gpWrap(render(r.data));
     wire();
   }).catch(function(e){mc.innerHTML='<div style="padding:40px;text-align:center;color:#f5222d">'+esc(e.message)+'</div>'});
 }
 
+/*__GP_INJECT_FIX__*/
+function gpHere(){return location.hash.indexOf('/group-pricing')>-1;}
+function gpBox(){return document.getElementById('main-container');}
+// The marker IS the latch. A boolean cannot know that React re-rendered over us;
+// the DOM can. load() wraps its own output in the same marker (patched below),
+// so a completed page counts as ours and does not trigger a re-injection.
+function gpWrap(html){return '<div data-gp-root="1">'+html+'</div>';}
+function gpMine(mc){return !!(mc&&mc.querySelector('[data-gp-root]'));}
+var gpBurst=0,gpWindow=0;
 function inject(){
-  if(injected)return;
-  if(location.hash.indexOf('/group-pricing')<0)return;
-  var mc=document.getElementById('main-container');
+  if(!gpHere()){injected=false;return;}
+  var mc=gpBox();
   if(!mc)return;
+  if(gpMine(mc))return;
+  // A budget, not a cooldown. React clobbers the container once, immediately
+  // after we write into it, so recovery has to be allowed to happen right away -
+  // a plain "wait 1.5s between injections" guard blocks exactly the case this
+  // patch exists to fix, which is how it was caught. Three tries per three
+  // seconds leaves the re-render case instant while still capping the one the
+  // marker cannot cover: a fetch that fails and leaves markup without a marker.
+  var now=Date.now();
+  if(now-gpWindow>3000){gpWindow=now;gpBurst=0;}
+  if(gpBurst>=3)return;
+  gpBurst++;
   injected=true;
-  mc.innerHTML='<div style="text-align:center;padding:60px;color:#999">⏳ در حال بارگذاری…</div>';
+  mc.innerHTML=gpWrap('<div style="text-align:center;padding:60px;color:#999">\u23f3 \u062f\u0631 \u062d\u0627\u0644 \u0628\u0627\u0631\u06af\u0630\u0627\u0631\u06cc\u2026</div>');
   load();
 }
+// Coalesce the burst of mutations one React render produces, so a re-render
+// costs a single re-injection rather than dozens.
+var gpTimer=null;
+function gpSoon(){if(gpTimer)return;gpTimer=setTimeout(function(){gpTimer=null;inject();},60);}
 new MutationObserver(function(){
-  if(location.hash.indexOf('/group-pricing')>-1){inject()}else{injected=false}
+  if(gpHere()){gpSoon()}else{injected=false}
 }).observe(document.body,{childList:true,subtree:true});
-window.addEventListener('hashchange',function(){setTimeout(inject,120)});
-setTimeout(inject,900);
+window.addEventListener('hashchange',function(){setTimeout(inject,120);setTimeout(inject,400);});
+setTimeout(inject,900);/*__GP_INJECT_FIX_END__*/
 console.log('\u{1F4B0} Group Pricing Admin v1.0');
 })();
