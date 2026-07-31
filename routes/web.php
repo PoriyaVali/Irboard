@@ -210,4 +210,9 @@ Route::prefix('api/v1/' . config('v2board.secure_path', 'admin') . '/smartbot')-
 Route::prefix('api/v1/' . config('v2board.secure_path', 'admin') . '/tunnel')->middleware('admin')->group(function () {
     Route::get('/status', 'V1\\Admin\\TunnelController@status');
     Route::post('/toggle', 'V1\\Admin\\TunnelController@toggle');
+    // Registration used to be SQL-only: the CLI that wrote v2_tunnel_map lived on
+    // a panel host that no longer exists, so a newly tunnelled node showed no
+    // status and could not be switched back until someone hand-wrote a row.
+    Route::post('/register', 'V1\\Admin\\TunnelController@register');
+    Route::post('/unregister', 'V1\\Admin\\TunnelController@unregister');
 });
