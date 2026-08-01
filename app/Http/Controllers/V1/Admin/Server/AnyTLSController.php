@@ -62,8 +62,22 @@ class AnyTLSController extends Controller
             // The borrowed site. REALITY completes a real handshake against it,
             // so it must be a reachable TLS 1.3 host - and it is what a censor
             // sees instead of our own domain.
+            //
+            // 🔴 It must also be a host our USERS can reach. This defaulted to
+            // www.microsoft.com, and Microsoft geo-blocks Iran: a TLS connection
+            // carrying that SNI from an Iranian network is a connection to a
+            // place the user is not supposed to be able to reach, and it does not
+            // survive. Every node created here inherited that, and the symptom
+            // was the worst kind - a prober got a flawless certificate chain, so
+            // the node looked perfect from outside, while no real client could
+            // connect. It cost most of a day to find.
+            //
+            // A CDN that Iranian websites themselves depend on is the safer
+            // class of choice: it cannot be filtered without breaking the local
+            // web, it does not sanction-block, and a long-lived connection to it
+            // is what every browser does all day anyway.
             if (empty($params['tls_settings']['server_name'])) {
-                $params['tls_settings']['server_name'] = 'www.microsoft.com';
+                $params['tls_settings']['server_name'] = 'cdnjs.cloudflare.com';
             }
             if (empty($params['tls_settings']['server_port'])) {
                 $params['tls_settings']['server_port'] = '443';

@@ -151,4 +151,34 @@ class AnytlsRealityVisibilityTest extends TestCase
             'the undefined-method call is back'
         );
     }
+
+    /**
+     * 🔴 The borrowed site must be reachable BY OUR USERS, not merely reachable.
+     *
+     * This defaulted to www.microsoft.com, and Microsoft geo-blocks Iran: a TLS
+     * connection carrying that SNI from an Iranian network goes somewhere the
+     * user is not supposed to be able to reach, and it does not survive. Every
+     * node created here inherited it, and the symptom was the worst kind - a
+     * prober received a flawless certificate chain, so the node looked perfect
+     * from outside, while no real client could connect.
+     */
+    public function testTheDefaultBorrowedSiteIsReachableFromIran(): void
+    {
+        $src = file_get_contents(app_path('Http/Controllers/V1/Admin/Server/AnyTLSController.php'));
+
+        $this->assertStringNotContainsString("= 'www.microsoft.com'", $src,
+            'the REALITY default is a host that geo-blocks Iran; no node created with it can be used');
+        $this->assertStringContainsString("= 'cdnjs.cloudflare.com'", $src,
+            'the REALITY server_name default is missing');
+
+        // The admin form suggests the same value, and a suggestion is followed.
+        foreach (['public/assets/admin/umi.js', 'public/assets/admin/umi-fa.js'] as $bundle) {
+            $path = base_path($bundle);
+            if (!is_file($path)) {
+                continue;
+            }
+            $this->assertStringNotContainsString('placeholder:"www.microsoft.com"', file_get_contents($path),
+                "$bundle still offers the unusable host as the hint an admin will copy");
+        }
+    }
 }
