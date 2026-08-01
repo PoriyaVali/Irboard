@@ -57,6 +57,11 @@ class Surfboard
                 $proxyGroup .= $item['name'] . ', ';
             }
             if ($item['type'] === 'anytls') {
+                // This client's anytls has no REALITY: the builder below emits
+                // only sni and skip-cert-verify, so a tls=2 node arrives with no
+                // key and the server refuses it, forwarding to the borrowed site.
+                // A node the client cannot use is worse present than absent.
+                if ((int)($item['tls'] ?? 1) === 2) continue;
                 // [Proxy]
                 $proxies .= self::buildAnyTLS($user['uuid'], $item);
                 // [Proxy Group]

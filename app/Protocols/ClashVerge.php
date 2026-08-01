@@ -62,6 +62,19 @@ class ClashVerge
                     $proxies[] = $item['name'];
                     break;
                 case 'anytls':
+                    // mihomo has no REALITY for anytls: its AnyTLSOption struct
+                    // offers only ShadowTLS/Restls/JLS, so `reality-opts` is not
+                    // a field it would read even if we emitted one. Handing a
+                    // REALITY node to this client produces a proxy that looks
+                    // correct in the list and can never connect - the server
+                    // refuses the unauthenticated ClientHello and forwards it to
+                    // the borrowed site, and the user just sees failure.
+                    //
+                    // Skipping it is what this file already does for a protocol
+                    // it cannot express; a node the client cannot use is worse
+                    // present than absent. Use VLESS+Vision+REALITY instead,
+                    // which this client does support in full.
+                    if ((int)($item['tls'] ?? 1) === 2) break;
                     $proxy[] = self::buildAnyTLS($user['uuid'], $item);
                     $proxies[] = $item['name'];
                     break;

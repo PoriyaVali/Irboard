@@ -54,7 +54,12 @@ class QuantumultX
                     $uri .= self::buildTrojan($uuid, $item);
                     break;
                 case 'anytls':
-                    $uri .= self::buildAnyTLS($uuid, $item);
+                    // 🔴 self::buildAnyTLS does not exist on this class and it has
+                    // no parent, so this was a fatal error for every QuantumultX
+                    // subscriber the moment an anytls node entered their list -
+                    // and the fleet is mostly anytls. Omitting the node is what
+                    // this switch already does for every protocol it has no case
+                    // for; a missing node beats a 500 for the whole subscription.
                     break;
             }
         }
