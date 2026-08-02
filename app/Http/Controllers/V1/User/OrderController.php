@@ -186,7 +186,16 @@ class OrderController extends Controller
         $orderService->setVipDiscount($user);
         $orderService->setOrderType($user);
 
-        if ($user->balance > 0 && $order->total_amount > 0 && !$user->is_staff) {
+        // Wallet balance is applied unless the client opts out. It defaults to
+        // ON, so the site and any older app that never sends the flag behave
+        // exactly as before; only a client that passes use_wallet=false (the app's
+        // "pay from wallet" toggle) skips it and pays the whole amount at the
+        // gateway. Accepts the common false spellings because it arrives as form
+        // input, not a typed bool.
+        $useWallet = $request->input('use_wallet', true);
+        $useWallet = !in_array($useWallet, [false, 0, '0', 'false', 'no'], true);
+
+        if ($useWallet && $user->balance > 0 && $order->total_amount > 0 && !$user->is_staff) {
             $remainingBalance = $user->balance - $order->total_amount;
             $userService = new UserService();
             if ($remainingBalance > 0) {
