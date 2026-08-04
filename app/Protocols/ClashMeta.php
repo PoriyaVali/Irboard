@@ -66,19 +66,10 @@ class ClashMeta
                     $proxies[] = $item['name'];
                     break;
                 case 'anytls':
-                    // mihomo has no REALITY for anytls: its AnyTLSOption struct
-                    // offers only ShadowTLS/Restls/JLS, so `reality-opts` is not
-                    // a field it would read even if we emitted one. Handing a
-                    // REALITY node to this client produces a proxy that looks
-                    // correct in the list and can never connect - the server
-                    // refuses the unauthenticated ClientHello and forwards it to
-                    // the borrowed site, and the user just sees failure.
-                    //
-                    // Skipping it is what this file already does for a protocol
-                    // it cannot express; a node the client cannot use is worse
-                    // present than absent. Use VLESS+Vision+REALITY instead,
-                    // which this client does support in full.
-                    if ((int)($item['tls'] ?? 1) === 2) break;
+                    // Our mihomo fork adds `reality-opts` to the anytls outbound
+                    // (upstream mihomo lacks it), so anytls+REALITY (tls=2) nodes
+                    // are now expressible and connect. buildAnyTLS emits the
+                    // reality-opts for them.
                     $proxy[] = self::buildAnyTLS($user['uuid'], $item);
                     $proxies[] = $item['name'];
                     break;
@@ -433,6 +424,13 @@ class ClashMeta
         $tlsSettings = $server['tls_settings'] ?? [];
         $array['sni'] = $server['server_name'] ?? ($tlsSettings['server_name'] ?? '');
         $array['skip-cert-verify'] = ($server['insecure'] ?? ($tlsSettings['allow_insecure'] ?? 0)) == 1 ? true : false;
+        // REALITY (tls=2): our mihomo fork reads reality-opts on anytls.
+        if ((int)($server['tls'] ?? 1) === 2) {
+            $array['reality-opts'] = [
+                'public-key' => $tlsSettings['public_key'] ?? '',
+                'short-id' => $tlsSettings['short_id'] ?? '',
+            ];
+        }
         return $array;
     }
 
