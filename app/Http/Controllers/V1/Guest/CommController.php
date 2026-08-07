@@ -60,7 +60,7 @@ class CommController extends Controller
                 if (!is_array($parsed) || !isset($parsed['settings']) || !is_array($parsed['settings'])) {
                     return null;
                 }
-                return [
+                $document = [
                     'version' => (int)($parsed['version'] ?? 1),
                     // Keys starting with _ are notes for whoever edits the file;
                     // they are not settings and never reach a device.
@@ -70,6 +70,14 @@ class CommController extends Controller
                         ARRAY_FILTER_USE_KEY
                     ),
                 ];
+                // Which settings to put back even for users who changed them.
+                // Only passed on when it says something, so a file that predates
+                // the option behaves as it always did.
+                $force = $parsed['force'] ?? false;
+                if ($force === true || (is_array($force) && $force !== [])) {
+                    $document['force'] = $force;
+                }
+                return $document;
             }
         );
 

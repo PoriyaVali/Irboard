@@ -24,10 +24,27 @@
     "a device is running.",
     "",
     "Every value below was checked against the app's own default, so publishing",
-    "this file as-is changes nothing until you actually edit something."
+    "this file as-is changes nothing until you actually edit something.",
+    "",
+    "'force' is the exception to 'the user keeps the last word'. Use it when a",
+    "setting has stopped working in the field and has to be corrected even on",
+    "phones whose owners already changed it:",
+    "",
+    "  false                          off - the normal, and the default",
+    "  [\"byedpi_args\", \"mh_stack\"]     put these back on every profile update",
+    "  true                           put ALL of the settings below back",
+    "",
+    "A forced setting is put back each time the user's profile updates - it is",
+    "not locked, so between updates they can still change it and see the change",
+    "take effect. Prefer the list form: 'true' overwrites every setting anyone",
+    "has ever chosen, including their core and their DNS, on every update. Keys",
+    "listed but not defined below are ignored, so a typo cannot wipe a setting",
+    "back to something nobody chose."
   ],
 
   "version": 1,
+
+  "force": false,
 
   "settings": {
     "_1_core": "which core the connect button drives: mihomo | singbox | mdns",
