@@ -16,6 +16,8 @@ class GuestRoute
             $router->match(['get', 'post'], '/payment/notify/{method}/{uuid}', 'V1\\Guest\\PaymentController@notify');
             // Comm
             $router->get ('/comm/config', 'V1\\Guest\\CommController@config');
+            // Doctor Mobile app settings; see resources/rules/default.dm-app.json
+            $router->get ('/comm/appConfig', 'V1\\Guest\\CommController@appConfig');
         });
     }
 }

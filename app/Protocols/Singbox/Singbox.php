@@ -26,12 +26,39 @@ class Singbox
         $this->config['outbounds'] = $outbounds;
         $user = $this->user;
 
-        return response(json_encode($this->config, JSON_UNESCAPED_SLASHES), 200)
+        $response = response(json_encode($this->config, JSON_UNESCAPED_SLASHES), 200)
             ->header('Content-Type', 'application/json')
             ->header('subscription-userinfo', "upload={$user['u']}; download={$user['d']}; total={$user['transfer_enable']}; expire={$user['expired_at']}")
             ->header('profile-update-interval', '24')
             ->header('Profile-Title', 'base64:' . base64_encode($appName))
             ->header('Content-Disposition', 'attachment; filename="' . $appName . '"');
+
+        if ($url = $this->appConfigUrl()) {
+            $response->header('dm-config-url', $url);
+        }
+
+        return $response;
+    }
+
+    /**
+     * Where the Doctor Mobile app can pick up its settings, or null if this
+     * panel does not publish any.
+     *
+     * Only announced when the file is actually there, so a panel that never
+     * set one up sends nothing and clients do not chase a URL that has no
+     * document behind it. Clients that do not know this header ignore it.
+     */
+    protected function appConfigUrl()
+    {
+        if (!file_exists(base_path('resources/rules/custom.dm-app.json'))
+            && !file_exists(base_path('resources/rules/default.dm-app.json'))
+        ) {
+            return null;
+        }
+        // The host the client just reached us on. A device that came in through
+        // a mirror or tunnel domain stays on it instead of being pointed at one
+        // it may not be able to reach.
+        return rtrim(request()->getSchemeAndHttpHost(), '/') . '/api/v1/guest/comm/appConfig';
     }
 
     protected function loadConfig()
