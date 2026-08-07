@@ -62,13 +62,7 @@ class CommController extends Controller
                 }
                 $document = [
                     'version' => (int)($parsed['version'] ?? 1),
-                    // Keys starting with _ are notes for whoever edits the file;
-                    // they are not settings and never reach a device.
-                    'settings' => (object)array_filter(
-                        $parsed['settings'],
-                        fn($key) => strncmp($key, '_', 1) !== 0,
-                        ARRAY_FILTER_USE_KEY
-                    ),
+                    'settings' => (object)$this->flattenAppSettings($parsed['settings']),
                 ];
                 // Which settings to put back even for users who changed them.
                 // Only passed on when it says something, so a file that predates
@@ -92,6 +86,43 @@ class CommController extends Controller
             ->json($document, 200, [], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
             ->header('Cache-Control', 'public, max-age=300')
             ->setEtag(md5($path . $mtime));
+    }
+
+    /**
+     * Turns the file's per-core sections into the flat map a device reads.
+     *
+     * The file groups settings by which core they belong to, because with
+     * ninety-odd of them a flat list gives an operator no way to tell a
+     * sing-box option from a mihomo one. Devices have no use for the grouping -
+     * every setting is looked up by its own name - so it is undone here, which
+     * also means the wire format never changed and older app builds are
+     * unaffected by how the file happens to be arranged.
+     *
+     * A flat file still works: anything that is not a section is taken as a
+     * setting. Keys starting with _ are notes for whoever edits the file, at
+     * either level, and never reach a device.
+     */
+    private function flattenAppSettings(array $settings)
+    {
+        $flat = [];
+        foreach ($settings as $key => $value) {
+            if (strncmp($key, '_', 1) === 0) {
+                continue;
+            }
+            // A section is a map; a setting's value may well be a list
+            // (mdns_resolvers), which is why the two are told apart by shape
+            // rather than by nesting depth.
+            if (is_array($value) && !array_is_list($value)) {
+                foreach ($value as $k => $v) {
+                    if (strncmp($k, '_', 1) !== 0) {
+                        $flat[$k] = $v;
+                    }
+                }
+                continue;
+            }
+            $flat[$key] = $value;
+        }
+        return $flat;
     }
 
     private function getEmailSuffix()
