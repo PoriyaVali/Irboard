@@ -51,7 +51,8 @@
 
   "force": false,
 
-  "settings":  {
+  "settings":
+  {
       "app": {
           "_": "Which core the connect button drives: mihomo | singbox | mdns.",
           "selected_core": "mihomo"
@@ -87,6 +88,18 @@
           "tun-implementation": "gvisor",
           "url-test-interval": 600,
           "use-xray-core-when-possible": false
+      },
+      "evasion": {
+          "_": "Anti-censorship levers of the sing-box core. mirage-enable is our own TLS-record fragmentation and mirage-offset 0 means the measured default; block-quic forces apps onto TCP, which helps where QUIC is throttled.",
+          "block-ads": false,
+          "block-quic": false,
+          "bypass-lan": false,
+          "enable-mux": false,
+          "mirage-enable": true,
+          "mirage-offset": 0,
+          "mux-max-streams": 8,
+          "mux-padding": false,
+          "mux-protocol": "h2mux"
       },
       "mihomo": {
           "_": "The mihomo core. Every key starts with mh_.",
@@ -140,6 +153,7 @@
           "mh_social_tolerance": 150,
           "mh_stack": "gvisor",
           "mh_tcp_concurrent": true,
+          "mh_tun_gso": false,
           "mh_udp_timeout": 5,
           "mh_unified_delay": true
       },
@@ -163,5 +177,4 @@
           "byedpi_enabled": false,
           "byedpi_port": 10808
       }
-  }
-}
+  }}
