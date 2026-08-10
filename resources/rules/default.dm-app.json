@@ -171,7 +171,7 @@
           "mh_use_system_hosts": false
       },
       "mdns": {
-          "_": "The MasterDnsVPN DNS-tunnel core. mdns_max_resolvers bounds how many scanned resolvers one connect measures - the core MTU-tests every one it is given. mdns_dns_cache_* stop a resolved address outliving the tunnel server it came from.",
+          "_": "The MasterDnsVPN DNS-tunnel core. mdns_max_resolvers 0 measures every scanned resolver; set a number only where a full scan takes too long. mdns_dns_cache_* stop a resolved address outliving the tunnel server it came from.",
           "mdns_adaptive": true,
           "mdns_balancing": 3,
           "mdns_compression": 1,
@@ -180,7 +180,7 @@
           "mdns_listen_port": 18000,
           "mdns_log_level": "INFO",
           "mdns_max_down_mtu": 256,
-          "mdns_max_resolvers": 60,
+          "mdns_max_resolvers": 0,
           "mdns_max_up_mtu": 100,
           "mdns_packet_dup": 4,
           "mdns_racing": 3,
