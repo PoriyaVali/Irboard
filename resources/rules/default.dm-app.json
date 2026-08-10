@@ -90,7 +90,7 @@
           "use-xray-core-when-possible": false
       },
       "evasion": {
-          "_": "Anti-censorship levers of the sing-box core. mirage-enable is our own TLS-record fragmentation and mirage-offset 0 means the measured default; block-quic forces apps onto TCP, which helps where QUIC is throttled.",
+          "_": "Anti-censorship levers of the sing-box core. mirage-* is our own TLS-record fragmentation (offset 0 = the measured default); block-quic forces apps onto TCP.",
           "block-ads": false,
           "block-quic": false,
           "bypass-lan": false,
@@ -102,7 +102,7 @@
           "mux-protocol": "h2mux"
       },
       "mihomo": {
-          "_": "The mihomo core. Every key starts with mh_. mh_block_quic_social rejects Meta/Instagram QUIC so those apps fall back to TCP instead of stalling; mh_fake_ip_filter_mode whitelist inverts fake-ip, which is what to try when fake-ip itself is suspect.",
+          "_": "The mihomo core. mh_block_quic_social rejects Meta QUIC so Instagram falls back to TCP instead of stalling. mh_health_check_lazy stops re-testing every node while the phone is idle. mh_fake_ip_filter_mode whitelist inverts fake-ip.",
           "mh_auto_interval": 120,
           "mh_auto_show": true,
           "mh_auto_tolerance": 50,
@@ -141,6 +141,7 @@
           "mh_hash_lazy": false,
           "mh_hash_show": false,
           "mh_hash_timeout": 5000,
+          "mh_health_check_lazy": true,
           "mh_ipv6": false,
           "mh_ipv6_timeout": 0,
           "mh_iran_bypass": true,
@@ -169,7 +170,7 @@
           "mh_use_system_hosts": false
       },
       "mdns": {
-          "_": "The MasterDnsVPN DNS-tunnel core. Every key starts with mdns_.",
+          "_": "The MasterDnsVPN DNS-tunnel core.",
           "mdns_adaptive": true,
           "mdns_balancing": 3,
           "mdns_compression": 1,
