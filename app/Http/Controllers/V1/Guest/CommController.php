@@ -56,7 +56,7 @@ class CommController extends Controller
             'dm_app_config_' . md5($path) . '_' . $mtime,
             3600,
             function () use ($path) {
-                $parsed = json_decode(file_get_contents($path), true);
+                $parsed = json_decode($this->stripJsonComments(file_get_contents($path)), true);
                 if (!is_array($parsed) || !isset($parsed['settings']) || !is_array($parsed['settings'])) {
                     return null;
                 }
@@ -86,6 +86,66 @@ class CommController extends Controller
             ->json($document, 200, [], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
             ->header('Cache-Control', 'public, max-age=300')
             ->setEtag(md5($path . $mtime));
+    }
+
+    /**
+     * Removes // and # comments so the settings file can carry notes.
+     *
+     * JSON has no comments, and this file is worth annotating: ninety-odd
+     * values whose accepted forms are not guessable from the value alone. The
+     * only thing that reads it is this controller, so it can allow them.
+     *
+     * Comments are stripped while tracking whether we are inside a string,
+     * because half the values contain the very characters being looked for -
+     * every http:// URL has a //, and stripping from there would silently
+     * truncate the value rather than fail loudly.
+     */
+    private function stripJsonComments($json)
+    {
+        $out = '';
+        $len = strlen($json);
+        $inString = false;
+        for ($i = 0; $i < $len; $i++) {
+            $ch = $json[$i];
+
+            if ($inString) {
+                $out .= $ch;
+                if ($ch === '\\' && $i + 1 < $len) {
+                    // An escaped character cannot end the string, and that
+                    // includes an escaped backslash before a closing quote.
+                    $out .= $json[++$i];
+                } elseif ($ch === '"') {
+                    $inString = false;
+                }
+                continue;
+            }
+
+            if ($ch === '"') {
+                $inString = true;
+                $out .= $ch;
+                continue;
+            }
+
+            $isLineComment = $ch === '#' || ($ch === '/' && $i + 1 < $len && $json[$i + 1] === '/');
+            if ($isLineComment) {
+                while ($i < $len && $json[$i] !== "\n") {
+                    $i++;
+                }
+                // Keep the newline: it is not part of the comment, and dropping
+                // it would join two lines that were never meant to be one.
+                $out .= "\n";
+                continue;
+            }
+
+            if ($ch === '/' && $i + 1 < $len && $json[$i + 1] === '*') {
+                $end = strpos($json, '*/', $i + 2);
+                $i = $end === false ? $len : $end + 1;
+                continue;
+            }
+
+            $out .= $ch;
+        }
+        return $out;
     }
 
     /**

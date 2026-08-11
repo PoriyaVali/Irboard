@@ -19,11 +19,12 @@
     "url-test-interval in seconds, mdns_compression as its number. A value of",
     "the wrong type is skipped rather than applied, and unknown keys are",
     "ignored - so an older app build simply skips what it does not have yet.",
-    "Every setting is preceded by a _<name> line listing what it accepts -",
-    "the choices for a fixed set, the unit for a number. Those, and anything",
-    "else starting with _, are notes to whoever edits this file: they are",
-    "stripped before the document is sent and never reach a device, so the",
-    "bytes on the wire are the same with or without them.",
+    "Each setting carries a // comment saying what it accepts - the choices",
+    "for a fixed set, the unit for a number. // and # comments are allowed",
+    "anywhere here even though JSON has none, because the only thing that",
+    "reads this file is the panel, which strips them. So does anything whose",
+    "name starts with _. None of it reaches a device: the bytes on the wire",
+    "are the same with or without.",
     "",
     "Raise version whenever you edit, so it is obvious in logs which document",
     "a device is running.",
@@ -58,264 +59,142 @@
   {
       "app": {
           "_": "Which core the connect button drives.",
-          "_selected_core": "mihomo | singbox | mdns",
-          "selected_core": "mihomo"
+          "selected_core": "mihomo"   // mihomo | singbox | mdns
       },
       "sing-box": {
           "_": "The sing-box core. Dashed names, matching sing-box own options.",
-          "_allow-connection-from-lan": "true | false",
-          "allow-connection-from-lan": false,
-          "_balancer-strategy": "round-robin | consistent-hashing | sticky-sessions",
-          "balancer-strategy": "round-robin",
-          "_clash-api-port": "number (port)",
-          "clash-api-port": 16756,
-          "_connection-test-url": "text",
-          "connection-test-url": "http://captive.apple.com/hotspot-detect.html",
-          "_direct-dns-address": "local | udp://1.1.1.1 | udp://223.5.5.5 | tcp://1.1.1.1 | 8.8.8.8",
-          "direct-dns-address": "1.1.1.1",
-          "_direct-dns-domain-strategy": "\"\" | prefer_ipv6 | prefer_ipv4 | ipv4_only | ipv6_only",
-          "direct-dns-domain-strategy": "",
-          "_direct-port": "number (port)",
-          "direct-port": 12337,
-          "_enable-tls-fragment": "true | false",
-          "enable-tls-fragment": false,
-          "_enable-tls-mixed-sni-case": "true | false",
-          "enable-tls-mixed-sni-case": false,
-          "_enable-tls-padding": "true | false",
-          "enable-tls-padding": false,
-          "_fragment-packets": "tlshello | 1-3 | 1-2",
-          "fragment-packets": "tlshello",
-          "_ipv6-mode": "ipv4_only | prefer_ipv4 | prefer_ipv6 | ipv6_only",
-          "ipv6-mode": "ipv4_only",
-          "_log-level": "trace | debug | info | warn | error | fatal | panic",
-          "log-level": "warn",
-          "_mixed-port": "number (port)",
-          "mixed-port": 12334,
-          "_mtu": "number (bytes)",
-          "mtu": 9000,
-          "_redirect-port": "number (port)",
-          "redirect-port": 12336,
-          "_region": "ir | cn | ru | af | id | tr | br | other",
-          "region": "ir",
-          "_remote-dns-address": "local | tcp://8.8.8.8 | tcp://1.1.1.1 | https://1.1.1.1/dns-query | tcp://4.4.2.2",
-          "remote-dns-address": "tcp://8.8.8.8",
-          "_remote-dns-domain-strategy": "\"\" | prefer_ipv6 | prefer_ipv4 | ipv4_only | ipv6_only",
-          "remote-dns-domain-strategy": "",
-          "_resolve-destination": "true | false",
-          "resolve-destination": false,
-          "_service-mode": "proxy | system-proxy | vpn | vpn-service",
-          "service-mode": "system-proxy",
-          "_strict-route": "true | false",
-          "strict-route": true,
-          "_tls-fragment-size": "range \"min-max\", e.g. 10-30",
-          "tls-fragment-size": "10-30",
-          "_tls-fragment-sleep": "range \"min-max\", e.g. 2-8",
-          "tls-fragment-sleep": "2-8",
-          "_tls-padding-size": "range \"min-max\", e.g. 1-1500",
-          "tls-padding-size": "1-1500",
-          "_tproxy-port": "number (port)",
-          "tproxy-port": 12335,
-          "_tun-implementation": "mixed | system | gvisor",
-          "tun-implementation": "gvisor",
-          "_url-test-interval": "number (seconds)",
-          "url-test-interval": 600,
-          "_use-xray-core-when-possible": "true | false",
-          "use-xray-core-when-possible": false
+          "allow-connection-from-lan": false,   // true | false
+          "balancer-strategy": "round-robin",   // round-robin | consistent-hashing | sticky-sessions
+          "clash-api-port": 16756,   // number (port)
+          "connection-test-url": "http://captive.apple.com/hotspot-detect.html",   // text
+          "direct-dns-address": "1.1.1.1",   // local | udp://1.1.1.1 | udp://223.5.5.5 | tcp://1.1.1.1 | 8.8.8.8
+          "direct-dns-domain-strategy": "",   // "" | prefer_ipv6 | prefer_ipv4 | ipv4_only | ipv6_only
+          "direct-port": 12337,   // number (port)
+          "enable-tls-fragment": false,   // true | false
+          "enable-tls-mixed-sni-case": false,   // true | false
+          "enable-tls-padding": false,   // true | false
+          "fragment-packets": "tlshello",   // tlshello | 1-3 | 1-2
+          "ipv6-mode": "ipv4_only",   // ipv4_only | prefer_ipv4 | prefer_ipv6 | ipv6_only
+          "log-level": "warn",   // trace | debug | info | warn | error | fatal | panic
+          "mixed-port": 12334,   // number (port)
+          "mtu": 9000,   // number (bytes)
+          "redirect-port": 12336,   // number (port)
+          "region": "ir",   // ir | cn | ru | af | id | tr | br | other
+          "remote-dns-address": "tcp://8.8.8.8",   // local | tcp://8.8.8.8 | tcp://1.1.1.1 | https://1.1.1.1/dns-query | tcp://4.4.2.2
+          "remote-dns-domain-strategy": "",   // "" | prefer_ipv6 | prefer_ipv4 | ipv4_only | ipv6_only
+          "resolve-destination": false,   // true | false
+          "service-mode": "system-proxy",   // proxy | system-proxy | vpn | vpn-service
+          "strict-route": true,   // true | false
+          "tls-fragment-size": "10-30",   // range "min-max", e.g. 10-30
+          "tls-fragment-sleep": "2-8",   // range "min-max", e.g. 2-8
+          "tls-padding-size": "1-1500",   // range "min-max", e.g. 1-1500
+          "tproxy-port": 12335,   // number (port)
+          "tun-implementation": "gvisor",   // mixed | system | gvisor
+          "url-test-interval": 600,   // number (seconds)
+          "use-xray-core-when-possible": false   // true | false
       },
       "evasion": {
           "_": "Anti-censorship levers of the sing-box core. mirage-* is our own TLS-record fragmentation.",
-          "_block-ads": "true | false",
-          "block-ads": false,
-          "_block-quic": "true | false",
-          "block-quic": false,
-          "_bypass-lan": "true | false",
-          "bypass-lan": false,
-          "_enable-mux": "true | false",
-          "enable-mux": false,
-          "_mirage-enable": "true | false",
-          "mirage-enable": true,
-          "_mirage-offset": "bytes kept in the small first record; 0 = the measured default (5)",
-          "mirage-offset": 0,
-          "_mux-max-streams": "number (streams)",
-          "mux-max-streams": 8,
-          "_mux-padding": "true | false",
-          "mux-padding": false,
-          "_mux-protocol": "h2mux | smux | yamux",
-          "mux-protocol": "h2mux"
+          "block-ads": false,   // true | false
+          "block-quic": false,   // true | false
+          "bypass-lan": false,   // true | false
+          "enable-mux": false,   // true | false
+          "mirage-enable": true,   // true | false
+          "mirage-offset": 0,   // bytes kept in the small first record; 0 = the measured default (5)
+          "mux-max-streams": 8,   // number (streams)
+          "mux-padding": false,   // true | false
+          "mux-protocol": "h2mux"   // h2mux | smux | yamux
       },
       "mihomo": {
           "_": "The mihomo core. mh_block_quic_social stops Instagram stalling on QUIC; mh_store_fake_ip keeps cached fake addresses meaningful after a reconnect.",
-          "_mh_auto_interval": "number (seconds)",
-          "mh_auto_interval": 120,
-          "_mh_auto_show": "true | false",
-          "mh_auto_show": true,
-          "_mh_auto_tolerance": "number (ms)",
-          "mh_auto_tolerance": 50,
-          "_mh_block_ads": "true | false",
-          "mh_block_ads": true,
-          "_mh_block_quic_all": "true | false",
-          "mh_block_quic_all": false,
-          "_mh_block_quic_social": "true | false",
-          "mh_block_quic_social": true,
-          "_mh_block_quic_yt": "true | false",
-          "mh_block_quic_yt": true,
-          "_mh_custom_rules": "list of \"type|domain|action\"",
-          "mh_custom_rules": [],
-          "_mh_default_auto": "true | false",
-          "mh_default_auto": true,
-          "_mh_default_ns": "plain IP (bootstrap)",
-          "mh_default_ns": "8.8.8.8",
-          "_mh_direct_ns": "plain IP (DNS for DIRECT traffic)",
-          "mh_direct_ns": "178.22.122.100",
-          "_mh_disable_keep_alive": "true | false",
-          "mh_disable_keep_alive": false,
-          "_mh_dns_cache_algo": "\"\" (core default) | lru | arc",
-          "mh_dns_cache_algo": "",
-          "_mh_dns_cache_size": "records; 0 = core default",
-          "mh_dns_cache_size": 0,
-          "_mh_dns_fallback": "true | false",
-          "mh_dns_fallback": true,
-          "_mh_dns_mode": "fakeip | redir",
-          "mh_dns_mode": "fakeip",
-          "_mh_dns_respect_rules": "true | false",
-          "mh_dns_respect_rules": true,
-          "_mh_dns_server": "IP or host; tcp:// is added when bare",
-          "mh_dns_server": "8.8.8.8",
-          "_mh_dns_server2": "IP or host, or \"\" for none",
-          "mh_dns_server2": "1.1.1.1",
-          "_mh_ein": "true | false",
-          "mh_ein": false,
-          "_mh_fake_ip_filter_mode": "blacklist | whitelist",
-          "mh_fake_ip_filter_mode": "blacklist",
-          "_mh_fake_ip_ttl": "seconds; 0 = core default",
-          "mh_fake_ip_ttl": 0,
-          "_mh_fakeip_filter": "true | false",
-          "mh_fakeip_filter": true,
-          "_mh_fb_disable_udp": "true | false",
-          "mh_fb_disable_udp": false,
-          "_mh_fb_interval": "number (seconds)",
-          "mh_fb_interval": 300,
-          "_mh_fb_lazy": "true | false",
-          "mh_fb_lazy": false,
-          "_mh_fb_show": "true | false",
-          "mh_fb_show": false,
-          "_mh_fb_timeout": "number (ms)",
-          "mh_fb_timeout": 5000,
-          "_mh_find_process": "off | strict | always",
-          "mh_find_process": "off",
-          "_mh_fp_random": "true | false",
-          "mh_fp_random": true,
-          "_mh_geo_auto_update": "true | false",
-          "mh_geo_auto_update": false,
-          "_mh_geo_update_interval": "number (hours)",
-          "mh_geo_update_interval": 24,
-          "_mh_geodata_mode": "true | false",
-          "mh_geodata_mode": false,
-          "_mh_global_ua": "free text; \"\" = core default",
-          "mh_global_ua": "",
-          "_mh_hash_interval": "number (seconds)",
-          "mh_hash_interval": 300,
-          "_mh_hash_lazy": "true | false",
-          "mh_hash_lazy": false,
-          "_mh_hash_show": "true | false",
-          "mh_hash_show": false,
-          "_mh_hash_timeout": "number (ms)",
-          "mh_hash_timeout": 5000,
-          "_mh_health_check_lazy": "true | false",
-          "mh_health_check_lazy": true,
-          "_mh_ipv6": "true | false",
-          "mh_ipv6": false,
-          "_mh_ipv6_timeout": "ms; 0 = core default",
-          "mh_ipv6_timeout": 0,
-          "_mh_iran_bypass": "true | false",
-          "mh_iran_bypass": true,
-          "_mh_keep_alive": "number (seconds)",
-          "mh_keep_alive": 15,
-          "_mh_keep_alive_idle": "number (seconds)",
-          "mh_keep_alive_idle": 15,
-          "_mh_lb_interval": "number (seconds)",
-          "mh_lb_interval": 300,
-          "_mh_lb_lazy": "true | false",
-          "mh_lb_lazy": false,
-          "_mh_lb_show": "true | false",
-          "mh_lb_show": false,
-          "_mh_lb_strategy": "round-robin | sticky-sessions",
-          "mh_lb_strategy": "round-robin",
-          "_mh_lb_timeout": "number (ms)",
-          "mh_lb_timeout": 5000,
-          "_mh_log_level": "silent | error | warning | info | debug",
-          "mh_log_level": "warning",
-          "_mh_mode": "rule | global | direct",
-          "mh_mode": "rule",
-          "_mh_mtu": "number (bytes)",
-          "mh_mtu": 9000,
-          "_mh_prefer_h3": "true | false",
-          "mh_prefer_h3": false,
-          "_mh_quic_no_ecn": "true | false",
-          "mh_quic_no_ecn": false,
-          "_mh_quic_no_gso": "true | false",
-          "mh_quic_no_gso": false,
-          "_mh_sniffer": "true | false",
-          "mh_sniffer": true,
-          "_mh_social_interval": "number (seconds)",
-          "mh_social_interval": 120,
-          "_mh_social_show": "true | false",
-          "mh_social_show": true,
-          "_mh_social_tolerance": "number (ms)",
-          "mh_social_tolerance": 150,
-          "_mh_stack": "gvisor | system | mixed",
-          "mh_stack": "gvisor",
-          "_mh_store_fake_ip": "true | false",
-          "mh_store_fake_ip": true,
-          "_mh_tcp_concurrent": "true | false",
-          "mh_tcp_concurrent": true,
-          "_mh_tun_gso": "true | false",
-          "mh_tun_gso": false,
-          "_mh_udp_timeout": "number (seconds)",
-          "mh_udp_timeout": 5,
-          "_mh_unified_delay": "true | false",
-          "mh_unified_delay": true,
-          "_mh_use_system_hosts": "true | false",
-          "mh_use_system_hosts": false
+          "mh_auto_interval": 120,   // number (seconds)
+          "mh_auto_show": true,   // true | false
+          "mh_auto_tolerance": 50,   // number (ms)
+          "mh_block_ads": true,   // true | false
+          "mh_block_quic_all": false,   // true | false
+          "mh_block_quic_social": true,   // true | false
+          "mh_block_quic_yt": true,   // true | false
+          "mh_custom_rules": [],   // list of "type|domain|action"
+          "mh_default_auto": true,   // true | false
+          "mh_default_ns": "8.8.8.8",   // plain IP (bootstrap)
+          "mh_direct_ns": "178.22.122.100",   // plain IP (DNS for DIRECT traffic)
+          "mh_disable_keep_alive": false,   // true | false
+          "mh_dns_cache_algo": "",   // "" (core default) | lru | arc
+          "mh_dns_cache_size": 0,   // records; 0 = core default
+          "mh_dns_fallback": true,   // true | false
+          "mh_dns_mode": "fakeip",   // fakeip | redir
+          "mh_dns_respect_rules": true,   // true | false
+          "mh_dns_server": "8.8.8.8",   // IP or host; tcp:// is added when bare
+          "mh_dns_server2": "1.1.1.1",   // IP or host, or "" for none
+          "mh_ein": false,   // true | false
+          "mh_fake_ip_filter_mode": "blacklist",   // blacklist | whitelist
+          "mh_fake_ip_ttl": 0,   // seconds; 0 = core default
+          "mh_fakeip_filter": true,   // true | false
+          "mh_fb_disable_udp": false,   // true | false
+          "mh_fb_interval": 300,   // number (seconds)
+          "mh_fb_lazy": false,   // true | false
+          "mh_fb_show": false,   // true | false
+          "mh_fb_timeout": 5000,   // number (ms)
+          "mh_find_process": "off",   // off | strict | always
+          "mh_fp_random": true,   // true | false
+          "mh_geo_auto_update": false,   // true | false
+          "mh_geo_update_interval": 24,   // number (hours)
+          "mh_geodata_mode": false,   // true | false
+          "mh_global_ua": "",   // free text; "" = core default
+          "mh_hash_interval": 300,   // number (seconds)
+          "mh_hash_lazy": false,   // true | false
+          "mh_hash_show": false,   // true | false
+          "mh_hash_timeout": 5000,   // number (ms)
+          "mh_health_check_lazy": true,   // true | false
+          "mh_ipv6": false,   // true | false
+          "mh_ipv6_timeout": 0,   // ms; 0 = core default
+          "mh_iran_bypass": true,   // true | false
+          "mh_keep_alive": 15,   // number (seconds)
+          "mh_keep_alive_idle": 15,   // number (seconds)
+          "mh_lb_interval": 300,   // number (seconds)
+          "mh_lb_lazy": false,   // true | false
+          "mh_lb_show": false,   // true | false
+          "mh_lb_strategy": "round-robin",   // round-robin | sticky-sessions
+          "mh_lb_timeout": 5000,   // number (ms)
+          "mh_log_level": "warning",   // silent | error | warning | info | debug
+          "mh_mode": "rule",   // rule | global | direct
+          "mh_mtu": 9000,   // number (bytes)
+          "mh_prefer_h3": false,   // true | false
+          "mh_quic_no_ecn": false,   // true | false
+          "mh_quic_no_gso": false,   // true | false
+          "mh_sniffer": true,   // true | false
+          "mh_social_interval": 120,   // number (seconds)
+          "mh_social_show": true,   // true | false
+          "mh_social_tolerance": 150,   // number (ms)
+          "mh_stack": "gvisor",   // gvisor | system | mixed
+          "mh_store_fake_ip": true,   // true | false
+          "mh_tcp_concurrent": true,   // true | false
+          "mh_tun_gso": false,   // true | false
+          "mh_udp_timeout": 5,   // number (seconds)
+          "mh_unified_delay": true,   // true | false
+          "mh_use_system_hosts": false   // true | false
       },
       "mdns": {
           "_": "The MasterDnsVPN DNS-tunnel core.",
-          "_mdns_adaptive": "true | false",
-          "mdns_adaptive": true,
-          "_mdns_balancing": "1..8 (strategy id)",
-          "mdns_balancing": 3,
-          "_mdns_compression": "0 off | 1 zstd | 2 lz4 | 3 zlib",
-          "mdns_compression": 1,
-          "_mdns_dns_cache_persist": "true | false",
-          "mdns_dns_cache_persist": false,
-          "_mdns_dns_cache_ttl": "seconds",
-          "mdns_dns_cache_ttl": 60,
-          "_mdns_listen_port": "local SOCKS5 port",
-          "mdns_listen_port": 18000,
-          "_mdns_log_level": "INFO | DEBUG | WARN | ERROR",
-          "mdns_log_level": "INFO",
-          "_mdns_max_down_mtu": "cap on the discovered download MTU",
-          "mdns_max_down_mtu": 256,
-          "_mdns_max_resolvers": "how many one connect measures; 0 = all of them",
-          "mdns_max_resolvers": 0,
-          "_mdns_max_up_mtu": "cap on the discovered upload MTU",
-          "mdns_max_up_mtu": 100,
-          "_mdns_packet_dup": "1..10",
-          "mdns_packet_dup": 4,
-          "_mdns_racing": "1..5",
-          "mdns_racing": 3,
-          "_mdns_resolver_mode": "direct | recursive",
-          "mdns_resolver_mode": "recursive",
-          "_mdns_resolvers": "list of \"ip\" or \"ip:port\"",
-          "mdns_resolvers": []
+          "mdns_adaptive": true,   // true | false
+          "mdns_balancing": 3,   // 1..8 (strategy id)
+          "mdns_compression": 1,   // 0 off | 1 zstd | 2 lz4 | 3 zlib
+          "mdns_dns_cache_persist": false,   // true | false
+          "mdns_dns_cache_ttl": 60,   // seconds
+          "mdns_listen_port": 18000,   // local SOCKS5 port
+          "mdns_log_level": "INFO",   // INFO | DEBUG | WARN | ERROR
+          "mdns_max_down_mtu": 256,   // cap on the discovered download MTU
+          "mdns_max_resolvers": 0,   // how many one connect measures; 0 = all of them
+          "mdns_max_up_mtu": 100,   // cap on the discovered upload MTU
+          "mdns_packet_dup": 4,   // 1..10
+          "mdns_racing": 3,   // 1..5
+          "mdns_resolver_mode": "recursive",   // direct | recursive
+          "mdns_resolvers": []   // list of "ip" or "ip:port"
       },
       "anti-dpi": {
           "_": "The byedpi helper, shared by the sing-box and mihomo cores.",
-          "_byedpi_args": "ciadpi arguments; --dm = our auto chain",
-          "byedpi_args": "--dm",
-          "_byedpi_enabled": "true | false",
-          "byedpi_enabled": false,
-          "_byedpi_port": "local port",
-          "byedpi_port": 10808
+          "byedpi_args": "--dm",   // ciadpi arguments; --dm = our auto chain
+          "byedpi_enabled": false,   // true | false
+          "byedpi_port": 10808   // local port
       }
   }}
