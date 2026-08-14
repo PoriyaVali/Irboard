@@ -944,3 +944,7 @@ CREATE TABLE IF NOT EXISTS `v2_user_group_usage` (
 -- depends on it and v2node has no equivalent.
 ALTER TABLE `v2_server_anytls` ADD COLUMN `tls` tinyint(1) NOT NULL DEFAULT '1' COMMENT '1=plain TLS, 2=REALITY';
 ALTER TABLE `v2_server_anytls` ADD COLUMN `tls_settings` text COMMENT 'REALITY keys and/or ECH config, same shape as v2_server_v2node.tls_settings';
+
+
+ALTER TABLE `v2_server_group`
+ADD `addon_note` varchar(500) COLLATE 'utf8mb4_general_ci' NULL COMMENT 'what this add-on is, shown to the customer in the app' AFTER `price_per_gb`;

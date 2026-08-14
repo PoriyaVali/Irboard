@@ -78,6 +78,10 @@ class AddonController extends Controller
                 'group_id'     => (int)$gid,
                 'name'         => $group->name,
                 'price_per_gb' => $price,
+                // What this tier is, in the operator own words. Empty means
+                // they have not written one and the app uses its own wording,
+                // so a panel that never sets this behaves as it always did.
+                'note'         => (string)($group->addon_note ?? ''),
                 'min_balance'  => $need,
                 'active'       => $on,
                 // An admin's free grant: served in full, never billed, and not

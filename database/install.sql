@@ -462,6 +462,7 @@ CREATE TABLE `v2_server_group` (
   `name` varchar(255) NOT NULL,
   `addon_enabled` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'sellable as a paid add-on on top of a plan',
   `price_per_gb` int(11) NOT NULL DEFAULT '0' COMMENT 'wallet cost per GB, same unit as v2_user.balance',
+  `addon_note` varchar(500) DEFAULT NULL COMMENT 'what this add-on is, shown to the customer in the app; NULL falls back to the app own wording',
   `created_at` int(11) NOT NULL,
   `updated_at` int(11) NOT NULL,
   PRIMARY KEY (`id`)

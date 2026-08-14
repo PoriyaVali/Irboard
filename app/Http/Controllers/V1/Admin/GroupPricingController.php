@@ -18,7 +18,7 @@ class GroupPricingController extends Controller
 {
     public function fetch(Request $request)
     {
-        $groups = ServerGroup::orderBy('id')->get(['id', 'name', 'addon_enabled', 'price_per_gb']);
+        $groups = ServerGroup::orderBy('id')->get(['id', 'name', 'addon_enabled', 'price_per_gb', 'addon_note']);
 
         // How much each group has carried and earned, so the price can be set
         // against something real rather than guessed.
@@ -49,6 +49,7 @@ class GroupPricingController extends Controller
                 'addon_enabled' => (bool)$g->addon_enabled,
                 'price_per_gb'  => (int)$g->price_per_gb,
                 'min_balance'   => (int)$g->price_per_gb,   // one GB's worth
+                'addon_note'    => (string)($g->addon_note ?? ''),
                 'nodes'         => $nodeCounts[$g->id] ?? 0,
                 'subscribers'   => (int)($holders[$g->id] ?? 0),
                 'gb_30d'        => $row ? round($row->bytes / AddonBillingService::BYTES_PER_GB, 2) : 0,
@@ -79,6 +80,13 @@ class GroupPricingController extends Controller
             }
             $group->price_per_gb = $price;
         }
+        if ($request->exists('addon_note')) {
+            // Trimmed to the column, not rejected: an operator writing a long
+            // description should get a shortened one rather than an error and
+            // a lost draft.
+            $note = trim((string)$request->input('addon_note'));
+            $group->addon_note = $note === '' ? null : mb_substr($note, 0, 500);
+        }
         $group->updated_at = time();
         $group->save();
 
@@ -87,6 +95,7 @@ class GroupPricingController extends Controller
             'name'          => $group->name,
             'addon_enabled' => (bool)$group->addon_enabled,
             'price_per_gb'  => (int)$group->price_per_gb,
+            'addon_note'    => (string)($group->addon_note ?? ''),
         ]]);
     }
 
