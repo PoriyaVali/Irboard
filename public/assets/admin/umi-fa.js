@@ -116901,7 +116901,10 @@ function render(rows){
         +'<input type="checkbox" class="gp-on" data-id="'+g.id+'"'+(on?' checked':'')+'></td>'
       +'<td style="padding:10px">'
         +'<input class="ant-input ant-input-sm gp-price" data-id="'+g.id+'" value="'+g.price_per_gb+'" '
-        +'style="width:120px;direction:ltr;text-align:center"> <span style="font-size:11px;color:#999">تومان / گیگ</span></td>'
+        +'style="width:120px;direction:ltr;text-align:center"> <span style="font-size:11px;color:#999">تومان / گیگ</span>'
+        +'<div style="margin-top:8px"><textarea class="ant-input ant-input-sm gp-note" data-id="'+g.id+'" rows="2" maxlength="500" '
+          +'placeholder="توضیحی که کاربر در اپ می‌بیند؛ خالی یعنی متنِ پیش‌فرضِ اپ" '
+          +'style="width:100%;font-size:12px">'+esc(g.addon_note||'')+'</textarea></div></td>'
       +'<td style="padding:10px;font-size:12px;color:#666">'+(g.price_per_gb>0?fmt(g.min_balance)+' تومان':'—')+'</td>'
       +'<td style="padding:10px;text-align:center">'+g.subscribers+'</td>'
       +'<td style="padding:10px;font-size:12px">'+g.gb_30d+' گیگ<div style="color:#52c41a">'+fmt(g.earned_30d)+' تومان</div></td>'
@@ -116940,9 +116943,11 @@ function wire(){
       var id=b.getAttribute('data-id');
       var on=document.querySelector('.gp-on[data-id="'+id+'"]').checked?1:0;
       var price=parseInt(document.querySelector('.gp-price[data-id="'+id+'"]').value,10)||0;
+      var nEl=document.querySelector('.gp-note[data-id="'+id+'"]');
+      var note=nEl?nEl.value:'';
       msg('در حال ذخیره…');
       j(API+'/save',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({id:parseInt(id,10),addon_enabled:on,price_per_gb:price})})
+        body:JSON.stringify({id:parseInt(id,10),addon_enabled:on,price_per_gb:price,addon_note:note})})
         .then(function(r){
           if(r&&r.data){msg('ذخیره شد: '+r.data.name+' — '+(r.data.addon_enabled?fmt(r.data.price_per_gb)+' تومان/گیگ':'غیرفعال'),'#52c41a');load();}
           else msg((r&&r.message)||'خطا','#f5222d');
