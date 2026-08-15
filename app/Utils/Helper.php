@@ -212,6 +212,80 @@ class Helper
         return "mdns://{$uuid}@{$host}:{$port}?{$query}#" . rawurlencode($name) . "\r\n";
     }
 
+    /**
+     * TrustTunnel subscribes with a binary payload rather than a query string.
+     *
+     * Every other protocol here writes its parameters as URL query pairs, so a
+     * mistake shows up as a visibly wrong link. This one is length-prefixed
+     * binary, base64url-encoded, and a wrong byte simply fails to parse on the
+     * client with nothing to read - hence the explicit encoders below and the
+     * tag numbers written out rather than inlined.
+     *
+     * Username and password are both the subscriber's uuid: that is what V2bX
+     * writes into the endpoint's credentials file, and the two have to agree or
+     * nobody authenticates.
+     */
+    public static function buildTrusttunnelUri($uuid, $server)
+    {
+        $host = $server['host'];
+        $port = $server['server_port'] ?? $server['port'];
+
+        $payload = self::ttTlv(0x01, $server['hostname'] ?? $host)          // hostname
+                 . self::ttTlv(0x02, $host . ':' . $port)                   // addresses
+                 . self::ttTlv(0x05, $uuid)                                 // username
+                 . self::ttTlv(0x06, $uuid)                                 // password
+                 . self::ttTlv(0x0C, (string)$server['name']);              // display name
+
+        // A self-signed endpoint cannot be checked against system CAs, so the
+        // client must be told to skip verification or every connection fails.
+        if (($server['cert_type'] ?? 'self-signed') === 'self-signed') {
+            $payload .= self::ttTlv(0x07, chr(0x01));
+        }
+        if (!empty($server['custom_sni'])) {
+            $payload .= self::ttTlv(0x03, $server['custom_sni']);
+        }
+        if (!empty($server['anti_dpi'])) {
+            $payload .= self::ttTlv(0x0A, chr(0x01));
+        }
+        if (!empty($server['client_random_prefix'])) {
+            $payload .= self::ttTlv(0x0B, $server['client_random_prefix']);
+        }
+
+        $encoded = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($payload));
+
+        return "tt://?{$encoded}\r\n";
+    }
+
+    /** One tag-length-value record: both tag and length are QUIC varints. */
+    private static function ttTlv(int $tag, string $value): string
+    {
+        return self::ttVarInt($tag) . self::ttVarInt(strlen($value)) . $value;
+    }
+
+    /**
+     * The variable-length integer of RFC 9000, which TrustTunnel borrows: the
+     * two most significant bits give the total byte count, the rest is the
+     * value, big-endian.
+     */
+    private static function ttVarInt(int $n): string
+    {
+        if ($n < 0) {
+            throw new \InvalidArgumentException('varint cannot be negative');
+        }
+        if ($n <= 0x3F) {
+            return chr($n);
+        }
+        if ($n <= 0x3FFF) {
+            return pack('n', $n | 0x4000);
+        }
+        if ($n <= 0x3FFFFFFF) {
+            return pack('N', $n | 0x80000000);
+        }
+        // The 8-byte form exists in the spec but nothing here can reach it - a
+        // single field would have to exceed a gigabyte.
+        throw new \InvalidArgumentException('varint too large for a subscription field');
+    }
+
     public static function buildShadowsocksUri($uuid, $server)
     {
         $cipher = $server['cipher'];
