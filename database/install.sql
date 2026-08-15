@@ -462,7 +462,7 @@ CREATE TABLE `v2_server_group` (
   `name` varchar(255) NOT NULL,
   `addon_enabled` tinyint(1) NOT NULL DEFAULT '0' COMMENT 'sellable as a paid add-on on top of a plan',
   `price_per_gb` int(11) NOT NULL DEFAULT '0' COMMENT 'wallet cost per GB, same unit as v2_user.balance',
-  `addon_note` varchar(500) DEFAULT NULL COMMENT 'what this add-on is, shown to the customer in the app; NULL falls back to the app own wording',
+  `addon_note` varchar(500) DEFAULT NULL COMMENT 'what this add-on is, shown to the customer in the app, NULL falls back to the app own wording',
   `created_at` int(11) NOT NULL,
   `updated_at` int(11) NOT NULL,
   PRIMARY KEY (`id`)
@@ -539,6 +539,33 @@ CREATE TABLE `v2_server_mdns` (
   `domain` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `encryption_method` int(11) NOT NULL DEFAULT '2',
   `encryption_key` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `rate` decimal(10,2) NOT NULL DEFAULT '1.00',
+  `show` tinyint(1) NOT NULL DEFAULT '0',
+  `sort` int(11) DEFAULT NULL,
+  `created_at` int(11) NOT NULL,
+  `updated_at` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+DROP TABLE IF EXISTS `v2_server_trusttunnel`;
+CREATE TABLE `v2_server_trusttunnel` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `group_id` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `route_id` text COLLATE utf8mb4_unicode_ci,
+  `parent_id` int(11) DEFAULT NULL,
+  `tags` text COLLATE utf8mb4_unicode_ci,
+  `host` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `port` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `server_port` int(11) NOT NULL,
+  `hostname` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'certificate hostname, falls back to host',
+  `cert_type` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'self-signed' COMMENT 'self-signed | letsencrypt | provided',
+  `acme_email` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'required when cert_type=letsencrypt',
+  `cert_chain_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'required when cert_type=provided',
+  `cert_key_path` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'required when cert_type=provided',
+  `custom_sni` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `anti_dpi` tinyint(1) NOT NULL DEFAULT '0',
+  `client_random_prefix` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT 'connection filter, NOT authentication',
   `rate` decimal(10,2) NOT NULL DEFAULT '1.00',
   `show` tinyint(1) NOT NULL DEFAULT '0',
   `sort` int(11) DEFAULT NULL,
@@ -947,6 +974,7 @@ INSERT INTO `migrations` (`id`,`migration`,`batch`) VALUES
 (18,'2026_01_29_000001_create_external_configs_table',13),
 (19,'2026_02_14_003710_add_carry_over_days_to_v2_plan_table',14),
 (20,'2026_02_14_011103_create_v2_reserved_plans_table',15),
-(21,'2026_07_03_100000_create_v2_server_mdns_table',16);
+(21,'2026_07_03_100000_create_v2_server_mdns_table',16),
+(22,'2026_08_15_100000_create_v2_server_trusttunnel_table',17);
 
 SET FOREIGN_KEY_CHECKS=1;
