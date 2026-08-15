@@ -29,7 +29,8 @@ class ManageController extends Controller
             'hysteria',
             'anytls',
             'v2node',
-            'mdns'
+            'mdns',
+            'trusttunnel'
         ) ?? [];
         if (empty($params)) {
             $params = [
@@ -42,6 +43,7 @@ class ManageController extends Controller
                 'anytls'      => $_POST['anytls'] ?? null,
                 'v2node'      => $_POST['v2node'] ?? null,
                 'mdns'        => $_POST['mdns'] ?? null,
+                'trusttunnel' => $_POST['trusttunnel'] ?? null,
             ];
         }
         DB::beginTransaction();

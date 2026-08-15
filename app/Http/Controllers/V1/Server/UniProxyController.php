@@ -226,6 +226,19 @@ class UniProxyController extends Controller
                     'node_secret' => Helper::getServerKey($this->nodeInfo->created_at, 32),
                 ];
                 break;
+            case 'trusttunnel':
+                // What V2bX hands the endpoint's setup wizard. hostname falls
+                // back to host so a node that serves a certificate for its own
+                // address needs nothing extra filled in.
+                $response = [
+                    'server_port'     => $this->nodeInfo->server_port,
+                    'hostname'        => $this->nodeInfo->hostname ?: $this->nodeInfo->host,
+                    'cert_type'       => $this->nodeInfo->cert_type ?: 'self-signed',
+                    'acme_email'      => $this->nodeInfo->acme_email,
+                    'cert_chain_path' => $this->nodeInfo->cert_chain_path,
+                    'cert_key_path'   => $this->nodeInfo->cert_key_path,
+                ];
+                break;
             case 'shadowsocks':
                 $response = [
                     'server_port' => $this->nodeInfo->server_port,

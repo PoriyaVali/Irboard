@@ -14,6 +14,7 @@ use App\Models\ServerTrojan;
 use App\Models\ServerTuic;
 use App\Models\ServerAnytls;
 use App\Models\ServerMdns;
+use App\Models\ServerTrusttunnel;
 use App\Models\UserGroup;
 use App\Services\AddonBillingService;
 use App\Utils\CacheKey;
@@ -346,6 +347,26 @@ class ServerService
         return $servers;
     }
 
+    public function getAvailableTrustTunnel(User $user)
+    {
+        $userGroupIds = $this->getUserGroupIds($user);
+        $servers = [];
+        $model = ServerTrusttunnel::orderBy('sort', 'ASC');
+        $nodes = $model->get()->keyBy('id');
+        foreach ($nodes as $key => $v) {
+            if (!$v['show']) continue;
+            $nodes[$key]['type'] = 'trusttunnel';
+            $nodes[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_TRUSTTUNNEL_LAST_CHECK_AT', $v['id']));
+            if (!$this->groupCanReach($userGroupIds, $v['group_id'])) continue;
+            if (isset($nodes[$v['parent_id']])) {
+                $nodes[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_TRUSTTUNNEL_LAST_CHECK_AT', $v['parent_id']));
+                $nodes[$key]['created_at'] = $nodes[$v['parent_id']]['created_at'];
+            }
+            $servers[] = $nodes[$key]->toArray();
+        }
+        return $servers;
+    }
+
     public function getAvailableServers(User $user)
     {
         $servers = array_merge(
@@ -357,7 +378,8 @@ class ServerService
             $this->getAvailableVless($user),
             $this->getAvailableAnyTLS($user),
             $this->getAvailableV2node($user),
-            $this->getAvailableMdns($user)
+            $this->getAvailableMdns($user),
+            $this->getAvailableTrustTunnel($user)
         );
         $tmp = array_column($servers, 'sort');
         array_multisort($tmp, SORT_ASC, $servers);
@@ -588,6 +610,17 @@ class ServerService
         return $servers;
     }
 
+    public function getAllTrustTunnel()
+    {
+        $servers = ServerTrusttunnel::orderBy('sort', 'ASC')
+            ->get()
+            ->toArray();
+        foreach ($servers as $k => $v) {
+            $servers[$k]['type'] = 'trusttunnel';
+        }
+        return $servers;
+    }
+
     public function getAllV2node()
     {
         $servers = ServerV2node::orderBy('sort', 'ASC')
@@ -642,7 +675,8 @@ class ServerService
             $this->getAllVLess(),
             $this->getAllAnyTLS(),
             $this->getAllV2node(),
-            $this->getAllMdns()
+            $this->getAllMdns(),
+            $this->getAllTrustTunnel()
         );
         $this->mergeData($servers);
         $tmp = array_column($servers, 'sort');
@@ -686,6 +720,8 @@ class ServerService
                 return ServerAnytls::find($serverId);
             case 'mdns':
                 return ServerMdns::find($serverId);
+            case 'trusttunnel':
+                return ServerTrusttunnel::find($serverId);
             default:
                 return false;
         }
