@@ -80506,6 +80506,50 @@
                 }
             }
         }
+function U(p) {
+            return "/" + window.settings.secure_path + "/server/trusttunnel/" + p
+        }
+        t["default"] = {
+            name: "serverTrusttunnel",
+            state: {
+                switchLoading: {},
+                saveLoading: !1
+            },
+            reducers: {
+                setState: function(e, t) {
+                    var n = t.payload;
+                    return Object.assign({}, e, n)
+                }
+            },
+            effects: {
+                update: function*(e, t) {
+                    var n = e.id, r = e.key, i = e.value, s = t.put;
+                    var p = { id: n };
+                    p[r] = i;
+                    var a = yield Object(o["b"])(U("update"), p);
+                    if (200 === a.code) { yield s({ type: "serverManage/getNodes" }) }
+                },
+                drop: function*(e, t) {
+                    var n = e.id, r = t.put;
+                    var a = yield Object(o["b"])(U("drop"), { id: n });
+                    if (200 === a.code) { yield r({ type: "serverManage/getNodes" }) }
+                },
+                copy: function*(e, t) {
+                    var n = e.id, r = t.put;
+                    var a = yield Object(o["b"])(U("copy"), { id: n });
+                    if (200 === a.code) { yield r({ type: "serverManage/getNodes" }) }
+                },
+                save: function*(e, t) {
+                    var n = e.params, r = e.callback, i = t.put;
+                    yield i({ type: "setState", payload: { saveLoading: !0 } });
+                    var a = yield Object(o["b"])(U("save"), n);
+                    yield i({ type: "setState", payload: { saveLoading: !1 } });
+                    if (200 !== a.code) { return }
+                    yield i({ type: "serverManage/getNodes" });
+                    if ("function" === typeof r) { r() }
+                }
+            }
+        }
     },
     callV2node: function(e, t, n) {
         "use strict";
@@ -106332,6 +106376,227 @@
                 serverRoute: i
             }
         })(wMdns);
+        class wTrusttunnel extends y.a.Component {
+            constructor(e) {
+                super(e),
+                this.state = {
+                    server: this.props.record || {
+                        cert_type: "self-signed",
+                        rate: 1
+                    },
+                    visible: !1
+                }
+            }
+            onShow() {
+                this.setState({
+                    visible: !this.state.visible
+                })
+            }
+            save() {
+                var e = this.state.server;
+                this.props.dispatch({
+                    type: "serverTrusttunnel/save",
+                    params: e,
+                    callback: ()=>{
+                        this.onShow()
+                    }
+                })
+            }
+            formChange(e, t) {
+                this.setState({
+                    server: I()({}, this.state.server, { [e]: t })
+                })
+            }
+            render() {
+                var e = this.state.server,
+                t = this.props.serverTrusttunnel.saveLoading,
+                n = this.props.serverManage.servers,
+                r = this.props.serverGroup.groups,
+                i = this.props.serverRoute.routes;
+                return y.a.createElement(y.a.Fragment, null, y.a.cloneElement(this.props.children, {
+                    onClick: ()=>this.setState({
+                        visible: !0
+                    })
+                }), y.a.createElement(R["a"], {
+                    id: "server",
+                    maskClosable: !0,
+                    title: e.id ? "ویرایش نود" : "نود جدید",
+                    width: "80%",
+                    visible: this.state.visible,
+                    onClose: ()=>this.onShow()
+                }, y.a.createElement("div", null, y.a.createElement("div", {
+                    className: "row"
+                }, y.a.createElement("div", {
+                    className: "form-group col-8"
+                }, y.a.createElement("label", null, "نام نود"), y.a.createElement(s["a"], {
+                    placeholder: "نام نود را وارد کنید",
+                    value: e.name,
+                    onChange: e=>this.formChange("name", e.target.value)
+                })), y.a.createElement("div", {
+                    className: "form-group col-4"
+                }, y.a.createElement("label", null, "ضریب"), y.a.createElement(s["a"], {
+                    addonAfter: "x",
+                    placeholder: "ضریب نود",
+                    value: e.rate,
+                    onChange: e=>this.formChange("rate", e.target.value)
+                }))), y.a.createElement("div", {
+                    className: "form-group"
+                }, y.a.createElement("label", null, "برچسب نود"), y.a.createElement(N["a"], {
+                    mode: "tags",
+                    value: e.tags || [],
+                    style: {
+                        width: "100%"
+                    },
+                    placeholder: "بعد از ورود Enter بزنید",
+                    onChange: e=>this.formChange("tags", e.length > 0 ? e : null)
+                })), y.a.createElement("div", {
+                    className: "form-group"
+                }, y.a.createElement("label", null, "گروه دسترسی"), y.a.createElement(N["a"], {
+                    mode: "multiple",
+                    value: e.group_id,
+                    placeholder: "گروه دسترسی را انتخاب کنید",
+                    style: {
+                        width: "100%"
+                    },
+                    onChange: e=>this.formChange("group_id", e)
+                }, r.map(e=>{
+                    return y.a.createElement(N["a"].Option, {
+                        key: e.id
+                    }, e.name)
+                }))), y.a.createElement("div", {
+                    className: "form-group"
+                }, y.a.createElement("label", null, "آدرس نود"), y.a.createElement(s["a"], {
+                    placeholder: "آدرس یا IP سرور",
+                    value: e.host,
+                    onChange: e=>this.formChange("host", e.target.value)
+                })), y.a.createElement("div", {
+                    className: "row"
+                }, y.a.createElement("div", {
+                    className: "form-group col-md-6 col-xs-12"
+                }, y.a.createElement("label", null, "پورت اتصال"), y.a.createElement(s["a"], {
+                    placeholder: "پورت اتصال کاربر",
+                    value: e.port,
+                    onChange: e=>this.formChange("port", e.target.value)
+                })), y.a.createElement("div", {
+                    className: "form-group col-md-6 col-xs-12"
+                }, y.a.createElement("label", null, "پورت سرویس"), y.a.createElement(s["a"], {
+                    placeholder: "پورت شنوندهٔ endpoint",
+                    value: e.server_port,
+                    onChange: e=>this.formChange("server_port", e.target.value)
+                }))), y.a.createElement("div", {
+                    className: "row"
+                }, y.a.createElement("div", {
+                    className: "form-group col-md-6 col-xs-12"
+                }, y.a.createElement("label", null, "دامنهٔ گواهی"), y.a.createElement(s["a"], {
+                    placeholder: "خالی = همان آدرس سرور",
+                    value: e.hostname || "",
+                    onChange: e=>this.formChange("hostname", e.target.value || null)
+                })), y.a.createElement("div", {
+                    className: "form-group col-md-6 col-xs-12"
+                }, y.a.createElement("label", null, "نوع گواهی"), y.a.createElement(N["a"], {
+                    value: e.cert_type || "self-signed",
+                    style: {
+                        width: "100%"
+                    },
+                    onChange: e=>this.formChange("cert_type", e)
+                }, y.a.createElement(N["a"].Option, {
+                    key: "self-signed",
+                    value: "self-signed"
+                }, "خودامضا"), y.a.createElement(N["a"].Option, {
+                    key: "letsencrypt",
+                    value: "letsencrypt"
+                }, "Let’s Encrypt"), y.a.createElement(N["a"].Option, {
+                    key: "provided",
+                    value: "provided"
+                }, "دستی")))), "letsencrypt" === e.cert_type && y.a.createElement("div", {
+                    className: "form-group"
+                }, y.a.createElement("label", null, "ایمیل Let’s Encrypt"), y.a.createElement(s["a"], {
+                    placeholder: "برای ثبت حساب ACME لازم است",
+                    value: e.acme_email || "",
+                    onChange: e=>this.formChange("acme_email", e.target.value || null)
+                })), "provided" === e.cert_type && y.a.createElement("div", {
+                    className: "row"
+                }, y.a.createElement("div", {
+                    className: "form-group col-md-6 col-xs-12"
+                }, y.a.createElement("label", null, "مسیر زنجیرهٔ گواهی"), y.a.createElement(s["a"], {
+                    placeholder: "/path/fullchain.pem",
+                    value: e.cert_chain_path || "",
+                    onChange: e=>this.formChange("cert_chain_path", e.target.value || null)
+                })), y.a.createElement("div", {
+                    className: "form-group col-md-6 col-xs-12"
+                }, y.a.createElement("label", null, "مسیر کلید"), y.a.createElement(s["a"], {
+                    placeholder: "/path/privkey.pem",
+                    value: e.cert_key_path || "",
+                    onChange: e=>this.formChange("cert_key_path", e.target.value || null)
+                }))), y.a.createElement("div", {
+                    className: "row"
+                }, y.a.createElement("div", {
+                    className: "form-group col-md-6 col-xs-12"
+                }, y.a.createElement("label", null, "SNI سفارشی"), y.a.createElement(s["a"], {
+                    placeholder: "خالی = همان دامنهٔ گواهی",
+                    value: e.custom_sni || "",
+                    onChange: e=>this.formChange("custom_sni", e.target.value || null)
+                })), y.a.createElement("div", {
+                    className: "form-group col-md-6 col-xs-12"
+                }, y.a.createElement("label", null, "پیشوند تصادفی کلاینت"), y.a.createElement(s["a"], {
+                    placeholder: "فیلتر اتصال، احراز هویت نیست",
+                    value: e.client_random_prefix || "",
+                    onChange: e=>this.formChange("client_random_prefix", e.target.value || null)
+                }))), y.a.createElement("div", {
+                    className: "form-group"
+                }, y.a.createElement("label", null, "نود والد"), y.a.createElement(N["a"], {
+                    value: e.parent_id || "",
+                    onChange: e=>this.formChange("parent_id", e),
+                    style: {
+                        width: "100%"
+                    }
+                }, y.a.createElement(N["a"].Option, {
+                    value: ""
+                }, "ندارد"), n.map(t=>{
+                    if ("trusttunnel" === t.type && t.id !== e.id) return y.a.createElement(N["a"].Option, {
+                        key: Math.random(),
+                        value: t.id
+                    }, t.name)
+                }))), y.a.createElement("div", {
+                    className: "form-group"
+                }, y.a.createElement("label", null, "گروه مسیریابی"), y.a.createElement(N["a"], {
+                    mode: "multiple",
+                    value: e.route_id || [],
+                    placeholder: "گروه مسیریابی را انتخاب کنید",
+                    style: {
+                        width: "100%"
+                    },
+                    onChange: e=>this.formChange("route_id", e.length > 0 ? e : null)
+                }, i.map(e=>{
+                    return y.a.createElement(N["a"].Option, {
+                        key: e.id
+                    }, e.remarks)
+                })))), y.a.createElement("div", {
+                    className: "v2board-drawer-action"
+                }, y.a.createElement(l["a"], {
+                    style: {
+                        marginRight: 8
+                    },
+                    onClick: ()=>this.onShow()
+                }, "انصراف"), y.a.createElement(l["a"], {
+                    loading: t,
+                    onClick: ()=>this.save(),
+                    type: "primary"
+                }, "ثبت"))))
+            }
+        }
+        var mTrusttunnel = Object(_["c"])(e=>{
+            var t = e.serverTrusttunnel,
+            n = e.serverGroup,
+            r = e.serverManage,
+            i = e.serverRoute;
+            return {
+                serverTrusttunnel: t,
+                serverGroup: n,
+                serverManage: r,
+                serverRoute: i
+            }
+        })(wTrusttunnel);
         class wV2node extends y.a.Component {
             constructor(e) {
                 super(e),
@@ -107053,6 +107318,10 @@
                     return y.a.createElement(g["a"], {
                         color: "#FF0000"
                     }, t)
+                case "trusttunnel":
+                    return y.a.createElement(g["a"], {
+                        color: "#7B5EA7"
+                    }, t)
                 case "mdns":
                     return y.a.createElement(g["a"], {
                         color: "#00A9A5"
@@ -107079,6 +107348,8 @@
                     return "serverV2node/".concat(t);
                 case "mdns":
                     return "serverMdns/".concat(t);
+                case "trusttunnel":
+                    return "serverTrusttunnel/".concat(t);
                 }
             }
             copy(e) {
@@ -107147,7 +107418,10 @@
                         record: e
                     }, y.a.createElement("a", null, y.a.createElement(m["a"], {
                         type: "edit"
-                    }), " ویرایش")), "mdns" === e.type && y.a.createElement(mMdns, {
+                    }), " ویرایش")), "trusttunnel" === e.type && y.a.createElement(mTrusttunnel, {
+                        key: e.id,
+                        record: e
+                    }), "mdns" === e.type && y.a.createElement(mMdns, {
                         key: e.id,
                         record: e
                     }, y.a.createElement("a", null, y.a.createElement(m["a"], {
@@ -107332,7 +107606,9 @@
                         key: Math.random()
                     }, y.a.createElement("a", null, this.getTypeTag("anytls", "AnyTLS")))), y.a.createElement(p["a"].Item, null, y.a.createElement(mMdns, {
                         key: Math.random()
-                    }, y.a.createElement("a", null, this.getTypeTag("mdns", "MDNS")))))
+                    }, y.a.createElement("a", null, this.getTypeTag("mdns", "MDNS")))), y.a.createElement(p["a"].Item, null, y.a.createElement(mTrusttunnel, {
+                        key: Math.random()
+                    }, y.a.createElement("a", null, this.getTypeTag("trusttunnel", "TrustTunnel")))))
                 }, y.a.createElement(l["a"], null, y.a.createElement(m["a"], {
                     type: "plus"
                 }))), y.a.createElement(s["a"], {
@@ -107476,7 +107752,10 @@
                     record: this.record
                 }, y.a.createElement("a", null, y.a.createElement(m["a"], {
                     type: "form"
-                }), " ویرایش")), "mdns" === (null === (r = this.record) || void 0 === r ? void 0 : r.type) && y.a.createElement(mMdns, {
+                }), " ویرایش")), "trusttunnel" === (null === (r = this.record) || void 0 === r ? void 0 : r.type) && y.a.createElement(mTrusttunnel, {
+                    key: Math.random(),
+                    record: this.record
+                }), "mdns" === (null === (r = this.record) || void 0 === r ? void 0 : r.type) && y.a.createElement(mMdns, {
                     key: Math.random(),
                     record: this.record
                 }, y.a.createElement("a", null, y.a.createElement(m["a"], {
