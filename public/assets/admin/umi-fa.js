@@ -80506,7 +80506,12 @@
                 }
             }
         }
-function U(p) {
+    },
+callTrusttunnel: function(e, t, n) {
+        "use strict";
+        n.r(t);
+        var o = n("t3Un");
+        function U(p) {
             return "/" + window.settings.secure_path + "/server/trusttunnel/" + p
         }
         t["default"] = {
@@ -112650,6 +112655,9 @@ function U(p) {
             u.model(i()({
                 namespace: "serverMdns"
             }, n("callMdns").default)),
+            u.model(i()({
+                namespace: "serverTrusttunnel"
+            }, n("callTrusttunnel").default)),
             u.model(i()({
                 namespace: "serverV2node"
             }, n("callV2node").default)),
