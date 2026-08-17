@@ -107,6 +107,14 @@ class AdminRoute
                 $router->post('copy', 'V1\\Admin\\Server\\MdnsController@copy');
             });
             $router->group([
+                'prefix' => 'server/trusttunnel'
+            ], function ($router) {
+                $router->post('save', 'V1\\Admin\\Server\\TrusttunnelController@save');
+                $router->post('drop', 'V1\\Admin\\Server\\TrusttunnelController@drop');
+                $router->post('update', 'V1\\Admin\\Server\\TrusttunnelController@update');
+                $router->post('copy', 'V1\\Admin\\Server\\TrusttunnelController@copy');
+            });
+            $router->group([
                 'prefix' => 'server/v2node'
             ], function ($router) {
                 $router->post('save', 'V1\\Admin\\Server\\V2nodeController@save');
