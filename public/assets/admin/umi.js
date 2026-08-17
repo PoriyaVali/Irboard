@@ -107426,7 +107426,9 @@ callTrusttunnel: function(e, t, n) {
                     }), " ویرایش")), "trusttunnel" === e.type && y.a.createElement(mTrusttunnel, {
                         key: e.id,
                         record: e
-                    }), "mdns" === e.type && y.a.createElement(mMdns, {
+                    }, y.a.createElement("a", null, y.a.createElement(m["a"], {
+                        type: "edit"
+                    }), " ویرایش")), "mdns" === e.type && y.a.createElement(mMdns, {
                         key: e.id,
                         record: e
                     }, y.a.createElement("a", null, y.a.createElement(m["a"], {
@@ -107760,7 +107762,9 @@ callTrusttunnel: function(e, t, n) {
                 }), " ویرایش")), "trusttunnel" === (null === (r = this.record) || void 0 === r ? void 0 : r.type) && y.a.createElement(mTrusttunnel, {
                     key: Math.random(),
                     record: this.record
-                }), "mdns" === (null === (r = this.record) || void 0 === r ? void 0 : r.type) && y.a.createElement(mMdns, {
+                }, y.a.createElement("a", null, y.a.createElement(m["a"], {
+                    type: "form"
+                }), " ویرایش")), "mdns" === (null === (r = this.record) || void 0 === r ? void 0 : r.type) && y.a.createElement(mMdns, {
                     key: Math.random(),
                     record: this.record
                 }, y.a.createElement("a", null, y.a.createElement(m["a"], {
