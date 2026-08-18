@@ -64,3 +64,7 @@ nohup.out
 # Backups written by scripts/patch_admin_anytls_tls.py next to the bundle it
 # edits. Useful locally for an instant revert; never part of the tree.
 *.prepatch
+
+# Generated knowledge-graph artefacts (52 MB). Swept in by a git add -A;
+# they are build output of the graphify tool, not part of the panel.
+graphify-out/
