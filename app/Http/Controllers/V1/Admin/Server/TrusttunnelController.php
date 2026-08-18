@@ -27,9 +27,30 @@ class TrusttunnelController extends Controller
             'cert_chain_path' => 'nullable',
             'cert_key_path' => 'nullable',
             'custom_sni' => 'nullable',
-            'anti_dpi' => 'nullable|boolean',
+            // 🔑 The form's Select sends "" for "not set", and `boolean`
+            // rejects an empty string even under `nullable` - which is the
+            // validation.boolean the panel showed on save. `in:` accepts every
+            // shape the two Selects can produce, and the cast below turns them
+            // into real booleans for the column.
+            'anti_dpi' => 'nullable|in:0,1,"0","1",true,false',
             'client_random_prefix' => 'nullable',
+            // ⚠️ validate() is a WHITELIST: a field missing here is silently
+            // dropped, so the new options would have saved as nothing at all
+            // even without an error message to notice.
+            'upstream_protocol' => 'nullable|in:,http2,http3',
+            'has_ipv6' => 'nullable|in:0,1,"0","1",true,false',
+            'dns_upstreams' => 'nullable|string',
         ]);
+
+        // Normalise what the Selects send. The column is tinyint(1) and the
+        // model casts to boolean, so "" and null both have to become 0 rather
+        // than reaching the database as an empty string.
+        foreach (['anti_dpi', 'has_ipv6'] as $flag) {
+            $params[$flag] = empty($params[$flag]) ? 0 : 1;
+        }
+        if (!isset($params['upstream_protocol'])) {
+            $params['upstream_protocol'] = '';
+        }
 
         // The certificate hostname is what the endpoint serves TLS for. Falling
         // back to the address means a node whose certificate matches its own
