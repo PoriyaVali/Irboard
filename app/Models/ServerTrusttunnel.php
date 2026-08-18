@@ -16,5 +16,6 @@ class ServerTrusttunnel extends Model
         'route_id' => 'array',
         'tags' => 'array',
         'anti_dpi' => 'boolean',
+        'has_ipv6' => 'boolean',
     ];
 }

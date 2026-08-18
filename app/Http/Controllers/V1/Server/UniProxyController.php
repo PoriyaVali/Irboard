@@ -237,6 +237,11 @@ class UniProxyController extends Controller
                     'acme_email'      => $this->nodeInfo->acme_email,
                     'cert_chain_path' => $this->nodeInfo->cert_chain_path,
                     'cert_key_path'   => $this->nodeInfo->cert_key_path,
+                    // Sent so the node's own installer can prepare what the
+                    // certificate mode needs before the endpoint starts - the
+                    // wizard reads exactly these keys.
+                    'upstream_protocol' => $this->nodeInfo->upstream_protocol,
+                    'has_ipv6'          => (bool)$this->nodeInfo->has_ipv6,
                 ];
                 break;
             case 'shadowsocks':

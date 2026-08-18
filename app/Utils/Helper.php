@@ -250,6 +250,30 @@ class Helper
         if (!empty($server['client_random_prefix'])) {
             $payload .= self::ttTlv(0x0B, $server['client_random_prefix']);
         }
+        // Transport the node prefers. Empty means the client decides, which is
+        // the right default: a node forced to http3 on a network that blocks
+        // QUIC simply never connects.
+        if (!empty($server['upstream_protocol'])) {
+            $payload .= self::ttTlv(0x09, $server['upstream_protocol'] === 'http3' ? chr(0x02) : chr(0x01));
+        }
+        if (!empty($server['has_ipv6'])) {
+            $payload .= self::ttTlv(0x04, chr(0x01));
+        }
+        // Encrypted DNS through the tunnel. String[] on the wire: each element
+        // carries its own varint length, so this is not a joined string.
+        if (!empty($server['dns_upstreams'])) {
+            $list = preg_split('/[
+,]+/', (string)$server['dns_upstreams'], -1, PREG_SPLIT_NO_EMPTY);
+            $joined = '';
+            foreach ($list as $one) {
+                $one = trim($one);
+                if ($one === '') continue;
+                $joined .= self::ttVarInt(strlen($one)) . $one;
+            }
+            if ($joined !== '') {
+                $payload .= self::ttTlv(0x0D, $joined);
+            }
+        }
 
         $encoded = str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($payload));
 
