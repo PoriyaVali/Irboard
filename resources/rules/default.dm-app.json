@@ -191,6 +191,23 @@
           "mdns_resolver_mode": "recursive",   // direct | recursive
           "mdns_resolvers": []   // list of "ip" or "ip:port"
       },
+      "trusttunnel": {
+          "_": "The TrustTunnel core (HTTP/2-3 tunnel). These are the app defaults; publishing them changes nothing until one is edited.",
+          "tt_anti_dpi": "",   // empty follows the node, or on | off
+          "tt_custom_sni": "",   // empty follows the node, else the SNI to present
+          "tt_dns_upstreams": "",   // encrypted DNS through the tunnel, one per line
+          "tt_excluded_routes": "",   // CIDRs kept off the tunnel, one per line
+          "tt_exclusions": "",   // domains kept off the tunnel in selective mode
+          "tt_fallback_protocol": "",   // empty for none, or http2 | http3
+          "tt_ipv6": false,   // true | false - route IPv6 through the tunnel
+          "tt_killswitch": false,   // true | false - block traffic if the tunnel drops
+          "tt_log_level": "",   // empty follows the app, or error | warn | info | debug
+          "tt_mtu": 1350,   // 576..9000; lower than other cores, this carries TLS inside TLS
+          "tt_post_quantum": false,   // true | false - enlarges the ClientHello
+          "tt_protocol": "",   // empty follows the node, or http2 | http3
+          "tt_skip_verification": "",   // empty follows the node, or on | off - on accepts ANY certificate
+          "tt_vpn_mode": "general"   // general | selective
+      },
       "anti-dpi": {
           "_": "The byedpi helper, shared by the sing-box and mihomo cores.",
           "byedpi_args": "--dm",   // ciadpi arguments; --dm = our auto chain
