@@ -28,6 +28,11 @@ class Kernel extends ConsoleKernel
         // System Maintenance
         $schedule->command('system:fix-logs-permissions')->everyMinute();
         $schedule->command('system:heartbeat')->everyFiveMinutes();
+        // Samples the live per-user device count into v2_stat_user_device.
+        // Five minutes is 288 samples a day: fine enough that a peak is not
+        // missed, coarse enough that the table stays one row per user per
+        // day. withoutOverlapping because a slow run must not stack.
+        $schedule->command('stat:devices')->everyFiveMinutes()->withoutOverlapping();
 
         // Auto Renewal
         $schedule->command('check:renewal')->everyTenMinutes()->withoutOverlapping(8)->runInBackground();

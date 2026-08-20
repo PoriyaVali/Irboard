@@ -851,6 +851,41 @@ CREATE TABLE `v2_stat_user` (
   KEY `server_rate` (`server_rate`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+DROP TABLE IF EXISTS `v2_stat_user_device`;
+-- Per-account device history.
+--
+-- The panel already counts a user's live devices - the nodes push their alive
+-- IPs and UniProxyController folds them into ALIVE_IP_USER_<id> in the cache,
+-- where device_limit_mode=1 makes that a count of DISTINCT IPs rather than of
+-- connections. What it has never had is a memory of it: the number is live and
+-- then it is gone.
+--
+-- One row per user per day. A five-minute sampler keeps the peak, and enough
+-- to average, which is what makes "how many devices was I using" answerable
+-- for yesterday as well as for now.
+--
+-- Shaped to match v2_stat_user next door: int timestamps, a unique key on the
+-- pair that must not repeat, and an index on each column anything filters by.
+CREATE TABLE `v2_stat_user_device` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  -- Midnight of the day this row covers, server time.
+  `record_at` int(11) NOT NULL,
+  -- The most devices seen at once that day: the number that answers "is
+  -- someone else on my account".
+  `peak` smallint(5) unsigned NOT NULL DEFAULT '0',
+  -- Sum and count of the samples, so an average can be taken without storing
+  -- every sample. A day of five-minute samples is 288 of them, and 288 rows
+  -- per user per day is not worth what it would buy.
+  `total` int(11) NOT NULL DEFAULT '0',
+  `samples` smallint(5) unsigned NOT NULL DEFAULT '0',
+  `created_at` int(11) NOT NULL,
+  `updated_at` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `user_id_record_at` (`user_id`,`record_at`),
+  KEY `record_at` (`record_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 DROP TABLE IF EXISTS `v2_ticket`;
 CREATE TABLE `v2_ticket` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
