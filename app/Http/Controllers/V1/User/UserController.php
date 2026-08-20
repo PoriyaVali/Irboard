@@ -113,8 +113,22 @@ class UserController extends Controller
             abort(500, __('The user does not exist'));
         }
         $authService = new AuthService($user);
+        // auth_data is the session's JWT. The client needs the guid to remove a
+        // session and never the token itself, so it stops here - one session
+        // must not be able to read every other session's credential.
+        //
+        // 'current' replaces the only legitimate reason the client had for
+        // seeing tokens: telling which row is the device that is asking. Read
+        // the same way the User middleware reads it, so the two agree.
+        $token = $request->input('auth_data') ?? $request->header('authorization');
+        $sessions = [];
+        foreach ($authService->getSessions() as $guid => $meta) {
+            $meta['current'] = isset($meta['auth_data']) && $meta['auth_data'] === $token;
+            unset($meta['auth_data']);
+            $sessions[$guid] = $meta;
+        }
         return response([
-            'data' => $authService->getSessions()
+            'data' => $sessions
         ]);
     }
 

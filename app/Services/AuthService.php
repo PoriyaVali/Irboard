@@ -110,6 +110,14 @@ class AuthService
     public function removeSession($sessionId)
     {
         $sessions = self::getSessionsFromRedis($this->user->id);
+        // Forget the cached token as well, exactly as removeAllSession does.
+        // decryptAuthData() short-circuits on Cache::has($jwt) and never reaches
+        // checkSession(), so dropping the row on its own left that device
+        // working for the rest of the hour - a "sign this device out" button
+        // that did not sign anything out.
+        if (isset($sessions[$sessionId]['auth_data'])) {
+            Cache::forget($sessions[$sessionId]['auth_data']);
+        }
         unset($sessions[$sessionId]);
         return self::saveSessionsToRedis($this->user->id, $sessions);
     }
