@@ -25,10 +25,17 @@ class AuthService
             'id' => $this->user->id,
             'session' => $guid,
         ], config('app.key'), 'HS256');
+        // Every request the app sends carries the same browser-shaped
+        // User-Agent, so 'ua' cannot tell one phone from another and the
+        // sessions list showed identical rows. The client sends what it is
+        // beside it. Trimmed rather than trusted: this blob is unserialized on
+        // every authenticated request, and it is client-supplied.
+        $device = substr(trim((string)$request->header('x-device')), 0, 64);
         self::addSession($this->user->id, $guid, [
             'ip' => $request->ip(),
             'login_at' => time(),
             'ua' => $request->userAgent(),
+            'device' => $device,
             'auth_data' => $authData
         ]);
         return [
