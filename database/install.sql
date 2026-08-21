@@ -1015,4 +1015,40 @@ INSERT INTO `migrations` (`id`,`migration`,`batch`) VALUES
 (21,'2026_07_03_100000_create_v2_server_mdns_table',16),
 (22,'2026_08_15_100000_create_v2_server_trusttunnel_table',17);
 
+DROP TABLE IF EXISTS `v2_mirror_export`;
+-- The snapshot the Iranian relay pulls, so it can still answer a paying
+-- subscriber when the link out of Iran is down.
+--
+-- Why a table and not a live endpoint: the export has to render each user's
+-- subscription, and the Clash-family renderers call the global header()
+-- directly. Doing that inside an HTTP request would inject
+-- subscription-userinfo and content-disposition into the export's own
+-- response, and under webman - where a worker outlives the request - those
+-- headers can reach the next request too. In CLI, header() is inert. So a
+-- scheduled command renders into this table and the endpoint only reads it.
+--
+-- It also keeps the cost off the request path: a full build is around 39
+-- seconds of CPU for the 336 accounts that have a live plan, which is fine
+-- once an hour in the background and not fine while a worker is held open.
+--
+-- 🔑 Nothing here identifies anyone to someone who steals the table. The
+-- subjects are sha256 digests of the credentials, never the credentials, so
+-- the relay - a box in Iran that nobody logs into - can match what a caller
+-- presents without ever holding a token it could replay.
+CREATE TABLE `v2_mirror_export` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  -- One JSON document per user: the session digests, the bodies of
+  -- getSubscribe and info, and one rendered subscription per client flag.
+  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  -- sha256 of the payload. Lets a build skip writing a row that has not
+  -- changed, and lets a future sync ask for only what moved.
+  `payload_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `built_at` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `user_id` (`user_id`),
+  -- The endpoint pages by id, and staleness is judged by built_at.
+  KEY `built_at` (`built_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 SET FOREIGN_KEY_CHECKS=1;

@@ -73,6 +73,10 @@ class Kernel extends HttpKernel
         'admin' => \App\Http\Middleware\Admin::class,
         'client' => \App\Http\Middleware\Client::class,
         'staff' => \App\Http\Middleware\Staff::class,
+        // The Iranian relay's export. A shared secret, not a user or admin
+        // token: the caller is a cron on a box nobody logs into, and the
+        // export is the only thing it ever needs.
+        'mirror' => \App\Http\Middleware\MirrorSecret::class,
         'log' => \App\Http\Middleware\RequestLog::class
     ];
 

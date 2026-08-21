@@ -33,6 +33,13 @@ class Kernel extends ConsoleKernel
         // missed, coarse enough that the table stays one row per user per
         // day. withoutOverlapping because a slow run must not stack.
         $schedule->command('stat:devices')->everyFiveMinutes()->withoutOverlapping();
+        // Renders the snapshot the Iranian relay serves when the tunnel out of
+        // Iran is down. Hourly because the things it holds - the subscription
+        // token, the node list, the plan and its expiry - change slowly, and a
+        // full build is around 40 seconds of CPU. In the background so it never
+        // sits in front of traffic:update, and withoutOverlapping so a slow
+        // build cannot stack on itself.
+        $schedule->command('mirror:build')->hourly()->withoutOverlapping(30)->runInBackground();
 
         // Auto Renewal
         $schedule->command('check:renewal')->everyTenMinutes()->withoutOverlapping(8)->runInBackground();

@@ -1018,3 +1018,31 @@ CREATE TABLE IF NOT EXISTS `v2_stat_user_device` (
   UNIQUE KEY `user_id_record_at` (`user_id`,`record_at`),
   KEY `record_at` (`record_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- The snapshot the Iranian relay pulls, so it can still answer a paying
+-- subscriber when the link out of Iran is down.
+--
+-- Why a table and not a live endpoint: the export has to render each user's
+-- subscription, and the Clash-family renderers call the global header()
+-- directly. Doing that inside an HTTP request would inject
+-- subscription-userinfo and content-disposition into the export's own
+-- response, and under webman - where a worker outlives the request - those
+-- headers can reach the next request too. In CLI, header() is inert. So a
+-- scheduled command renders into this table and the endpoint only reads it.
+--
+-- It also keeps the cost off the request path: a full build is around 39
+-- seconds of CPU for the 336 accounts that have a live plan, which is fine
+-- once an hour in the background and not fine while a worker is held open.
+--
+-- Nothing here identifies anyone to someone who steals the table. The
+-- subjects are sha256 digests of the credentials, never the credentials.
+CREATE TABLE IF NOT EXISTS `v2_mirror_export` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `payload_hash` char(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  `built_at` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `user_id` (`user_id`),
+  KEY `built_at` (`built_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
