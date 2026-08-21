@@ -23,10 +23,17 @@ use Illuminate\Support\Facades\DB;
  * `header()` is inert, so rendering belongs here and the endpoint only reads
  * what this wrote.
  *
- * It is also where the time is. Measured on this panel: `getAvailableServers`
- * is about 96ms per user and each render about 25ms, which is roughly 39
- * seconds of CPU for the 336 accounts that have a live plan. Fine hourly in the
+ * It is also where the time is. Measured on this panel, not estimated: a full
+ * build is **70 seconds** for the 336 accounts that have a live plan, and 33
+ * seconds when most of them turn out to be unchanged. (An earlier estimate of
+ * 39s was wrong because it counted only `getAvailableServers` at 96ms per user
+ * and forgot the three renders and the writes on top.) Fine hourly in the
  * background; not fine while an HTTP worker is held open.
+ *
+ * ⚠️ Rather less of that is skippable than it looks. `getSubscribe` embeds the
+ * live device count and `info` the last login, so a payload changes for its own
+ * reasons: a second run one minute later still rebuilt 89 of 336. The hash
+ * check saves the write, never the render.
  *
  * ## 🔑 The bodies are produced by the real controllers
  *

@@ -1030,9 +1030,10 @@ CREATE TABLE IF NOT EXISTS `v2_stat_user_device` (
 -- headers can reach the next request too. In CLI, header() is inert. So a
 -- scheduled command renders into this table and the endpoint only reads it.
 --
--- It also keeps the cost off the request path: a full build is around 39
--- seconds of CPU for the 336 accounts that have a live plan, which is fine
--- once an hour in the background and not fine while a worker is held open.
+-- It also keeps the cost off the request path: a measured full build is 70
+-- seconds for the 336 accounts that have a live plan (33 when most are
+-- unchanged), which is fine once an hour in the background and not fine while
+-- a worker is held open.
 --
 -- Nothing here identifies anyone to someone who steals the table. The
 -- subjects are sha256 digests of the credentials, never the credentials.
