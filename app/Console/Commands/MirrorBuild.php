@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Http\Controllers\V1\Client\ClientController;
+use App\Http\Controllers\V1\User\CommController;
 use App\Http\Controllers\V1\User\UserController;
 use App\Models\User;
 use App\Services\AuthService;
@@ -74,15 +75,33 @@ class MirrorBuild extends Command
 
         $t0 = microtime(true);
 
+        /*
+         * 🔑 One body, stored under every subject.
+         *
+         * CommController::config() takes no request at all - currency and
+         * symbol, telegram links, the stripe public key - so it is the same
+         * string for every account on the panel. It is carried because the
+         * customer site does not render without it, and rendering nothing is
+         * the failure the mirror exists to prevent.
+         *
+         * Copying it per user rather than inventing a "global entry" is
+         * deliberate, and the codebase already argues for it: the lookup on the
+         * relay stays a single indexed equality with no fallback logic, which
+         * is what should happen on the one path that has to work when
+         * everything else has failed. The redundancy is about 435 rows of 300
+         * bytes, which is not worth a second code path to avoid.
+         */
+        $comm = $this->body((new CommController())->config());
+
         $this->eligible()->chunkById(100, function ($users) use (
-            $flags, $now, $limit, &$built, &$unchanged, &$failed
+            $flags, $comm, $now, $limit, &$built, &$unchanged, &$failed
         ) {
             foreach ($users as $user) {
                 if ($limit > 0 && ($built + $unchanged) >= $limit) {
                     return false;
                 }
                 try {
-                    $payload = $this->payloadFor($user, $flags);
+                    $payload = $this->payloadFor($user, $flags, $comm);
                 } catch (\Throwable $e) {
                     // One account that cannot be rendered must not cost the
                     // other 335 theirs. Its previous row stays exactly where it
@@ -159,7 +178,7 @@ class MirrorBuild extends Command
     /**
      * @return array<string, mixed>
      */
-    private function payloadFor(User $user, array $flags): array
+    private function payloadFor(User $user, array $flags, string $comm): array
     {
         $payload = [
             'user_id' => $user->id,
@@ -197,6 +216,8 @@ class MirrorBuild extends Command
         //
         // It costs nothing to mirror: the response is three booleans read
         // straight off the auth data, with no query behind it.
+        // The same for every account - see the note where it is computed.
+        $payload['commConfig'] = $comm;
         $payload['checkLogin'] = $this->body(
             $controller->checkLogin($this->request('/api/v1/user/checkLogin', [], $auth))
         );
