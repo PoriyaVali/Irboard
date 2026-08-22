@@ -185,6 +185,21 @@ class MirrorBuild extends Command
         $payload['info'] = $this->body(
             $controller->info($this->request('/api/v1/user/info', [], $auth))
         );
+        // 🔑 Tiny, and the customer site does not work without it.
+        //
+        // drmobjay.com's own Vue front-end calls checkLogin on every page load
+        // to decide whether it has a session. Unanswered, it concludes the
+        // person is signed out and shows a login form they cannot get past -
+        // during an outage where their subscription was sitting right here,
+        // ready to serve. A site that loads and then locks you out is worse
+        // than one that does not load, because it looks like your account is
+        // gone.
+        //
+        // It costs nothing to mirror: the response is three booleans read
+        // straight off the auth data, with no query behind it.
+        $payload['checkLogin'] = $this->body(
+            $controller->checkLogin($this->request('/api/v1/user/checkLogin', [], $auth))
+        );
 
         // The configuration file, once per client bucket. The Client middleware
         // puts the User *model* on the request here, not the array - the
