@@ -4,6 +4,10 @@ namespace App\Console\Commands;
 
 use App\Http\Controllers\V1\Client\ClientController;
 use App\Http\Controllers\V1\User\CommController;
+use App\Http\Controllers\V1\User\KnowledgeController;
+use App\Http\Controllers\V1\User\NoticeController;
+use App\Http\Controllers\V1\User\PlanController;
+use App\Http\Controllers\V1\User\TelegramController;
 use App\Http\Controllers\V1\User\UserController;
 use App\Models\User;
 use App\Services\AuthService;
@@ -218,6 +222,39 @@ class MirrorBuild extends Command
         // straight off the auth data, with no query behind it.
         // The same for every account - see the note where it is computed.
         $payload['commConfig'] = $comm;
+
+        /*
+         * The rest of what a subscriber can still usefully see.
+         *
+         * 🔑 `notice` earns its place twice over. It is the only channel that
+         * can tell people what is happening - a notice written before the
+         * outage ("the national internet is down; the app works slowly") is the
+         * difference between someone who waits and someone who concludes the
+         * service is gone. Nothing else in this payload can say a word.
+         *
+         * All four are ordinary reads whose answers change slowly, so a stale
+         * copy is a smaller answer rather than a wrong one. That is the test
+         * everything here has to pass - and why order status and add-on state
+         * are deliberately absent: "pending" about an order that completed is
+         * not less information, it is false information.
+         */
+        foreach ([
+            'notice' => [NoticeController::class, 'fetch'],
+            'knowledge' => [KnowledgeController::class, 'fetch'],
+            'plan' => [PlanController::class, 'fetch'],
+            'telegramBot' => [TelegramController::class, 'getBotInfo'],
+        ] as $key => [$class, $method]) {
+            try {
+                $payload[$key] = $this->body(
+                    (new $class())->$method($this->request('/api/v1/user/' . $key, [], $auth))
+                );
+            } catch (\Throwable $e) {
+                // One optional extra must not cost this account the things it
+                // actually needs. Absent is already handled - the relay answers
+                // its honest 503 for anything it does not hold.
+                unset($payload[$key]);
+            }
+        }
         $payload['checkLogin'] = $this->body(
             $controller->checkLogin($this->request('/api/v1/user/checkLogin', [], $auth))
         );
