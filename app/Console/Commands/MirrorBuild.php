@@ -7,6 +7,7 @@ use App\Http\Controllers\V1\User\CommController;
 use App\Http\Controllers\V1\User\KnowledgeController;
 use App\Http\Controllers\V1\User\NoticeController;
 use App\Http\Controllers\V1\User\PlanController;
+use App\Http\Controllers\V1\User\ServerController;
 use App\Http\Controllers\V1\User\TelegramController;
 use App\Http\Controllers\V1\User\UserController;
 use App\Models\User;
@@ -241,8 +242,17 @@ class MirrorBuild extends Command
         foreach ([
             'notice' => [NoticeController::class, 'fetch'],
             'knowledge' => [KnowledgeController::class, 'fetch'],
+            'knowledgeCategory' => [KnowledgeController::class, 'getCategory'],
             'plan' => [PlanController::class, 'fetch'],
             'telegramBot' => [TelegramController::class, 'getBotInfo'],
+            // The website's server list. Costs the most of anything here - it
+            // is another getAvailableServers, which is the 96ms part - but it
+            // is the same slowly-changing node list the configuration file
+            // already carries, so a stale copy is exactly as wrong as the
+            // configuration itself, which is to say not very.
+            'serverFetch' => [ServerController::class, 'fetch'],
+            // Reserved plans, for the badge the app shows.
+            'reserved' => [UserController::class, 'getReservedPlans'],
         ] as $key => [$class, $method]) {
             try {
                 $payload[$key] = $this->body(
