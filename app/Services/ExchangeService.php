@@ -12,9 +12,21 @@ class ExchangeService
     {
         $cached = Cache::get('exchange_rate');
         
+        /*
+         * 🔑 Fifteen minutes, not an hour.
+         *
+         * The relay publishes a new median every five, so an hour of cache here
+         * threw most of that away: a rate could be three cycles old before this
+         * even looked. The chain from a market move to a customer seeing a new
+         * price used to be up to three hours of stacked hourly steps, none of
+         * them aligned with each other.
+         *
+         * The cost of asking more often is one HTTP request to a box that
+         * answers in a third of a second.
+         */
         if ($cached && is_array($cached)) {
             $age = time() - $cached['time'];
-            if ($age < 3600) {
+            if ($age < 900) {
                 return $cached['rate'];
             }
         }
@@ -26,7 +38,9 @@ class ExchangeService
                 'rate' => $rate,
                 'time' => time(),
                 'date' => date('Y-m-d H:i:s')
-            ], 3600);
+            ], 3600);   // kept longer than the read window on purpose: a stale
+                        // entry is what plausible() compares against and what
+                        // getCurrentRate() falls back to when every source fails.
             
             Log::info('✓ Rate updated', ['rate' => $rate]);
             return $rate;

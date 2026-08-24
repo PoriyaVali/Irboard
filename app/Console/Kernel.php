@@ -57,7 +57,11 @@ class Kernel extends ConsoleKernel
         $schedule->command('backup:scheduled')->everyMinute()->withoutOverlapping();
 
         // Price Sync
-        $schedule->command('plan:sync-prices')->hourly()->withoutOverlapping()->runInBackground();
+        // Every fifteen minutes rather than hourly. It costs almost nothing when
+        // nothing moved - the command skips any plan whose last_exchange_rate
+        // already matches - and hourly meant a plan could carry yesterday's
+        // dollar for an hour after the rate had been corrected.
+        $schedule->command('plan:sync-prices')->everyFifteenMinutes()->withoutOverlapping()->runInBackground();
     }
 
     protected function commands()
