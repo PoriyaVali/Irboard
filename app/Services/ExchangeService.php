@@ -164,7 +164,11 @@ class ExchangeService
             return null;
         }
 
-        $res = Http::timeout(12)->connectTimeout(6)->get($url);
+        // ⚠️ connect_timeout as a Guzzle option, not ->connectTimeout(): that
+        // helper does not exist on this panel's Laravel, and the call died
+        // inside the try/catch as "Method ... does not exist" - a silent
+        // fallthrough to the wrong source.
+        $res = Http::timeout(12)->withOptions(['connect_timeout' => 6])->get($url);
         if (!$res->successful()) {
             return null;
         }
