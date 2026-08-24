@@ -52,7 +52,11 @@ class ExchangeService
         foreach ($sources as $method) {
             try {
                 $rate = self::$method();
-                if (self::isValidRate($rate)) {
+                // Two gates, and they ask different questions. isValidRate asks
+                // whether this could be a dollar price at all; plausible() asks
+                // whether it is the same currency we read an hour ago. The
+                // second is the one that catches a parse landing on the euro.
+                if (self::isValidRate($rate) && self::plausible($rate)) {
                     Log::info("✓ {$method}", ['rate' => $rate]);
                     return $rate;
                 }
@@ -64,9 +68,57 @@ class ExchangeService
         return null;
     }
     
+    /**
+     * Is this plausibly a dollar price at all?
+     *
+     * 🔴 The ceiling used to be 200,000 and the market went past it. Every
+     * correct reading was then rejected, Pattern 1 and 2 fell through, and a
+     * page-wide number scrape returned some other currency instead - 146,700
+     * against a real 203,200. Plans priced in USD were sold at 72% of their
+     * intended price, hourly, for as long as that lasted.
+     *
+     * So this band is now wide enough to be about catching a *parse* error - a
+     * three-digit fragment, a gold price in the millions - and not about
+     * having an opinion on the exchange rate. Deciding what the dollar is
+     * allowed to cost is not this function's job, and the last time it tried,
+     * it was wrong in the expensive direction.
+     *
+     * The check that actually catches a wrong number is plausible() below.
+     */
     private static function isValidRate(?int $rate): bool
     {
-        return $rate && $rate >= 80000 && $rate <= 200000;
+        return $rate && $rate >= 50000 && $rate <= 2000000;
+    }
+
+    /**
+     * Is this the same currency we read last time?
+     *
+     * 🔑 The real defence, and the one that would have caught today's bug on
+     * its own. An absolute band cannot tell a dollar from a euro; a rate that
+     * moved 38% in an hour can only be a different number, not a different
+     * price. Real moves are percent-a-day, not tens-of-percent-an-hour.
+     *
+     * Rejecting means falling back to the cached rate, which is a real dollar
+     * price from an hour ago. That is always better than a confident reading of
+     * something else entirely.
+     */
+    private static function plausible(int $rate): bool
+    {
+        $cached = Cache::get('exchange_rate');
+        if (!is_array($cached) || empty($cached['rate'])) {
+            return true;    // nothing to compare against
+        }
+
+        $drift = abs($rate - $cached['rate']) / $cached['rate'];
+        if ($drift > 0.35) {
+            Log::warning('Rate rejected: implausible jump', [
+                'previous' => $cached['rate'],
+                'candidate' => $rate,
+                'drift' => round($drift * 100) . '%',
+            ]);
+            return false;
+        }
+        return true;
     }
     
     /**
@@ -140,35 +192,28 @@ class ExchangeService
 			}
 		}
     
-		// Pattern 3: اگر Pattern های بالا کار نکردن، از اعداد موجود استفاده کن
-		// ولی از دومین عدد استفاده کن (اولی buyPrice است، دومی sellPrice)
-		preg_match_all('/(\d{2,3})[,،](\d{3})/u', $html, $matches, PREG_SET_ORDER);
-    
-		$candidates = [];
-		foreach ($matches as $match) {
-			$price = (int) str_replace([',', '،'], '', $match[0]);
-        
-			if (self::isValidRate($price)) {
-				$candidates[] = $price;
-			}
-		}
-    
-		// اگر 2 عدد در بازه معتبر داریم، دومی رو برمی‌گردونیم (sellPrice)
-		if (count($candidates) >= 2) {
-			$sellPrice = $candidates[1]; // دومین عدد = sellPrice
-			Log::debug('Alanchand using second candidate', [
-				'all' => $candidates,
-				'selected' => $sellPrice
-			]);
-			return $sellPrice;
-		}
-    
-		// اگر فقط یک عدد داریم، همون رو برمی‌گردونیم
-		if (count($candidates) === 1) {
-			Log::warning('Only one price found, using it', ['price' => $candidates[0]]);
-			return $candidates[0];
-		}
-		
+		/*
+		 * 🔴 There was a Pattern 3 here and it was the whole bug.
+		 *
+		 * It scraped every NN,NNN number from the entire page - euro, pound,
+		 * gold, crypto, anything - kept the ones inside the valid band and
+		 * returned the *second* of them. When the two patterns above failed,
+		 * which they did the moment the dollar went past the old 200,000
+		 * ceiling, it confidently returned a different currency: 146,700
+		 * against a real 203,200, hourly, and every plan priced in USD was sold
+		 * at 72% of its intended price for as long as that lasted.
+		 *
+		 * Nothing downstream could tell. It is a number, it is in range, it
+		 * passes every check - and it is the price of something else.
+		 *
+		 * Returning null is strictly better. The caller falls back to the
+		 * cached rate, which is a real dollar price from an hour ago; failing
+		 * that, to the configured fallback. Both are honest about being old.
+		 * A wrong number is not.
+		 */
+		Log::warning('Alanchand: the دلار آمریکا row did not parse', [
+			'html_bytes' => strlen($html),
+		]);
 		return null;
 	}
     
