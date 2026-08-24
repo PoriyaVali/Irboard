@@ -44,7 +44,29 @@ class ExchangeService
     
     private static function fetchRate(): ?int
     {
+        /*
+         * 🔑 The relay first, and the reason is geography.
+         *
+         * This panel is in Germany. alanchand.com serves a different page to a
+         * non-Iranian address - the دلار آمریکا row simply is not in it - so
+         * fetchFromAlanchand has never actually read the dollar from here. It
+         * fell through to fetchFromExchangeRateAPI, which returns a different
+         * rate entirely (152,320 against a real 203,500), and before that to a
+         * page-wide number scrape that returned whichever currency happened to
+         * be second.
+         *
+         * The relay is in Iran, already reads that row correctly every hour,
+         * and answers in about a third of a second from here. Scraping an
+         * Iranian site from Germany was the mistake; the box we already have
+         * inside the country is the fix.
+         *
+         * The other two stay as fallbacks. They are wrong about the free-market
+         * dollar, but plausible() will now refuse a number that disagrees with
+         * the last good one by more than a third, so they can no longer quietly
+         * replace it.
+         */
         $sources = [
+            'fetchFromRelay',
             'fetchFromAlanchand',
             'fetchFromExchangeRateAPI',
         ];
@@ -121,6 +143,54 @@ class ExchangeService
         return true;
     }
     
+    /**
+     * The rate as read from inside Iran, by the relay.
+     *
+     * drmobjay.com fetches alanchand hourly from an Iranian address, parses the
+     * دلار آمریکا row and caches it. This just asks it. That is the whole
+     * reason it is first: the same scrape from Germany does not see the row at
+     * all.
+     *
+     * ⚠️ A stale answer is still used. The relay marks anything over six hours
+     * old, but a real dollar price from this morning beats a different
+     * currency's price from this second - which is what the alternatives here
+     * offer. The staleness is logged so it is visible if the relay's own cron
+     * has stopped, which is exactly how this was found.
+     */
+    private static function fetchFromRelay(): ?int
+    {
+        $url = config('exchange.relay_url');
+        if (!$url) {
+            return null;
+        }
+
+        $res = Http::timeout(12)->connectTimeout(6)->get($url);
+        if (!$res->successful()) {
+            return null;
+        }
+
+        $data = $res->json();
+        if (!is_array($data) || !isset($data['price']) || !is_numeric($data['price'])) {
+            return null;
+        }
+
+        // The relay says so itself when it has fallen back to its built-in
+        // default rather than a real reading. That is not a price, it is a
+        // placeholder, and it must not become ours.
+        if (!empty($data['fallback'])) {
+            Log::warning('Relay is serving its own fallback price, not a real reading');
+            return null;
+        }
+
+        if (!empty($data['stale'])) {
+            Log::warning('Relay price is stale but still the best available', [
+                'age_minutes' => $data['age_minutes'] ?? null,
+            ]);
+        }
+
+        return (int) $data['price'];
+    }
+
     /**
      * تبدیل اعداد فارسی به انگلیسی
      */
