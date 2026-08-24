@@ -242,7 +242,6 @@ class MirrorBuild extends Command
         foreach ([
             'notice' => [NoticeController::class, 'fetch'],
             'knowledge' => [KnowledgeController::class, 'fetch'],
-            'knowledgeCategory' => [KnowledgeController::class, 'getCategory'],
             'plan' => [PlanController::class, 'fetch'],
             'telegramBot' => [TelegramController::class, 'getBotInfo'],
             // The website's server list. Costs the most of anything here - it
