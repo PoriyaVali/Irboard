@@ -59,31 +59,37 @@ class ExchangeService
     private static function fetchRate(): ?int
     {
         /*
-         * 🔑 The relay first, and the reason is geography.
+         * 🔑 The relay first when one is configured - and nothing breaks when
+         * none is.
          *
-         * This panel is in Germany. alanchand.com serves a different page to a
-         * non-Iranian address - the دلار آمریکا row simply is not in it - so
-         * fetchFromAlanchand has never actually read the dollar from here. It
-         * fell through to fetchFromExchangeRateAPI, which returns a different
-         * rate entirely (152,320 against a real 203,500), and before that to a
-         * page-wide number scrape that returned whichever currency happened to
-         * be second.
+         * An operator running this panel on their own has no relay, and must
+         * still get a real free-market rate. So the two scrapers below are not
+         * decoration: they are the whole answer for a standalone install, and
+         * both were verified to answer from outside Iran.
          *
-         * The relay is in Iran, already reads that row correctly every hour,
-         * and answers in about a third of a second from here. Scraping an
-         * Iranian site from Germany was the mistake; the box we already have
-         * inside the country is the fix.
+         * ⚠️ The comment that used to sit here said alanchand does not serve
+         * the دلار آمریکا row to a non-Iranian address. Measured again on
+         * 2026-08-31 from this panel in Germany, it does - the row and its
+         * price are both present. What actually broke that source was a span
+         * the site added inside the cell; see fetchFromAlanchand.
          *
-         * The other two stay as fallbacks. They are wrong about the free-market
-         * dollar, but plausible() will now refuse a number that disagrees with
-         * the last good one by more than a third, so they can no longer quietly
-         * replace it.
+         * Two scrapers rather than one because a markup change kills a scraper
+         * silently, and a single source means the price simply stops moving
+         * with nothing to notice it.
+         *
+         * ❌ fetchFromExchangeRateAPI is deliberately NOT in this list. It
+         * answers with a different rate entirely - 152,320 against a real
+         * 203,500 when it was last measured - and it is not the free-market
+         * dollar this panel prices in. It is worse than an absent source: a
+         * readable, confident, wrong number. At that distance plausible() does
+         * not save us either, since a 27% gap sits inside its 35% band. The
+         * method is kept for manual diagnosis only.
          */
-        $sources = [
-            'fetchFromRelay',
+        $sources = array_values(array_filter([
+            config('exchange.relay_url') ? 'fetchFromRelay' : null,
             'fetchFromAlanchand',
-            'fetchFromExchangeRateAPI',
-        ];
+            'fetchFromTgju',
+        ]));
         
         foreach ($sources as $method) {
             try {
@@ -244,39 +250,27 @@ class ExchangeService
 		// تبدیل اعداد فارسی به انگلیسی
 		$html = self::persianToEnglish($html);
     
-		// Pattern 1: جستجوی مستقیم sellPrice در ردیف دلار آمریکا
-		if (preg_match('/<tr[^>]*title="قیمت دلار آمریکا"[^>]*>.*?<td[^>]*class="[^"]*sellPrice[^"]*"[^>]*>([^<]+)<\/td>/su', $html, $match)) {
-			$priceText = strip_tags($match[1]);
-			$priceText = str_replace(['<span', '</span>'], '', $priceText); // حذف span ها
-			$price = (int) str_replace([',', '،', ' '], '', $priceText);
-        
+		/*
+		 * Anchored on the row's own title and its sellPrice cell, then simply
+		 * the digits that follow.
+		 *
+		 * 🔑 This used to exist as two patterns and both required `</td>`
+		 * immediately after the captured number. The site now places a span
+		 * between the figure and the end of the cell:
+		 *
+		 *     <td class="sellPrice text-center">210,600<span ...
+		 *
+		 * so both matched nothing and this source went silently dead - no
+		 * error, just a rate that stopped moving. What makes a pattern safe
+		 * here is the label it starts from, never how tightly it grips
+		 * whatever markup happens to follow the value.
+		 */
+		if (preg_match('/<tr[^>]*title="قیمت دلار آمریکا"[^>]*>.*?sellPrice[^>]*>\s*([0-9][0-9,]*)/su', $html, $match)) {
+			$price = (int) str_replace([',', '،', ' '], '', $match[1]);
+
 			if (self::isValidRate($price)) {
-				Log::debug('Alanchand sellPrice (Pattern 1)', [
-					'raw' => $match[1],
-					'cleaned' => $priceText,
-					'price' => $price
-				]);
+				Log::debug('Alanchand sellPrice', ['raw' => $match[1], 'price' => $price]);
 				return $price;
-			}
-		}
-    
-		// Pattern 2: جستجوی دقیق‌تر - پیدا کردن buyPrice و بعدش sellPrice
-		if (preg_match('/<tr[^>]*title="قیمت دلار آمریکا"[^>]*>.*?buyPrice[^>]*>([^<]+)<\/td>.*?sellPrice[^>]*>([^<]+)<\/td>/su', $html, $match)) {
-			$buyPriceText = strip_tags($match[1]);
-			$sellPriceText = strip_tags($match[2]);
-        
-			$buyPrice = (int) str_replace([',', '،', ' '], '', $buyPriceText);
-			$sellPrice = (int) str_replace([',', '،', ' '], '', $sellPriceText);
-        
-			Log::debug('Alanchand prices (Pattern 2)', [
-				'buy' => $buyPrice,
-				'sell' => $sellPrice
-			]);
-        
-			// استفاده از قیمت فروش (sellPrice)
-			if (self::isValidRate($sellPrice)) {
-				Log::info('Using SELL price', ['price' => $sellPrice]);
-				return $sellPrice;
 			}
 		}
     
@@ -304,7 +298,55 @@ class ExchangeService
 		]);
 		return null;
 	}
-    
+
+    /**
+     * Scraping: TGJU - a second source that does not need the relay.
+     *
+     * 🔑 Why this exists at all: without it a panel with no relay configured
+     * has exactly one way to learn the rate, so the day alanchand changes its
+     * markup - which is the failure that has already happened twice - the
+     * price silently stops moving and every USD plan is sold at yesterday's
+     * number. Two independent sources is the difference between a bad day and
+     * a bad month.
+     *
+     * ⚠️ This page quotes the dollar in RIAL - it is `price_dollar_rl` - so it
+     * is a factor of ten from everything else here. Getting that wrong would
+     * not look like an error: 21,000 passes every plausibility check that only
+     * asks whether a number could be a price, and would sell every plan for a
+     * tenth of its value.
+     */
+    private static function fetchFromTgju(): ?int
+    {
+        $html = Http::withoutVerifying()
+            ->timeout(15)
+            ->withHeaders([
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                'Accept-Language' => 'fa-IR,fa;q=0.9',
+            ])
+            ->get('https://www.tgju.org/profile/price_dollar_rl')
+            ->body();
+
+        if (strlen($html) < 1000) {
+            return null;
+        }
+
+        $html = self::persianToEnglish($html);
+
+        // Anchored on the named data column, never on position in the page.
+        if (preg_match('/data-col="info\.last_trade\.PDrCotVal"[^>]*>\s*([0-9][0-9,]*)/su', $html, $match)) {
+            $rial = (int) str_replace([',', '،', ' '], '', $match[1]);
+            $toman = intdiv($rial, 10);
+
+            if (self::isValidRate($toman)) {
+                Log::debug('TGJU dollar', ['rial' => $rial, 'toman' => $toman]);
+                return $toman;
+            }
+        }
+
+        Log::warning('TGJU: the dollar column did not parse', ['html_bytes' => strlen($html)]);
+        return null;
+    }
+
     /**
      * API: ExchangeRate
      */
@@ -376,6 +418,10 @@ class ExchangeService
         
         $sources = [
             'Alanchand' => 'fetchFromAlanchand',
+            'TGJU' => 'fetchFromTgju',
+            // Listed here on purpose even though it is not a pricing source:
+            // seeing how far off it is, next to the two that are trusted, is
+            // the point of a diagnostic.
             'ExchangeRate-API' => 'fetchFromExchangeRateAPI',
         ];
         
