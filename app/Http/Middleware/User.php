@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Services\AuthService;
+use App\Services\DeviceIdentityService;
 use Closure;
 
 class User
@@ -24,6 +25,13 @@ class User
         $request->merge([
             'user' => $user
         ]);
+        // Which devices this account is used from, so one device behind many
+        // accounts can be seen. Here and not only at login: nearly every live
+        // session predates the header, and a Google sign-in is created by the
+        // browser, which never sends it. The service gates this to one write
+        // per account and device every six hours, and it cannot fail the
+        // request.
+        DeviceIdentityService::recordFromHeader((int)$user['id'], $request->header('x-device-ids'));
         return $next($request);
     }
 }

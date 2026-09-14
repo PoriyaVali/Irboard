@@ -1047,3 +1047,10 @@ CREATE TABLE IF NOT EXISTS `v2_mirror_export` (
   UNIQUE KEY `user_id` (`user_id`),
   KEY `built_at` (`built_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- The devices each account has been used from, reported by the app in its
+-- X-Device-Ids header: keyed hashes of device signals, never raw ids. On the
+-- user row itself so the count sits beside the account it describes. See
+-- app/Services/DeviceIdentityService.php for the format and the merge rule.
+ALTER TABLE `v2_user` ADD COLUMN `device_ids` text COMMENT 'Devices this account was used from: JSON list of hashed signals, see DeviceIdentityService';
+ALTER TABLE `v2_user` ADD COLUMN `device_count` int(11) NOT NULL DEFAULT '0' COMMENT 'Distinct devices in device_ids';

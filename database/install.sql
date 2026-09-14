@@ -959,6 +959,8 @@ CREATE TABLE `v2_user` (
   `d` bigint(20) NOT NULL DEFAULT '0',
   `transfer_enable` bigint(20) NOT NULL DEFAULT '0',
   `device_limit` int(11) DEFAULT NULL,
+  `device_ids` text COMMENT 'Devices this account was used from: JSON list of hashed signals, see DeviceIdentityService',
+  `device_count` int(11) NOT NULL DEFAULT '0' COMMENT 'Distinct devices in device_ids',
   `banned` tinyint(1) NOT NULL DEFAULT '0',
   `is_admin` tinyint(1) NOT NULL DEFAULT '0',
   `last_login_at` int(11) DEFAULT NULL,

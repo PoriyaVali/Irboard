@@ -38,6 +38,10 @@ class AuthService
             'device' => $device,
             'auth_data' => $authData
         ]);
+        // Recorded here as well as in the User middleware so a registration has
+        // its device from the very first request - the middleware only sees the
+        // requests that come after this one.
+        DeviceIdentityService::recordFromHeader((int)$this->user->id, $request->header('x-device-ids'));
         return [
             'token' => $this->user->token,
             'is_admin' => $this->user->is_admin,
