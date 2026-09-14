@@ -14,8 +14,13 @@ use Illuminate\Support\Facades\Log;
  * the machine id on Windows). Raw device ids never reach the panel.
  *
  * Stored on the user row itself, in two columns:
- *  - `device_ids`   JSON list of devices, each {"ids":[...],"f":first,"l":last}
+ *  - `device_ids`   JSON list of devices, each
+ *                   {"ids":[...],"f":first seen,"l":last seen,"n":sightings}
  *  - `device_count` how many distinct devices that list holds
+ *
+ * `n` is what keeps the list honest. The header is client-supplied, so a user
+ * can invent devices; when the list is full the device seen FEWEST times is
+ * dropped, never the least recently used. See merge().
  *
  * A DEVICE is the set of hashes one phone presents, not a single hash. A phone
  * sends two, so counting hashes would call every phone two devices. The set
@@ -43,7 +48,7 @@ class DeviceIdentityService
     const MAX_PAIRS = 4;
     /** Hashes kept per device - room for several factory resets. */
     const MAX_IDS_PER_DEVICE = 8;
-    /** Devices kept per account; past this the least recently seen goes. */
+    /** Devices kept per account; past this the least often seen goes. */
     const MAX_DEVICES = 20;
     /** Seconds before one account presenting one header is written again. */
     const SEEN_TTL = 21600;
@@ -116,7 +121,7 @@ class DeviceIdentityService
      */
     public static function merge(array $devices, array $ids, int $now): array
     {
-        $merged = ['ids' => $ids, 'f' => $now, 'l' => $now];
+        $merged = ['ids' => $ids, 'f' => $now, 'l' => $now, 'n' => 1];
         $rest = [];
         foreach ($devices as $device) {
             if (!is_array($device) || !isset($device['ids']) || !is_array($device['ids'])) continue;
@@ -127,16 +132,32 @@ class DeviceIdentityService
                 // are the ones that fall off.
                 $merged['ids'] = array_merge($merged['ids'], $known);
                 $merged['f'] = min($merged['f'], (int)($device['f'] ?? $now));
+                // Sightings add up - including across two records that turn out
+                // to be one device. Rows written before this field existed count
+                // as one.
+                $merged['n'] += max(1, (int)($device['n'] ?? 1));
             } else {
                 $rest[] = $device;
             }
         }
         $merged['ids'] = array_slice(array_values(array_unique($merged['ids'])), 0, self::MAX_IDS_PER_DEVICE);
         $rest[] = $merged;
-        // Most recently seen first; an account over the cap loses the device
-        // it has not used for longest.
+        // 🔴 What gets dropped at the cap decides whether this can be defeated.
+        //
+        // The header is client-supplied, so a user can invent devices at will.
+        // Dropping the least recently SEEN let them push their own real device
+        // out with junk headers and erase the link this exists to make - proven
+        // on production, 20 junk sightings were enough and took a second.
+        //
+        // So the device seen FEWEST times goes first, and a tie is broken in
+        // favour of the one known longest. Junk seen once can then never
+        // displace a device seen twice, and because a repeat only counts once
+        // per gate window, every extra sighting costs an attacker six hours.
         usort($rest, function ($a, $b) {
-            return ((int)($b['l'] ?? 0)) <=> ((int)($a['l'] ?? 0));
+            $an = max(1, (int)($a['n'] ?? 1));
+            $bn = max(1, (int)($b['n'] ?? 1));
+            if ($an !== $bn) return $bn <=> $an;
+            return ((int)($a['f'] ?? 0)) <=> ((int)($b['f'] ?? 0));
         });
         return array_slice($rest, 0, self::MAX_DEVICES);
     }
@@ -161,6 +182,11 @@ class DeviceIdentityService
 
             $new = self::merge($devices, $ids, $now);
             $encoded = json_encode($new, JSON_UNESCAPED_SLASHES);
+            // Writing `false` would put a non-JSON value in the column, and the
+            // next read would silently start this account's device history over.
+            // Hex-only input should make this impossible; losing the history
+            // quietly if it ever is not, would be worse than not writing.
+            if (!is_string($encoded)) return false;
             // MySQL reports 0 affected rows for an UPDATE that changes nothing,
             // which would read as a lost race below.
             if ($encoded === $old) return true;

@@ -104,16 +104,79 @@ class DeviceIdentityServiceTest extends TestCase
         $this->assertSame(100, $out[0]['f']);
     }
 
-    public function testAnAccountOverTheCapLosesTheDeviceUnusedLongest()
+    public function testAnAccountOverTheCapLosesTheDeviceSeenFewestTimes()
     {
         $out = [];
         for ($i = 0; $i < DeviceIdentityService::MAX_DEVICES + 1; $i++) {
             $out = DeviceIdentityService::merge($out, ['androidid:' . hash('sha256', (string)$i)], 1000 + $i);
         }
         $this->assertCount(DeviceIdentityService::MAX_DEVICES, $out);
-        $seen = array_map(function ($d) { return $d['l']; }, $out);
-        $this->assertTrue(!in_array(1000, $seen, true), 'the oldest device should have been dropped');
-        $this->assertSame(1000 + DeviceIdentityService::MAX_DEVICES, $out[0]['l']);
+        // All were seen once, so the tie is broken in favour of the one known
+        // longest: the first device stays and the newest arrival is dropped.
+        $ids = [];
+        foreach ($out as $d) {
+            $ids = array_merge($ids, $d['ids']);
+        }
+        $this->assertTrue(in_array('androidid:' . hash('sha256', '0'), $ids, true),
+            'the device known longest must not be dropped');
+    }
+
+    /**
+     * 🔴 The attack this feature has to survive, and once did not.
+     *
+     * The header is client-supplied. When the cap dropped the least recently
+     * seen device, a user could push their own real device out with junk
+     * headers and erase the link - measured on production: 20 was enough.
+     */
+    public function testJunkHeadersCannotEraseADeviceThatWasActuallyUsed()
+    {
+        $real = ['androidid:' . $this->h('a'), 'widevine:' . $this->h('b')];
+        // Seen twice, as any genuinely used device is: two gate windows apart.
+        $out = DeviceIdentityService::merge([], $real, 1000);
+        $out = DeviceIdentityService::merge($out, $real, 1000 + DeviceIdentityService::SEEN_TTL);
+
+        // Now the flood: far more junk devices than the cap, all arriving later.
+        for ($i = 0; $i < DeviceIdentityService::MAX_DEVICES * 3; $i++) {
+            $out = DeviceIdentityService::merge($out, ['androidid:' . hash('sha256', "junk$i")], 90000 + $i);
+        }
+
+        $ids = [];
+        foreach ($out as $d) {
+            $ids = array_merge($ids, $d['ids']);
+        }
+        $this->assertCount(DeviceIdentityService::MAX_DEVICES, $out);
+        $this->assertTrue(in_array($real[0], $ids, true), 'the real device was erased by junk');
+        $this->assertTrue(in_array($real[1], $ids, true), 'the real widevine hash was erased by junk');
+    }
+
+    public function testRepeatedSightingsAreCountedAndSurviveAMerge()
+    {
+        $a = 'androidid:' . $this->h('a');
+        $w = 'widevine:' . $this->h('b');
+        // Seen separately, then tied together - the counts add up rather than
+        // resetting, so a long-known device is not demoted by being merged.
+        $out = DeviceIdentityService::merge([], [$a], 100);
+        $out = DeviceIdentityService::merge($out, [$a], 200);
+        $out = DeviceIdentityService::merge($out, [$w], 300);
+        $out = DeviceIdentityService::merge($out, [$a, $w], 400);
+        $this->assertCount(1, $out);
+        // Four sightings went in - 100, 200, 300, 400 - and four is what the
+        // single surviving device carries: the two records that turned out to
+        // be one device contribute their own counts, plus this sighting.
+        $this->assertSame(4, $out[0]['n']);
+        $this->assertSame(100, $out[0]['f']);
+    }
+
+    public function testARowWrittenBeforeSightingsWereCountedStillCounts()
+    {
+        // Rows already on production have no "n"; they must read as one
+        // sighting, not zero, or the first write after the upgrade would rank
+        // every existing device below fresh junk.
+        $legacy = [['ids' => ['androidid:' . $this->h('c')], 'f' => 10, 'l' => 20]];
+        $out = DeviceIdentityService::merge($legacy, ['androidid:' . $this->h('c')], 30);
+        $this->assertCount(1, $out);
+        $this->assertSame(2, $out[0]['n']);
+        $this->assertSame(10, $out[0]['f']);
     }
 
     public function testADeviceOverItsHashCapKeepsWhatItStillSends()
