@@ -1054,3 +1054,28 @@ CREATE TABLE IF NOT EXISTS `v2_mirror_export` (
 -- app/Services/DeviceIdentityService.php for the format and the merge rule.
 ALTER TABLE `v2_user` ADD COLUMN `device_ids` text COMMENT 'Devices this account was used from: JSON list of hashed signals, see DeviceIdentityService';
 ALTER TABLE `v2_user` ADD COLUMN `device_count` int(11) NOT NULL DEFAULT '0' COMMENT 'Distinct devices in device_ids';
+
+-- Every account a device-ban touched, and what it was before.
+--
+-- 🔴 NOT v2_user_banned_backup. That table holds 1031 rows from a bulk ban
+-- that was reverted - 120 of them still have live subscriptions and one is
+-- staff - and nothing in this codebase writes it. Reusing it would destroy
+-- the only surviving record of that event.
+--
+-- `was_banned` is the point: a ban is only reversible if the state it
+-- replaced is written down first. `batch` groups the accounts banned by one
+-- click so the whole action can be undone as one.
+CREATE TABLE IF NOT EXISTS `v2_device_ban` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `batch` char(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT 'one admin action',
+  `hash` varchar(80) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT 'the kind:hash the device was matched by',
+  `user_id` int(11) NOT NULL,
+  `was_banned` tinyint(1) NOT NULL COMMENT 'v2_user.banned BEFORE this action, so it can be put back',
+  `admin_id` int(11) DEFAULT NULL COMMENT 'who did it',
+  `reverted_at` int(11) DEFAULT NULL COMMENT 'null while the ban stands',
+  `created_at` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_batch` (`batch`),
+  KEY `idx_user` (`user_id`),
+  KEY `idx_hash` (`hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='device bans and the state each one replaced';

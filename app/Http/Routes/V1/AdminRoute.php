@@ -143,6 +143,18 @@ class AdminRoute
             // Extra access groups granted on top of the one the plan gives
             $router->get ('/user/group/fetch', 'V1\\Admin\\UserGroupController@fetch');
             $router->post('/user/group/save', 'V1\\Admin\\UserGroupController@save');
+            // Which devices an account has been used from, and which devices
+            // are behind more than one account.
+            $router->get ('/device-identity/fetch', 'V1\\Admin\\DeviceIdentityAdminController@fetch');
+            $router->get ('/device-identity/shared', 'V1\\Admin\\DeviceIdentityAdminController@shared');
+            $router->get ('/device-identity/lookup', 'V1\\Admin\\DeviceIdentityAdminController@lookup');
+            // Phase 2, and deliberately POST: these change accounts. `ban` takes
+            // an explicit list of user ids rather than a hash, so one shared
+            // hash can never ban people the admin did not look at.
+            $router->post('/device-identity/ban', 'V1\\Admin\\DeviceIdentityAdminController@ban');
+            $router->post('/device-identity/revert', 'V1\\Admin\\DeviceIdentityAdminController@revert');
+            $router->post('/device-identity/forget', 'V1\\Admin\\DeviceIdentityAdminController@forget');
+            $router->get ('/device-identity/bans', 'V1\\Admin\\DeviceIdentityAdminController@bans');
             // Pricing for groups sold as metered add-ons
             $router->get ('/group-pricing/fetch', 'V1\\Admin\\GroupPricingController@fetch');
             $router->post('/group-pricing/save', 'V1\\Admin\\GroupPricingController@save');
