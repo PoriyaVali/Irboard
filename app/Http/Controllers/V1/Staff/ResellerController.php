@@ -152,6 +152,25 @@ class ResellerController extends Controller
             abort(500, 'پلن یافت نشد');
         }
 
+        // محاسبه مدت
+        $periodDays = [
+            'month_price' => 30,
+            'quarter_price' => 90,
+            'half_year_price' => 180,
+            'year_price' => 365,
+            'two_year_price' => 730,
+            'three_year_price' => 1095,
+            'onetime_price' => 365 * 99,
+        ];
+
+        // Only a real subscription period may name the price. `$plan->$period`
+        // reads ANY column, and the days below fall back to 30 for an unknown
+        // key - so a crafted period=id, transfer_enable or reset_price charged
+        // the reseller that column's value (a few toman) for a 30-day plan.
+        if (!is_string($period) || !array_key_exists($period, $periodDays)) {
+            abort(500, 'این دوره برای این پلن فعال نیست');
+        }
+
         // قیمت با تخفیف نماینده
         $price = $plan->$period ?? 0;
         if ($price <= 0) {
@@ -165,18 +184,7 @@ class ResellerController extends Controller
             abort(500, 'موجودی کافی نیست. نیاز: ' . number_format($finalPrice) . ' تومان');
         }
 
-        // محاسبه مدت
-        $periodDays = [
-            'month_price' => 30,
-            'quarter_price' => 90,
-            'half_year_price' => 180,
-            'year_price' => 365,
-            'two_year_price' => 730,
-            'three_year_price' => 1095,
-            'onetime_price' => 365 * 99,
-        ];
-
-        $days = $periodDays[$period] ?? 30;
+        $days = $periodDays[$period];
 
         DB::beginTransaction();
         try {
