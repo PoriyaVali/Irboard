@@ -154,7 +154,11 @@ Route::post('/api/v1/user/email-by-token', 'V1\User\UserController@getEmailByTok
 
 // ✅ شارژ کیف پول
 Route::get('/api/v1/user/wallet/options', 'V1\\User\\UserController@getRechargeOptions');
-Route::get('/api/v1/user/wallet/history', 'V1\\User\\UserController@getWalletHistory');
+// 🔴 Must carry 'user'. That middleware is what puts the signed-in user into
+// the request (`merge(['user' => ...])`); without it `$request->user['id']`
+// is read from the QUERY STRING, and ?user[id]=N returned anyone's deposit
+// history - trade_no, amounts, dates - with no login at all.
+Route::get('/api/v1/user/wallet/history', 'V1\\User\\UserController@getWalletHistory')->middleware('user');
 // ✅ بسته‌های رزرو
 Route::get('/api/v1/user/reserved-plans', 'V1\\User\\UserController@getReservedPlans')->middleware('user');
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
