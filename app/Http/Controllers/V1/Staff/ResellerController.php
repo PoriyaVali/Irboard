@@ -98,7 +98,8 @@ class ResellerController extends Controller
             abort(500, 'فرمت ایمیل نامعتبر است');
         }
 
-        if (strlen($password) < 6) {
+        // 8, as the message, updateUser, the app and the website all say.
+        if (strlen($password) < 8) {
             abort(500, 'رمز عبور باید حداقل 8 کاراکتر باشد');
         }
 
@@ -263,7 +264,9 @@ class ResellerController extends Controller
                 }
             }
             $plan->discount = $discount;
-            $plan->transfer_gb = round($plan->transfer_enable / 1073741824, 2);
+            // v2_plan.transfer_enable is already in GB - assignPlan multiplies it
+            // by 1073741824 to get bytes. Dividing it again showed every plan as 0 GB.
+            $plan->transfer_gb = (int)$plan->transfer_enable;
             return $plan;
         });
 
@@ -289,6 +292,7 @@ class ResellerController extends Controller
         }
 
         $updated = false;
+        $signOut = false;
         $changes = [];
 
         // بن/آنبن
@@ -323,6 +327,7 @@ class ResellerController extends Controller
             $user->password = password_hash($request->input('password'), PASSWORD_DEFAULT);
             $user->password_algo = null;
             $updated = true;
+            $signOut = true;
             $changes[] = 'رمز عبور تغییر کرد';
         }
 
@@ -339,6 +344,13 @@ class ResellerController extends Controller
         }
 
         $user->save();
+
+        // A new password must end the sessions the old one opened, as the user's
+        // own changePassword does. Otherwise whoever held the old password - the
+        // reason a reseller changes it - stays signed in on every device.
+        if ($signOut) {
+            (new \App\Services\AuthService($user))->removeAllSession();
+        }
 
         // ثبت لاگ
         foreach ($changes as $change) {
