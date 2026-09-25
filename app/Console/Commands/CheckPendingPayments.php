@@ -177,30 +177,21 @@ class CheckPendingPayments extends Command
                     }
                     
                     if ($failCount >= $maxInquiryFails && $orderAge >= $refundAfter) {
+                        // 🔴 Claude 2026-09-25: this used to credit the order to the
+                        // wallet. An inquiry that fails says nothing about whether the
+                        // customer paid - during a Zibal or network outage every
+                        // abandoned order with a trackId would have been handed out
+                        // as free credit. The order stays pending and keeps being
+                        // asked about; a person decides if it never resolves.
                         if ($debug) {
-                            $this->warn("  ⚠ Max inquiry fails + old order → forcing refund...");
+                            $this->warn("  ⚠ Max inquiry fails + old order → left pending, admin alerted");
                         }
-                        
-                        if ($this->refundToWallet($order, $trackId, 'inquiry_failed_max_retries')) {
-                            $this->info("  ✓ Force refunded to wallet");
-                            
-                            $this->sendTelegram('⚠️ WARNING: Force Refund', $order, $trackId, [
-                                'reason' => 'Max inquiry failures',
-                                'fail_count' => $failCount,
-                                'order_age' => $orderAge . ' min'
-                            ]);
-                            
-                            Cache::forget($failCountKey);
-                            $stats['refunded']++;
-                        } else {
-                            $this->error("  ✗ Force refund failed");
-                            
-                            $this->sendTelegram('🚨 ERROR: Refund Failed', $order, $trackId, [
-                                'error' => 'Force refund failed after max inquiry failures'
-                            ]);
-                            
-                            $stats['failed']++;
-                        }
+                        $this->alertOnce("inquiry_failed_{$order->id}", '⚠️ Inquiry keeps failing', $order, $trackId, [
+                            'reason' => 'Zibal inquiry failed; payment state unknown - NOT credited',
+                            'fail_count' => $failCount,
+                            'order_age' => $orderAge . ' min'
+                        ]);
+                        $stats['skipped']++;
                     } else {
                         $stats['failed']++;
                     }
@@ -228,7 +219,24 @@ class CheckPendingPayments extends Command
                         if ($verifyResult) {
                             $this->info("  ✓✓ Verified and order completed!");
                             $stats['verified']++;
+                        } else if ($status === 2) {
+                            // 🔴 Claude 2026-09-25: paid but NOT verified. If it cannot be
+                            // verified the bank returns the money to the payer; crediting
+                            // the wallet as well (as this used to) paid them twice. Keep
+                            // trying to verify; a reversal later shows up as 15/16/18.
+                            if ($debug) {
+                                $this->warn("  ⚠ Unverified payment, verify failed → retrying, not crediting");
+                            }
+                            if ($orderAge >= $refundAfter) {
+                                $this->alertOnce("verify_unverified_{$order->id}", '⚠️ Unverified payment', $order, $trackId, [
+                                    'reason' => 'Zibal status 2 (paid, not verified) and verify fails - NOT credited',
+                                    'order_age' => $orderAge . ' min'
+                                ]);
+                            }
+                            $stats['skipped']++;
                         } else {
+                            // Status 1: verified at Zibal, so the money is ours; if our
+                            // own verify call fails the wallet credit stands.
                             if ($orderAge >= $refundAfter) {
                                 if ($debug) {
                                     $this->warn("  ⚠ Verify failed → refunding to wallet...");
@@ -345,9 +353,14 @@ class CheckPendingPayments extends Command
                         $stats['skipped']++;
                     }
                 } 
-                else if ($status === 4) {
+                // 🔴 Claude 2026-09-25: 5-12 are payments the bank refused
+                // (insufficient funds, wrong PIN, card errors...) and 15/16/18 ones
+                // it has returned to the payer. They used to fall to the unknown
+                // branch below and be credited to the wallet - free credit for a
+                // failed payment. They are what status 4 already was: cancelled.
+                else if (in_array($status, [4, 5, 6, 7, 8, 9, 10, 11, 12, 15, 16, 18], true)) {
                     if ($debug) {
-                        $this->line("  💳 Payment failed/returned (status: 4)");
+                        $this->line("  💳 Payment failed/returned (status: {$status})");
                     }
 
                     if ($orderAge >= $markOldUnused) {
@@ -400,31 +413,17 @@ class CheckPendingPayments extends Command
                     }
                     
                     if ($orderAge >= $refundAfter) {
+                        // 🔴 Claude 2026-09-25: used to credit the wallet. A status we
+                        // do not understand is not evidence of a payment.
                         if ($debug) {
-                            $this->warn("  ⚠ Unknown status + old order → forcing refund...");
+                            $this->warn("  ⚠ Unknown status + old order → left pending, admin alerted");
                         }
-                        
-                        if ($this->refundToWallet($order, $trackId, 'unknown_status')) {
-                            $this->info("  ✓ Force refunded to wallet");
-                            
-                            $this->sendTelegram('⚠️ WARNING: Unknown Status', $order, $trackId, [
-                                'reason' => 'Unknown Zibal status',
-                                'zibal_status' => $status,
-                                'order_age' => $orderAge . ' min',
-                                'action' => 'پول به کیف پول برگشت'
-                            ]);
-                            
-                            $stats['refunded']++;
-                        } else {
-                            $this->error("  ✗ Force refund failed");
-                            
-                            $this->sendTelegram('🚨 ERROR: Unknown Status', $order, $trackId, [
-                                'error' => 'Unknown status and refund failed',
-                                'zibal_status' => $status
-                            ]);
-                            
-                            $stats['failed']++;
-                        }
+                        $this->alertOnce("unknown_status_{$order->id}_{$status}", '⚠️ Unknown Zibal status', $order, $trackId, [
+                            'reason' => 'Unknown Zibal status - NOT credited, check by hand',
+                            'zibal_status' => $status,
+                            'order_age' => $orderAge . ' min'
+                        ]);
+                        $stats['skipped']++;
                     }
                 }
 
@@ -585,6 +584,16 @@ class CheckPendingPayments extends Command
             ]);
 
             return false;
+        }
+    }
+
+    /**
+     * Tell the admin once, not on every five-minute run.
+     */
+    private function alertOnce(string $key, string $title, Order $order, string $trackId, array $details): void
+    {
+        if (Cache::add("recovery_alert_{$key}", 1, 86400 * 3)) {
+            $this->sendTelegram($title, $order, $trackId, $details);
         }
     }
 
