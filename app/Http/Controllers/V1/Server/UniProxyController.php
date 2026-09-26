@@ -90,14 +90,45 @@ class UniProxyController extends Controller
                 'error' => 'Invalid traffic data'
             ], 400);
         }
-        Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_ONLINE_USER', $this->nodeInfo->id), count($data), 3600);
-        Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_LAST_PUSH_AT', $this->nodeInfo->id), time(), 3600);
-        $userService = new UserService();
-        $userService->trafficFetch($this->nodeInfo->toArray(), $this->nodeType, $data);
+        // A batch that arrives again under the id it was first sent with has
+        // already been counted: answer as if accepted and add nothing. V2bX
+        // (1.5+) keeps one id per batch across its HTTP retries and its
+        // next-cycle resends, so a timeout after we had recorded the batch no
+        // longer bills the traffic twice. A request without an id is counted
+        // as before.
+        $dedupeKey = $this->pushDedupeKey($request);
+        if ($dedupeKey !== null && !Cache::add($dedupeKey, 1, 86400)) {
+            return response([
+                'data' => true
+            ]);
+        }
+        try {
+            Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_ONLINE_USER', $this->nodeInfo->id), count($data), 3600);
+            Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_LAST_PUSH_AT', $this->nodeInfo->id), time(), 3600);
+            $userService = new UserService();
+            $userService->trafficFetch($this->nodeInfo->toArray(), $this->nodeType, $data);
+        } catch (\Throwable $e) {
+            // Not counted after all: let the resend through.
+            if ($dedupeKey !== null) {
+                Cache::forget($dedupeKey);
+            }
+            throw $e;
+        }
 
         return response([
             'data' => true
         ]);
+    }
+
+    // The cache key that marks one traffic batch as counted, or null when the
+    // node sent no usable id.
+    private function pushDedupeKey(Request $request): ?string
+    {
+        $id = (string)$request->header('X-Report-Id', '');
+        if (!preg_match('/^[A-Za-z0-9_-]{8,64}$/', $id)) {
+            return null;
+        }
+        return 'SERVER_PUSH_SEEN_' . strtoupper($this->nodeType) . '_' . $this->nodeInfo->id . '_' . $id;
     }
 
     // 后端获取在线数据
