@@ -65,6 +65,14 @@ class CheckCommission extends Command
             ->get();
         foreach ($orders as $order) {
             DB::beginTransaction();
+            // Re-read the order under a lock: the list above is unlocked and
+            // this job has no overlap guard, so two runs could both pay the
+            // same order's commission.
+            $order = Order::lockForUpdate()->find($order->id);
+            if (!$order || (int)$order->commission_status !== 1) {
+                DB::rollBack();
+                continue;
+            }
             if (!$this->payHandle($order->invite_user_id, $order)) {
                 DB::rollBack();
                 continue;
@@ -93,7 +101,9 @@ class CheckCommission extends Command
             ];
         }
         for ($l = 0; $l < $level; $l++) {
-            $inviter = User::find($inviteUserId);
+            // Locked: this adds to the inviter's balance and writes the row back,
+            // and an unlocked read lost any change made to it meanwhile.
+            $inviter = User::lockForUpdate()->find($inviteUserId);
             if (!$inviter) continue;
             if (!isset($commissionShareLevels[$l])) continue;
             $commissionBalance = $order->commission_balance * ($commissionShareLevels[$l] / 100);
