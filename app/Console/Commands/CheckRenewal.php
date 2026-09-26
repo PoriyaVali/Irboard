@@ -5,9 +5,9 @@ namespace App\Console\Commands;
 use App\Jobs\SendEmailJob;
 use App\Models\Plan;
 use App\Models\User;
-use App\Utils\Helper;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -26,11 +26,17 @@ class CheckRenewal extends Command
         $this->info('🔄 شروع فرآیند بررسی تمدید خودکار...');
         $this->info('📅 زمان اجرا: ' . now()->format('Y-m-d H:i:s'));
         
+        // renewal:health-check reads these two keys. Nothing wrote them, so it
+        // reported "never" and raised a critical alarm every three hours while
+        // this job was running normally.
+        Cache::put('renewal_last_run', time(), 86400);
+
         try {
             $users = $this->getUsersNeedingRenewal();
             
             if ($users->isEmpty()) {
                 $this->info('✅ هیچ کاربری برای تمدید یافت نشد.');
+                Cache::put('renewal_last_success', time(), 86400);
                 return Command::SUCCESS;
             }
 
@@ -73,6 +79,7 @@ class CheckRenewal extends Command
 
             $this->displayResults($stats);
             Log::info('CheckRenewal completed', $stats);
+            Cache::put('renewal_last_success', time(), 86400);
 
             return Command::SUCCESS;
 
@@ -94,6 +101,17 @@ class CheckRenewal extends Command
      * 3. اشتراک منقضی شده (تا 7 روز گذشته) - برای بازیابی
      */
     protected function getUsersNeedingRenewal()
+    {
+        return $this->renewalCandidates()
+            ->orderBy('expired_at', 'asc')
+            ->get();
+    }
+
+    /**
+     * Users due for renewal, as a query - so the same conditions can be checked
+     * again, for one user under a row lock, at the moment the money moves.
+     */
+    protected function renewalCandidates()
     {
         $now = Carbon::now();
         $criticalTimeThreshold = $now->copy()->addHours(self::HOURS_BEFORE_EXPIRY); // 1 ساعت
@@ -121,9 +139,7 @@ class CheckRenewal extends Command
                     $subQuery->where('expired_at', '>=', $recoveryThreshold->timestamp)
                              ->where('expired_at', '<=', $now->timestamp);
                 });
-            })
-            ->orderBy('expired_at', 'asc')
-            ->get();
+            });
     }
 
     protected function processUserRenewal(User $user)
@@ -167,6 +183,22 @@ class CheckRenewal extends Command
             DB::beginTransaction();
             
             try {
+                // Re-read the user under a row lock and check again. $user was
+                // loaded with the whole batch before this loop, and performRenewal
+                // writes the entire row back: a top-up that landed in between -
+                // and users top up exactly when they run low, which is when this
+                // fires - was overwritten by the stale balance and lost. A plan
+                // bought by hand in between would also have been renewed again.
+                $fresh = $this->renewalCandidates()->where('id', $user->id)->lockForUpdate()->first();
+                if (!$fresh || $fresh->plan_id != $user->plan_id) {
+                    DB::rollBack();
+                    return ['status' => 'skipped'];
+                }
+                if ($fresh->balance < $price) {
+                    DB::rollBack();
+                    return ['status' => 'failure'];
+                }
+                $user = $fresh;
                 $this->performRenewal($user, $plan, $renewalInfo, $price);
                 DB::commit();
                 
@@ -402,50 +434,24 @@ class CheckRenewal extends Command
             'timestamp' => Carbon::now()->toDateTimeString()
         ]);
 
-        $this->recordCommissionLog($user, $plan, $details['price']);
+        $this->recordDailyStats($details['price']);
     }
 
-    protected function recordCommissionLog(User $user, Plan $plan, $price)
+    /**
+     * Count today's renewals for renewal:daily-report.
+     *
+     * This used to insert into v2_commission_log - the REFERRAL commission table,
+     * with columns (type, amount, plan_id) it does not have - so every insert
+     * failed, and had it worked, each renewal would have shown up in the
+     * inviter's commission history.
+     */
+    protected function recordDailyStats($price)
     {
-        if (!class_exists('\App\Models\CommissionLog')) {
-            return;
-        }
-
-        try {
-            $data = [
-                'user_id' => $user->id,
-                'trade_no' => Helper::guid(),
-                'amount' => $price,
-                'order_amount' => $price,
-                'get_amount' => 0,
-                'type' => 'auto_renewal',
-                'created_at' => time(),
-                'updated_at' => time()
-            ];
-
-            if (isset($user->invite_user_id) && $user->invite_user_id !== null) {
-                $data['invite_user_id'] = $user->invite_user_id;
-            } else {
-                $data['invite_user_id'] = 0;
-            }
-
-            if (isset($plan->id)) {
-                $data['plan_id'] = $plan->id;
-            }
-
-            \App\Models\CommissionLog::create($data);
-
-        } catch (\Illuminate\Database\QueryException $e) {
-            Log::warning('Failed to create commission log entry', [
-                'user_id' => $user->id,
-                'error' => $e->getMessage(),
-                'sql_code' => $e->getCode()
-            ]);
-        } catch (\Exception $e) {
-            Log::warning('Unexpected error creating commission log', [
-                'user_id' => $user->id,
-                'error' => $e->getMessage()
-            ]);
+        $day = date('Y-m-d');
+        foreach (['count' => 1, 'revenue' => (int)$price] as $what => $by) {
+            $key = "renewal_daily:{$day}:{$what}";
+            Cache::add($key, 0, now()->addDays(3));
+            Cache::increment($key, $by);
         }
     }
 
