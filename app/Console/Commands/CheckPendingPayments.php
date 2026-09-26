@@ -550,7 +550,8 @@ class CheckPendingPayments extends Command
     private function attemptVerify(Order $order, string $trackId, ZibalPayment $zibal): bool
     {
         try {
-            $verifyResult = $zibal->verify($trackId);
+            // Pass the order so the gateway's amount and order id are checked too.
+            $verifyResult = $zibal->verify($trackId, $order);
 
             if ($verifyResult) {
                 if ((int)$order->status === 0 || (int)$order->status === 2) {

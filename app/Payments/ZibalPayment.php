@@ -252,6 +252,20 @@ class ZibalPayment
                 return false;
             }
 
+            // The gateway reports which order this payment was made for (the
+            // trade_no sent at request time). Require it to be this order: the
+            // callback's orderId arrives from the browser and was trusted on its
+            // own, so a receipt could be presented for a different order of the
+            // same price.
+            if (isset($result['orderId']) && (string)$result['orderId'] !== (string)$order->trade_no) {
+                Log::channel('payment')->error('Verify failed: payment belongs to another order', [
+                    'expected_order' => $order->trade_no,
+                    'paid_order' => $result['orderId'],
+                    'track_id' => $trackId,
+                ]);
+                return false;
+            }
+
             if ($result['amount'] != ($order->total_amount * 10)) {
                 Log::channel('payment')->error('Verify failed: Amount mismatch', [
                     'expected_amount' => $order->total_amount * 10,
@@ -350,8 +364,13 @@ class ZibalPayment
     /**
      * Standalone verify used by payment recovery (CheckPendingPayments).
      * Returns true on result 100 (verified) or 201 (already verified).
+     *
+     * Given the order, the gateway's answer must also match it - the amount
+     * paid and the order it was paid for - wherever the gateway reports them.
+     * The callback path always checked the amount; this recovery path checked
+     * nothing but the result code, so it would accept any verified payment.
      */
-    public function verify($trackId)
+    public function verify($trackId, $order = null)
     {
         try {
             $verifyParams = [
@@ -374,6 +393,24 @@ class ZibalPayment
 
             $code = $result['result'] ?? 0;
             if ($code === 100 || $code === 201) {
+                if ($order !== null) {
+                    if (isset($result['amount']) && (int)$result['amount'] !== (int)$order->total_amount * 10) {
+                        Log::channel('payment')->error('Zibal verify (recovery): amount mismatch', [
+                            'track_id' => $trackId,
+                            'expected_amount' => (int)$order->total_amount * 10,
+                            'received_amount' => $result['amount'],
+                        ]);
+                        return false;
+                    }
+                    if (isset($result['orderId']) && (string)$result['orderId'] !== (string)$order->trade_no) {
+                        Log::channel('payment')->error('Zibal verify (recovery): payment belongs to another order', [
+                            'track_id' => $trackId,
+                            'expected_order' => $order->trade_no,
+                            'paid_order' => $result['orderId'],
+                        ]);
+                        return false;
+                    }
+                }
                 return true;
             }
 
