@@ -912,125 +912,129 @@ class TelegramBotService
      */
     protected function processGiftCard(int $chatId, string $code): void
     {
-        $giftCard = \App\Models\Giftcard::where('code', $code)->first();
+        // One transaction, user then card read under a lock (the same order as
+        // the web redemption). It had neither: the same code sent twice at once
+        // passed the "already used" and usage-limit checks together and was
+        // credited twice, and a single-use card could serve several people.
+        [$ok, $text] = \Illuminate\Support\Facades\DB::transaction(function () use ($code) {
+            $user = \App\Models\User::lockForUpdate()->find($this->user->id);
+            $giftCard = \App\Models\Giftcard::where('code', $code)->lockForUpdate()->first();
 
-        if (!$giftCard) {
-            $this->sendMessage($chatId, "❌ کد گیفت کارت نامعتبر است.");
-            return;
-        }
-
-        $currentTime = time();
-        
-        // بررسی تاریخ شروع
-        if ($giftCard->started_at && $currentTime < $giftCard->started_at) {
-            $this->sendMessage($chatId, "❌ این گیفت کارت هنوز فعال نشده است.");
-            return;
-        }
-        
-        // بررسی تاریخ انقضا
-        if ($giftCard->ended_at && $currentTime > $giftCard->ended_at) {
-            $this->sendMessage($chatId, "❌ این گیفت کارت منقضی شده است.");
-            return;
-        }
-
-        // بررسی محدودیت استفاده
-        if ($giftCard->limit_use !== null) {
-            if (!is_numeric($giftCard->limit_use) || $giftCard->limit_use <= 0) {
-                $this->sendMessage($chatId, "❌ ظرفیت این گیفت کارت تکمیل شده است.");
-                return;
+            if (!$user || !$giftCard) {
+                return [false, "❌ کد گیفت کارت نامعتبر است."];
             }
-        }
 
-        // بررسی استفاده قبلی
-        $usedUserIds = $giftCard->used_user_ids ? json_decode($giftCard->used_user_ids, true) : [];
-        if (!is_array($usedUserIds)) {
-            $usedUserIds = [];
-        }
-        if (in_array($this->user->id, $usedUserIds)) {
-            $this->sendMessage($chatId, "❌ شما قبلاً از این گیفت کارت استفاده کرده‌اید.");
-            return;
-        }
+            $currentTime = time();
+        
+            // بررسی تاریخ شروع
+            if ($giftCard->started_at && $currentTime < $giftCard->started_at) {
+                return [false, "❌ این گیفت کارت هنوز فعال نشده است."];
+            }
+        
+            // بررسی تاریخ انقضا
+            if ($giftCard->ended_at && $currentTime > $giftCard->ended_at) {
+                return [false, "❌ این گیفت کارت منقضی شده است."];
+            }
 
-        // ثبت استفاده
-        $usedUserIds[] = $this->user->id;
-        $giftCard->used_user_ids = json_encode($usedUserIds);
-
-        $user = $this->user;
-        $resultText = "";
-
-        switch ($giftCard->type) {
-            case 1: // پول هدیه
-                $user->balance += $giftCard->value;
-                $resultText = "💰 مبلغ " . number_format($giftCard->value) . " تومان به کیف پول شما اضافه شد.\n💵 موجودی جدید: " . number_format($user->balance) . " تومان";
-                break;
-                
-            case 2: // افزایش مدت زمان اشتراک
-                if ($user->expired_at !== null) {
-                    if ($user->expired_at <= $currentTime) {
-                        $user->expired_at = $currentTime + $giftCard->value * 86400;
-                    } else {
-                        $user->expired_at += $giftCard->value * 86400;
-                    }
-                    $resultText = "📅 " . $giftCard->value . " روز به اشتراک شما اضافه شد.\n⏰ تاریخ انقضا: " . $this->jalaliDate($user->expired_at, 'Y/m/d');
-                } else {
-                    $this->sendMessage($chatId, "❌ شما اشتراک فعالی ندارید که بتوان مدت آن را افزایش داد.");
-                    return;
+            // بررسی محدودیت استفاده
+            if ($giftCard->limit_use !== null) {
+                if (!is_numeric($giftCard->limit_use) || $giftCard->limit_use <= 0) {
+                    return [false, "❌ ظرفیت این گیفت کارت تکمیل شده است."];
                 }
-                break;
+            }
+
+            // بررسی استفاده قبلی
+            $usedUserIds = $giftCard->used_user_ids ? json_decode($giftCard->used_user_ids, true) : [];
+            if (!is_array($usedUserIds)) {
+                $usedUserIds = [];
+            }
+            if (in_array($user->id, $usedUserIds)) {
+                return [false, "❌ شما قبلاً از این گیفت کارت استفاده کرده‌اید."];
+            }
+
+            // ثبت استفاده
+            $usedUserIds[] = $user->id;
+            $giftCard->used_user_ids = json_encode($usedUserIds);
+
+            $resultText = "";
+
+            switch ($giftCard->type) {
+                case 1: // پول هدیه
+                    $user->balance += $giftCard->value;
+                    $resultText = "💰 مبلغ " . number_format($giftCard->value) . " تومان به کیف پول شما اضافه شد.\n💵 موجودی جدید: " . number_format($user->balance) . " تومان";
+                    break;
                 
-            case 3: // افزایش ترافیک
-                $user->transfer_enable += $giftCard->value * 1073741824;
-                $newTrafficGB = round($user->transfer_enable / 1073741824, 2);
-                $resultText = "📊 " . $giftCard->value . " گیگابایت به ترافیک شما اضافه شد.\n📈 ترافیک کل: " . $newTrafficGB . " GB";
-                break;
-                
-            case 4: // بازنشانی ترافیک
-                $user->u = 0;
-                $user->d = 0;
-                $resultText = "🔄 ترافیک مصرفی شما بازنشانی شد.";
-                break;
-                
-            case 5: // تعریف پلن
-                if ($user->plan_id == null || ($user->expired_at !== null && $user->expired_at < $currentTime)) {
-                    $plan = \App\Models\Plan::find($giftCard->plan_id);
-                    if (!$plan) {
-                        $this->sendMessage($chatId, "❌ پلن مربوط به این گیفت کارت یافت نشد.");
-                        return;
+                case 2: // افزایش مدت زمان اشتراک
+                    if ($user->expired_at !== null) {
+                        if ($user->expired_at <= $currentTime) {
+                            $user->expired_at = $currentTime + $giftCard->value * 86400;
+                        } else {
+                            $user->expired_at += $giftCard->value * 86400;
+                        }
+                        $resultText = "📅 " . $giftCard->value . " روز به اشتراک شما اضافه شد.\n⏰ تاریخ انقضا: " . $this->jalaliDate($user->expired_at, 'Y/m/d');
+                    } else {
+                        return [false, "❌ شما اشتراک فعالی ندارید که بتوان مدت آن را افزایش داد."];
                     }
-                    $user->plan_id = $plan->id;
-                    $user->group_id = $plan->group_id;
-                    $user->transfer_enable = $plan->transfer_enable * 1073741824;
-                    $user->device_limit = $plan->device_limit;
+                    break;
+                
+                case 3: // افزایش ترافیک
+                    $user->transfer_enable += $giftCard->value * 1073741824;
+                    $newTrafficGB = round($user->transfer_enable / 1073741824, 2);
+                    $resultText = "📊 " . $giftCard->value . " گیگابایت به ترافیک شما اضافه شد.\n📈 ترافیک کل: " . $newTrafficGB . " GB";
+                    break;
+                
+                case 4: // بازنشانی ترافیک
                     $user->u = 0;
                     $user->d = 0;
-                    if ($giftCard->value == 0) {
-                        $user->expired_at = null;
-                    } else {
-                        $user->expired_at = $currentTime + $giftCard->value * 86400;
-                    }
-                    $resultText = "🎉 پلن \"{$plan->name}\" برای شما فعال شد!\n📅 مدت: " . ($giftCard->value == 0 ? "نامحدود" : $giftCard->value . " روز");
-                } else {
-                    $this->sendMessage($chatId, "❌ شما در حال حاضر اشتراک فعال دارید. این گیفت کارت فقط برای کاربران بدون اشتراک است.");
-                    return;
-                }
-                break;
+                    $resultText = "🔄 ترافیک مصرفی شما بازنشانی شد.";
+                    break;
                 
-            default:
-                $this->sendMessage($chatId, "❌ نوع گیفت کارت نامعتبر است.");
-                return;
-        }
+                case 5: // تعریف پلن
+                    if ($user->plan_id == null || ($user->expired_at !== null && $user->expired_at < $currentTime)) {
+                        $plan = \App\Models\Plan::find($giftCard->plan_id);
+                        if (!$plan) {
+                            return [false, "❌ پلن مربوط به این گیفت کارت یافت نشد."];
+                        }
+                        $user->plan_id = $plan->id;
+                        $user->group_id = $plan->group_id;
+                        $user->transfer_enable = $plan->transfer_enable * 1073741824;
+                        $user->device_limit = $plan->device_limit;
+                        $user->u = 0;
+                        $user->d = 0;
+                        if ($giftCard->value == 0) {
+                            $user->expired_at = null;
+                        } else {
+                            $user->expired_at = $currentTime + $giftCard->value * 86400;
+                        }
+                        $resultText = "🎉 پلن \"{$plan->name}\" برای شما فعال شد!\n📅 مدت: " . ($giftCard->value == 0 ? "نامحدود" : $giftCard->value . " روز");
+                    } else {
+                        return [false, "❌ شما در حال حاضر اشتراک فعال دارید. این گیفت کارت فقط برای کاربران بدون اشتراک است."];
+                    }
+                    break;
+                
+                default:
+                    return [false, "❌ نوع گیفت کارت نامعتبر است."];
+            }
 
-        // کاهش limit_use
-        if ($giftCard->limit_use !== null) {
-            $giftCard->limit_use -= 1;
-        }
+            // کاهش limit_use
+            if ($giftCard->limit_use !== null) {
+                $giftCard->limit_use -= 1;
+            }
         
-        $giftCard->save();
-        $user->save();
+            $giftCard->save();
+            $user->save();
 
+            return [true, $resultText];
+        });
+
+        if (!$ok) {
+            $this->sendMessage($chatId, $text);
+            return;
+        }
         $this->user->update(['bot_step' => null]);
-        $this->sendMessage($chatId, "✅ گیفت کارت با موفقیت اعمال شد!\n\n" . $resultText);
+        $this->sendMessage($chatId, "✅ گیفت کارت با موفقیت اعمال شد!\n\n" . $text);
     }
+
 
     /**
      * درخواست مبلغ شارژ
@@ -1538,21 +1542,26 @@ class TelegramBotService
      */
     protected function transferCommission(int $chatId): void
     {
-        $user = $this->user;
-        $commission = $user->commission_balance ?? 0;
-        
+        // Read and move under a row lock. The bot used the user it loaded at
+        // the start of the update, so tapping the button twice credited the
+        // same commission twice.
+        [$commission, $user] = \Illuminate\Support\Facades\DB::transaction(function () {
+            $user = \App\Models\User::lockForUpdate()->find($this->user->id);
+            $commission = $user ? ($user->commission_balance ?? 0) : 0;
+            if ($commission <= 0) {
+                return [0, $user];
+            }
+            $user->balance += $commission;
+            $user->commission_balance = 0;
+            $user->save();
+            return [$commission, $user];
+        });
+
         if ($commission <= 0) {
             $this->sendMessage($chatId, "❌ موجودی کمیسیون شما صفر است.");
             return;
         }
-        
-        $minWithdraw = config('v2board.withdraw_close_enable', 0) ? PHP_INT_MAX : 0;
-        
-        // انتقال به کیف پول
-        $user->balance += $commission;
-        $user->commission_balance = 0;
-        $user->save();
-        
+
         $this->sendMessage($chatId, "✅ مبلغ " . number_format($commission) . " تومان به کیف پول شما منتقل شد.\n\n💵 موجودی جدید: " . number_format($user->balance) . " تومان");
     }
 

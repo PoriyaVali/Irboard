@@ -264,12 +264,17 @@ class UserController extends Controller
         DB::beginTransaction();
 
         try {
-            $user = User::find($request->user['id']);
+            // Both rows are read under a lock, user first then card (the same
+            // order everywhere, so two redemptions cannot deadlock). Without it,
+            // the same request sent several times at once passed the "already
+            // used by this user" and usage-limit checks together and credited
+            // the card once per request - and a single-use card served many.
+            $user = User::lockForUpdate()->find($request->user['id']);
             if (!$user) {
                 abort(500, __('The user does not exist'));
             }
             $giftcard_input = $request->giftcard;
-            $giftcard = Giftcard::where('code', $giftcard_input)->first();
+            $giftcard = Giftcard::where('code', $giftcard_input)->lockForUpdate()->first();
 
             if (!$giftcard) {
                 abort(500, __('The gift card does not exist'));
@@ -562,14 +567,20 @@ class UserController extends Controller
 
     public function transfer(UserTransfer $request)
     {
-        $user = User::find($request->user['id']);
+        DB::beginTransaction();
+        // Check and move the money on a locked row. The check used to run on an
+        // unlocked read before the transaction, so a transfer submitted twice
+        // at once passed it twice: the commission went negative and the wallet
+        // was credited twice.
+        $user = User::lockForUpdate()->find($request->user['id']);
         if (!$user) {
+            DB::rollBack();
             abort(500, __('The user does not exist'));
         }
         if ($request->input('transfer_amount') > $user->commission_balance) {
+            DB::rollBack();
             abort(500, __('Insufficient commission balance'));
         }
-        DB::beginTransaction();
         $order = new Order();
         $orderService = new OrderService($order);
         $order->user_id = $request->user['id'];
