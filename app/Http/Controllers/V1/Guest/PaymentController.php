@@ -292,7 +292,9 @@ class PaymentController extends Controller
                 $text .= "💰 مبلغ: " . number_format($adjustedAmount) . " تومان\n";
                 $text .= "🔢 شماره سفارش: {$order->trade_no}\n\n";
                 if ($order->plan_id) {
-                    $text .= "🎉 اشتراک شما فعال شد!";
+                    $text .= OrderService::isReserved($order)
+                        ? "📦 بسته شما رزرو شد و بعد از تمام شدن اشتراک فعلی، خودکار فعال می‌شود."
+                        : "🎉 اشتراک شما فعال شد!";
                 } else {
                     $text .= "💵 کیف پول شما شارژ شد!";
                 }
@@ -335,7 +337,8 @@ class PaymentController extends Controller
             $title = 'پرداخت موفق';
             $icon = '✅';
             $color = '#28a745';
-            $desc = $order->plan_id ? 'اشتراک شما فعال شد!' : 'کیف پول شما شارژ شد!';
+            $desc = !$order->plan_id ? 'کیف پول شما شارژ شد!'
+                : (OrderService::isReserved($order) ? 'بسته شما رزرو شد و بعد از تمام شدن اشتراک فعلی، خودکار فعال می‌شود.' : 'اشتراک شما فعال شد!');
         } else {
             $title = 'پرداخت ناموفق';
             $icon = '❌';
@@ -383,7 +386,8 @@ h1{color:' . $color . ';margin-bottom:10px}
             $title = 'پرداخت موفق';
             $icon = '✅';
             $color = '#28a745';
-            $desc = $order->plan_id ? 'اشتراک شما فعال شد!' : 'کیف پول شما شارژ شد!';
+            $desc = !$order->plan_id ? 'کیف پول شما شارژ شد!'
+                : (OrderService::isReserved($order) ? 'بسته شما رزرو شد و بعد از تمام شدن اشتراک فعلی، خودکار فعال می‌شود.' : 'اشتراک شما فعال شد!');
         } else {
             $title = 'پرداخت ناموفق';
             $icon = '❌';

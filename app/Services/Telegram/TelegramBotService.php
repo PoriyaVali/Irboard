@@ -1187,7 +1187,10 @@ class TelegramBotService
         }
 
         if ($result["paid"]) {
-            $this->sendMessage($chatId, "✅ " . $result["message"] . "\n\nسرویس شما فعال شد!");
+            $done = \App\Services\OrderService::isReserved($result["order"])
+                ? "📦 بسته شما رزرو شد و بعد از تمام شدن اشتراک فعلی، خودکار فعال می‌شود."
+                : "سرویس شما فعال شد!";
+            $this->sendMessage($chatId, "✅ " . $result["message"] . "\n\n" . $done);
             return;
         }
 

@@ -465,6 +465,21 @@ class OrderService
     private function shouldReserve($order)
     {
         $user = $this->user;
+        if (!self::hasPlanToWaitFor($user)) return false;
+
+        // بررسی محدودیت 10 بسته رزرو
+        $reservedCount = ReservedPlan::where('user_id', $user->id)->where('status', 0)->count();
+        if ($reservedCount >= 10) abort(500, 'حداکثر ۱۰ بسته رزرو مجاز است');
+
+        return true;
+    }
+
+    /**
+     * Whether the user's current plan still has time and traffic left, so a
+     * newly paid plan is queued behind it rather than replacing it.
+     */
+    private static function hasPlanToWaitFor(User $user): bool
+    {
         // اگه کاربر اشتراک فعال نداره، نیاز به رزرو نیست
         if ($user->plan_id === null || $user->expired_at === null) return false;
         if ($user->expired_at <= time()) return false;
@@ -477,11 +492,27 @@ class OrderService
         $remainingTime = $user->expired_at - time();
         if ($remainingTime <= 3600) return false;
 
-        // بررسی محدودیت 10 بسته رزرو
-        $reservedCount = ReservedPlan::where('user_id', $user->id)->where('status', 0)->count();
-        if ($reservedCount >= 10) abort(500, 'حداکثر ۱۰ بسته رزرو مجاز است');
-
         return true;
+    }
+
+    /**
+     * Whether a paid plan order was, or is about to be, queued as a reserved
+     * plan instead of taking effect now. The payment pages and the bot used to
+     * say "your subscription is active" either way, so a customer who paid for
+     * a plan while the old one still ran was told it was active and kept the
+     * old plan.
+     */
+    public static function isReserved(Order $order): bool
+    {
+        if (!$order->plan_id || $order->period === 'reset_price') return false;
+        // Read the user before the order: fulfilment writes both in one
+        // transaction, so an order still not done means the user row read
+        // first is the state fulfilment will decide on.
+        $user = User::find($order->user_id);
+        if ((int)Order::where('id', $order->id)->value('status') === 3) {
+            return ReservedPlan::where('order_id', $order->id)->exists();
+        }
+        return $user && self::hasPlanToWaitFor($user);
     }
 
     private function reservePlan($order, $plan)

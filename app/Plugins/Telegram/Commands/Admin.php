@@ -302,8 +302,9 @@ class Admin extends Telegram {
         }
         
         // ساخت لینک‌ها
-        $baseUrl = config('v2board.subscribe_url', config('app.url'));
-        $subscribeLink = $baseUrl . "/api/v1/client/subscribe?token=" . $user->token;
+        // subscribe_url is set but empty on prod, so config()'s default never
+        // applied and this sent a link with no host. Use the panel's builder.
+        $subscribeLink = \App\Utils\Helper::getSubscribeUrl($user->token);
         
         // ساخت پیام کامل
         $profileText = "👤 پروفایل کامل کاربر\n\n" .
@@ -710,8 +711,7 @@ class Admin extends Telegram {
         }
         
         // ساخت لینک اشتراک جدید
-        $baseUrl = config('v2board.subscribe_url', config('app.url'));
-        $newSubscribeLink = $baseUrl . "/api/v1/client/subscribe?token=" . $newToken;
+        $newSubscribeLink = \App\Utils\Helper::getSubscribeUrl($newToken);
         
         $successText = "✅ Token کاربر با موفقیت تغییر کرد\n\n" .
                       "📧 ایمیل: {$user->email}\n" .
@@ -764,8 +764,7 @@ class Admin extends Telegram {
         }
         
         // ساخت لینک اشتراک جدید
-        $baseUrl = config('v2board.subscribe_url', config('app.url'));
-        $newSubscribeLink = $baseUrl . "/api/v1/client/subscribe?token=" . $newToken;
+        $newSubscribeLink = \App\Utils\Helper::getSubscribeUrl($newToken);
         
         $successText = "✅ Token جدید تولید شد\n\n" .
                       "📧 ایمیل: {$user->email}\n" .
