@@ -104,8 +104,11 @@ class Helper
         if (empty($path)) {
             $path = '/api/v1/client/subscribe';
         } 
-        $subscribeUrls = explode(',', config('v2board.subscribe_url'));
-        $subscribeUrl = $subscribeUrls[rand(0, count($subscribeUrls) - 1)];
+        // Trimmed and without empties: "a.com, b.com" used to yield " b.com" - a
+        // link with a leading space that clients reject - and an unset setting
+        // passed null to explode(), a deprecation warning on PHP 8.1.
+        $subscribeUrls = array_values(array_filter(array_map('trim', explode(',', (string)config('v2board.subscribe_url')))));
+        $subscribeUrl = $subscribeUrls ? $subscribeUrls[rand(0, count($subscribeUrls) - 1)] : '';
         switch ($submethod) {
             case 0:
                 $path = "{$path}?token={$token}";

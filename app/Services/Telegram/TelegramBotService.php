@@ -1240,8 +1240,10 @@ class TelegramBotService
             return;
         }
         
-        $subUrl = config('v2board.subscribe_url') ?: config('app.url');
-        $link = "{$subUrl}/api/v1/client/subscribe?token={$user->token}";
+        // The panel's own builder, as every other page uses: it honours several
+        // comma-separated subscribe domains (this glued them all into one
+        // broken host), the configured path and the one-time-token mode.
+        $link = \App\Utils\Helper::getSubscribeUrl($user->token);
 
         $text = "🔗 *لینک اشتراک شما:*\n\n`{$link}`\n\n📱 این لینک را در اپلیکیشن خود کپی کنید.";
 
