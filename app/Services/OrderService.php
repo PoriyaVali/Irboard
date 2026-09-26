@@ -6,6 +6,7 @@ use App\Jobs\OrderHandleJob;
 use App\Models\Order;
 use App\Models\Plan;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use App\Models\ReservedPlan;
 
@@ -27,12 +28,50 @@ class OrderService
         $this->order = $order;
     }
 
+    /**
+     * Open (fulfil) a paid order - once.
+     *
+     * The same payment can be marked paid twice at nearly the same moment: the
+     * gateway's callback and the pending-payment recovery job both call paid(),
+     * each dispatches an OrderHandleJob, and with several queue workers both
+     * jobs read status 1 and opened the order - a wallet top-up credited twice,
+     * a plan extended twice. A short lock per order plus a fresh read of its
+     * status makes the second one a no-op.
+     */
     public function open()
+    {
+        try {
+            $lock = Cache::lock('order_open_' . $this->order->id, 120);
+        } catch (\BadMethodCallException $e) {
+            $lock = null; // a cache store without locks: behave as before
+        }
+        if ($lock && !$lock->get()) {
+            return; // another worker is opening this order right now
+        }
+        try {
+            $fresh = Order::find($this->order->id);
+            if (!$fresh || (int)$fresh->status === 3) {
+                return; // already opened
+            }
+            $this->openOnce();
+        } finally {
+            if ($lock) {
+                $lock->release();
+            }
+        }
+    }
+
+    private function openOnce()
     {
         $order = $this->order;
         $this->user = User::find($order->user_id);
         if ($order->type == 9) {
             DB::beginTransaction();
+            // Read the balance under a row lock, inside the transaction. The
+            // user used to be read before the transaction without a lock, so a
+            // top-up landing together with an auto-renewal or a gift card wrote
+            // back a stale balance and one of the two changes was lost.
+            $this->user = User::lockForUpdate()->find($order->user_id);
             $this->user->balance += $order->total_amount + $this->getbounus($order->total_amount);
 
             if (!$this->user->save()) {
@@ -56,10 +95,13 @@ class OrderService
             return;
         }
 
+        DB::beginTransaction();
+        // Same reason as the top-up above: take the balance fresh and locked
+        // before this path writes the whole user row back.
+        $this->user = User::lockForUpdate()->find($order->user_id);
         if ($order->refund_amount) {
             $this->user->balance = $this->user->balance + $order->refund_amount;
         }
-        DB::beginTransaction();
         if ($order->surplus_order_ids) {
             try {
                 Order::whereIn('id', $order->surplus_order_ids)->update([
