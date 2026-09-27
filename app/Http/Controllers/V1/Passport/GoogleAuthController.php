@@ -60,6 +60,17 @@ class GoogleAuthController extends Controller
                 return $this->redirectToFrontendWithError('دریافت اطلاعات کاربر از Google با خطا مواجه شد');
             }
 
+            // An address Google has not verified proves nothing: an account can
+            // be opened with someone else's address, and matching on it would
+            // sign that person's panel account in. Google's userinfo reports
+            // the verification; only an explicit "not verified" is refused.
+            if (array_key_exists('verified_email', $googleUser) && !$googleUser['verified_email']) {
+                Log::warning('Google OAuth: Unverified email refused', [
+                    'email' => $googleUser['email']
+                ]);
+                return $this->redirectToFrontendWithError('ایمیل حساب گوگل شما تأیید نشده است');
+            }
+
             Log::info('Google OAuth: User info received', [
                 'email' => $googleUser['email']
             ]);

@@ -137,6 +137,11 @@ class UserController extends Controller
         if (!$reserved) {
             abort(500, 'بسته رزرو یافت نشد');
         }
+        // Only one still waiting in the queue: an activated plan is the user's
+        // current plan, and marking it cancelled only falsified its record.
+        if ((int)$reserved->status !== 0) {
+            abort(500, 'این بسته رزرو قبلاً فعال یا لغو شده است');
+        }
         $reserved->status = 2; // cancelled
         $reserved->save();
         return response([

@@ -217,9 +217,9 @@ class ZibalPayment
         }
 
         // Get order information
-        $order = cache()->remember("order_{$params['orderId']}", 60, function() use ($params) {
-            return Order::where('trade_no', $params['orderId'])->first();
-        });
+        // Read fresh: a cached copy could be a minute old, and the amount it is
+        // checked against (total and handling fee) must be the order's own.
+        $order = Order::where('trade_no', $params['orderId'])->first();
 
         if (!$order) {
             Log::channel('payment')->error('Order not found', ['order_id' => $params['orderId']]);
@@ -266,9 +266,9 @@ class ZibalPayment
                 return false;
             }
 
-            if ($result['amount'] != ($order->total_amount * 10)) {
+            if (!isset($result['amount']) || (int)$result['amount'] !== self::expectedRial($order)) {
                 Log::channel('payment')->error('Verify failed: Amount mismatch', [
-                    'expected_amount' => $order->total_amount * 10,
+                    'expected_amount' => self::expectedRial($order),
                     'received_amount' => $result['amount'] ?? null
                 ]);
                 return false;
@@ -394,10 +394,10 @@ class ZibalPayment
             $code = $result['result'] ?? 0;
             if ($code === 100 || $code === 201) {
                 if ($order !== null) {
-                    if (isset($result['amount']) && (int)$result['amount'] !== (int)$order->total_amount * 10) {
+                    if (isset($result['amount']) && (int)$result['amount'] !== self::expectedRial($order)) {
                         Log::channel('payment')->error('Zibal verify (recovery): amount mismatch', [
                             'track_id' => $trackId,
-                            'expected_amount' => (int)$order->total_amount * 10,
+                            'expected_amount' => self::expectedRial($order),
                             'received_amount' => $result['amount'],
                         ]);
                         return false;
@@ -424,6 +424,16 @@ class ZibalPayment
             ]);
             return false;
         }
+    }
+
+    /**
+     * What the gateway was asked to collect for an order, in rial: the order
+     * total plus the handling fee checkout added (see pay()). Comparing with
+     * the total alone failed every payment once a fee was configured.
+     */
+    public static function expectedRial($order): int
+    {
+        return ((int)$order->total_amount + (int)($order->handling_amount ?? 0)) * 10;
     }
 
     private function filterLogData($data)

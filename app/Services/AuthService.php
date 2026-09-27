@@ -49,6 +49,41 @@ class AuthService
         ];
     }
 
+    /**
+     * The wrong-password counter key for an email. Lower-cased and trimmed:
+     * the account lookup ignores case, so a counter that did not let
+     * "Admin@x.com" and "admin@x.com" count as separate addresses, each with
+     * its own fresh set of guesses.
+     */
+    public static function passwordLimitKey($email): string
+    {
+        return CacheKey::get('PASSWORD_ERROR_LIMIT', strtolower(trim((string)$email)));
+    }
+
+    /**
+     * Check an account's password against the login page's wrong-password
+     * limit, and count a wrong one against it.
+     *
+     * @return string|null null when the password is right, 'locked' when the
+     *                     account has had too many wrong tries, 'wrong' else
+     */
+    public static function checkPasswordWithLimit(User $user, string $password): ?string
+    {
+        $limitEnabled = (int)config('v2board.password_limit_enable', 1);
+        $key = self::passwordLimitKey($user->email);
+        $errors = (int)Cache::get($key, 0);
+        if ($limitEnabled && $errors >= (int)config('v2board.password_limit_count', 5)) {
+            return 'locked';
+        }
+        if ($password === '' || !Helper::multiPasswordVerify($user->password_algo, $user->password_salt, $password, $user->password)) {
+            if ($limitEnabled) {
+                Cache::put($key, $errors + 1, 60 * (int)config('v2board.password_limit_expire', 60));
+            }
+            return 'wrong';
+        }
+        return null;
+    }
+
     public static function invalidateUserAuthCache($userId)
     {
         Cache::put("auth_invalid_{$userId}", true, 3600);

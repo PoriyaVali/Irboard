@@ -165,6 +165,12 @@ class OrderController extends Controller
             abort(500, __('This subscription has expired, please change to another subscription'));
         }
 
+        // Refused here, before any money moves - fulfilment can no longer
+        // refuse a paid order.
+        if (OrderService::reservationLimitReached($user, $request->input('period'))) {
+            abort(500, 'حداکثر ۱۰ بسته رزرو مجاز است');
+        }
+
         DB::beginTransaction();
         $order = new Order();
         $orderService = new OrderService($order);
@@ -176,7 +182,15 @@ class OrderController extends Controller
 
         if ($request->input('coupon_code')) {
             $couponService = new CouponService($request->input('coupon_code'));
-            if (!$couponService->use($order)) {
+            try {
+                $couponUsed = $couponService->use($order);
+            } catch (\Throwable $e) {
+                // A refused coupon aborts; close the transaction first so it is
+                // not left open on a long-lived worker's connection.
+                DB::rollBack();
+                throw $e;
+            }
+            if (!$couponUsed) {
                 DB::rollBack();
                 abort(500, __('Coupon failed'));
             }

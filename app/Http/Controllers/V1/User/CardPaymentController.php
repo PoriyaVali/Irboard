@@ -7,6 +7,7 @@ use App\Models\CardPayment;
 use App\Models\Order;
 use App\Models\User;
 use App\Services\CardPaymentService;
+use App\Services\OrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -119,18 +120,37 @@ class CardPaymentController extends Controller
             $cardPayment->id
         );
 
+        // The order must still be waiting for this payment. A pending card
+        // record could outlive its order (cancelled, or replaced by a new one),
+        // and a claim on it then paid for an order whose wallet part had
+        // already been given back.
+        $order = Order::find($cardPayment->order_id);
+        if (!$order || (int)$order->status !== 0) {
+            abort(400, 'سفارش این پرداخت دیگر در انتظار پرداخت نیست');
+        }
+
         $now = time();
 
         // بروزرسانی رکورد
-        $cardPayment->status = CardPayment::STATUS_CLAIMED;
-        $cardPayment->tracking_number = $trackingNumber;
-        $cardPayment->tracking_fingerprint = CardPayment::generateTrackingFingerprint($trackingNumber);
-        $cardPayment->claimed_at = $now;
-        $cardPayment->claim_ip = $request->ip();
-        $cardPayment->claim_user_agent = $request->header('User-Agent');
-        $cardPayment->duplicate_warning = $duplicateWarning;
-        $cardPayment->updated_at = $now;
-        $cardPayment->save();
+        // Only a record that is still pending turns into a claim, decided in
+        // the UPDATE itself: a cancel or a second claim racing this one cannot
+        // both succeed.
+        $claimed = CardPayment::where('id', $cardPayment->id)
+            ->where('status', CardPayment::STATUS_PENDING)
+            ->update([
+                'status' => CardPayment::STATUS_CLAIMED,
+                'tracking_number' => $trackingNumber,
+                'tracking_fingerprint' => CardPayment::generateTrackingFingerprint($trackingNumber),
+                'claimed_at' => $now,
+                'claim_ip' => $request->ip(),
+                'claim_user_agent' => $request->header('User-Agent'),
+                'duplicate_warning' => $duplicateWarning ? 1 : 0,
+                'updated_at' => $now,
+            ]);
+        if (!$claimed) {
+            abort(400, 'این پرداخت قابل ثبت نیست');
+        }
+        $cardPayment = CardPayment::find($cardPayment->id);
 
         Log::channel('payment')->info('Card payment claimed', [
             'payment_id' => $cardPayment->id,
@@ -185,16 +205,28 @@ class CardPaymentController extends Controller
             abort(400, 'این پرداخت قابل لغو نیست');
         }
 
-        $cardPayment->status = CardPayment::STATUS_CANCELLED;
-        $cardPayment->updated_at = time();
-        $cardPayment->save();
+        // Claim-or-cancel is decided on the locked row, so a claim sent at the
+        // same moment cannot be overwritten by this cancel (or the reverse).
+        $cancelled = \Illuminate\Support\Facades\DB::transaction(function () use ($cardPayment) {
+            $locked = CardPayment::lockForUpdate()->find($cardPayment->id);
+            if (!$locked || $locked->status !== CardPayment::STATUS_PENDING) {
+                return false;
+            }
+            $locked->status = CardPayment::STATUS_CANCELLED;
+            $locked->updated_at = time();
+            $locked->save();
+            return true;
+        });
+        if (!$cancelled) {
+            abort(400, 'این پرداخت قابل لغو نیست');
+        }
 
         // لغو سفارش
+        // Through OrderService, which gives back what the order took from the
+        // wallet - the bare status write kept it.
         $order = Order::find($cardPayment->order_id);
         if ($order && $order->status === 0) {
-            $order->status = 2; // cancelled
-            $order->updated_at = time();
-            $order->save();
+            (new OrderService($order))->cancel();
         }
 
         Log::channel('payment')->info('Card payment cancelled by user', [

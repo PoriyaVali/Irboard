@@ -78,9 +78,9 @@ Route::post('payment/notify/{method}/{uuid}', [PaymentController::class, 'notify
     ->name('payment.notify')
     ->middleware('throttle:60,1');
 
-// مسیرهای legacy (سازگاری با نسخه‌های قدیم)
-Route::post('/api/v1/guest/payment/callback/aghayehpardakht', [PaymentController::class, 'aghayehpardakhtCallback']);
-Route::post('/api/v1/guest/payment/callback/zibal', [PaymentController::class, 'zibalCallback']);
+// The legacy callback/aghayehpardakht and callback/zibal routes pointed at
+// methods that do not exist, so they could only ever answer with a 500. Zibal
+// returns to payment/notify/{method}/{uuid} above.
 
 // نرخ دلار API
 Route::get("/api/v1/guest/exchange-rate", [\App\Http\Controllers\V1\Guest\ExchangeRateController::class, "fetch"]);

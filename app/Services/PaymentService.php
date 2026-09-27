@@ -55,12 +55,28 @@ class PaymentService
         }
 
         try {
-            // خواندن از دیتابیس با cache (TTL: 5 دقیقه)
-            $payment = Cache::remember("payment_config_{$method}", 300, function() use ($method) {
-                return Payment::where('payment', $method)
-                    ->where('enable', 1)
-                    ->first();
-            });
+            // خواندن از دیتابیس با cache
+            // The gateway row this call is about: the one checkout picked ($id)
+            // or the one the order was sent to. Looked up by class name alone,
+            // two gateways of the same kind (two Zibal merchants, two cards)
+            // both ran on the first one's settings.
+            $payment = null;
+            $paymentId = $id ?: ($order->payment_id ?? null);
+            if ($paymentId) {
+                $payment = Cache::remember("payment_config_id_{$paymentId}", 60, function() use ($paymentId, $method) {
+                    return Payment::where('id', $paymentId)
+                        ->where('payment', $method)
+                        ->where('enable', 1)
+                        ->first();
+                });
+            }
+            if (!$payment) {
+                $payment = Cache::remember("payment_config_{$method}", 300, function() use ($method) {
+                    return Payment::where('payment', $method)
+                        ->where('enable', 1)
+                        ->first();
+                });
+            }
 
             if (!$payment) {
                 Log::channel('payment')->error('Payment method not found or disabled', [

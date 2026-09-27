@@ -359,6 +359,12 @@ class UserController extends Controller
                 throw new \Exception(__('Save failed'));
             }
 
+            // Days added (2) or a plan handed over (5) move the plan's expiry;
+            // paid add-on grants ride on it, as after any purchase.
+            if (in_array((int)$giftcard->type, [2, 5], true)) {
+                \App\Services\AddonBillingService::syncGrantExpiry($user->id, $user->expired_at);
+            }
+
             DB::commit();
 
             return response([
@@ -590,7 +596,9 @@ class UserController extends Controller
         $order->total_amount = $request->input('transfer_amount');
 
         $orderService->setOrderType($user);
-        $orderService->setInvite($user);
+        // No setInvite(): this moves commission the user already earned into
+        // their wallet - it is not a sale. With an inviter attached, the
+        // order earned that inviter a commission on the commission.
 
         $user->commission_balance = $user->commission_balance - $request->input('transfer_amount');
         $user->balance = $user->balance + $request->input('transfer_amount');

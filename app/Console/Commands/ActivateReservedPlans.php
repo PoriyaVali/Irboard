@@ -40,6 +40,17 @@ class ActivateReservedPlans extends Command
             try {
                 DB::beginTransaction();
 
+                // Re-read both rows under a lock and decide again. The user was
+                // loaded with the whole batch, and saving it back could undo a
+                // purchase or a renewal made in between; the reserved row could
+                // have been activated or cancelled meanwhile.
+                $user = User::lockForUpdate()->find($user->id);
+                $reserved = ReservedPlan::lockForUpdate()->find($reserved->id);
+                if (!$user || !$reserved || (int)$reserved->status !== 0 || !$this->needsActivation($user)) {
+                    DB::rollBack();
+                    continue;
+                }
+
                 $orderService = new OrderService($order);
                 $orderService->user = $user;
 
@@ -63,11 +74,15 @@ class ActivateReservedPlans extends Command
                 $reserved->updated_at = time();
                 $reserved->save();
 
+                // The plan's expiry moved: paid add-on grants move with it, as
+                // after a purchase or a renewal.
+                \App\Services\AddonBillingService::syncGrantExpiry($user->id, $user->expired_at);
+
                 DB::commit();
                 Log::info("بسته رزرو #{$reserved->id} برای کاربر #{$user->id} فعال شد");
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 DB::rollBack();
-                Log::error("خطا در فعال‌سازی بسته رزرو #{$reserved->id}: " . $e->getMessage());
+                Log::error("خطا در فعال‌سازی بسته رزرو #" . ($reserved->id ?? '?') . ": " . $e->getMessage());
             }
         }
     }

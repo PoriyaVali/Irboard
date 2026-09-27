@@ -69,6 +69,27 @@ class Bind extends Telegram {
         if ($user->telegram_id) {
             abort(500, '❌ این حساب قبلاً به یک حساب تلگرام متصل شده است.');
         }
+        // A subscription link is handed to VPN apps and shared, so for an admin
+        // or reseller account it is not proof enough: binding one gives the
+        // bot's admin commands and approval buttons. Their password is asked
+        // for too, counted against the login page's wrong-password limit.
+        if ($user->is_admin || $user->is_staff) {
+            $password = (string)($message->args[1] ?? '');
+            if ($password === '') {
+                $this->telegramService->sendMessage($message->chat_id,
+                    "🔐 این حساب مدیریتی یا نمایندگی است؛ رمز عبور حساب را هم بفرستید:\n/bind [آدرس_اشتراک] [رمز_عبور]");
+                return;
+            }
+            $verdict = \App\Services\AuthService::checkPasswordWithLimit($user, $password);
+            if ($verdict === 'locked') {
+                $this->telegramService->sendMessage($message->chat_id, '❌ تعداد تلاش‌های ناموفق زیاد است؛ بعداً دوباره تلاش کنید.');
+                return;
+            }
+            if ($verdict !== null) {
+                $this->telegramService->sendMessage($message->chat_id, '❌ رمز عبور اشتباه است.');
+                return;
+            }
+        }
         $user->telegram_id = $message->chat_id;
         if (!$user->save()) {
             abort(500, '❌ ذخیره ناموفق بود.');

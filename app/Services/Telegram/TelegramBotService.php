@@ -40,7 +40,10 @@ class TelegramBotService
             } elseif (isset($update['callback_query'])) {
                 $this->handleCallback($update['callback_query']);
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            // Throwable, not Exception: a TypeError escaping here turned into
+            // an HTTP 500, and Telegram re-delivers an update that failed, so
+            // one bad update was processed again and again.
             Log::error('Telegram Bot Error: ' . $e->getMessage());
         }
     }
@@ -211,11 +214,12 @@ class TelegramBotService
             [['text' => '📚 راهنما']]
         ];
 
-        // دکمه‌ی ورود به پنل (WebApp) — ورود خودکار با توکن کاربر
-        if (!empty($this->user) && !empty($this->user->token)) {
+        // دکمه‌ی ورود به پنل (WebApp) — ورود خودکار با لینک امضاشده‌ی همین حساب
+        // (not the subscription token: see TelegramLoginLink)
+        if (!empty($this->user) && !empty($this->user->telegram_id)) {
             array_unshift($keyboard, [[
                 'text' => '🌐 ورود به پنل',
-                'web_app' => ['url' => rtrim(config('v2board.app_url', ''), '/') . '/api/v1/guest/telegram/auth?token=' . $this->user->token . '&redirect=dashboard']
+                'web_app' => ['url' => TelegramLoginLink::make($this->user, 'dashboard')]
             ]]);
         }
 
@@ -491,6 +495,34 @@ class TelegramBotService
         }
         
         return $user;
+    }
+
+    /**
+     * An invite may only be attached to an account that was just made: the
+     * one this /start created, or one made in the last hour that has bought
+     * nothing yet (a first /start that stopped at the channel-membership gate).
+     * An existing account taken under an inviter could be farmed for
+     * commission, and put under a reseller who can then reset its password.
+     */
+    protected function canAttachInviter(): bool
+    {
+        $user = $this->user;
+        if (!$user || $user->is_admin || $user->is_staff) return false;
+        if ($user->wasRecentlyCreated) return true;
+        if ((int)$user->created_at < time() - 3600) return false;
+        return !Order::where('user_id', $user->id)->whereNotIn('status', [0, 2])->exists();
+    }
+
+    const PRIVILEGED_BIND_MESSAGE = "❌ این حساب، حساب مدیریتی یا نمایندگی است و با لینک اشتراک به تلگرام متصل نمی‌شود.\n\nبرای اتصال از دستور زیر استفاده کنید:\n/bind [آدرس_اشتراک] [رمز_عبور]";
+
+    /**
+     * Accounts that must not be bound to a Telegram chat on the strength of a
+     * subscription link alone. That link is handed to VPN apps and shared; a
+     * bound admin or reseller gets the admin commands and the approval buttons.
+     */
+    protected function isPrivilegedAccount(User $user): bool
+    {
+        return (bool)$user->is_admin || (bool)$user->is_staff;
     }
 
     /**
@@ -893,13 +925,18 @@ class TelegramBotService
                 $this->processTicketReply($chatId, $text);
                 break;
             case 'setting_transit_url':
+                if ($this->user->is_admin) {
+                    $this->processTransitUrl($chatId, $text);
+                } else {
+                    $this->user->update(['bot_step' => null, 'bot_data' => null]);
+                    $this->sendMainMenu($chatId);
+                }
+                break;
             case 'waiting_card_receipt':
                 $this->sendMessage($chatId, '📸 لطفاً عکس رسید بانکی را ارسال کنید.');
                 break;
             case 'card_diff_amount':
                 $this->processCardDiffAmount($chatId, $text);
-                break;
-                $this->processTransitUrl($chatId, $text);
                 break;
             default:
                 $this->user->update(['bot_step' => null]);
@@ -1024,6 +1061,12 @@ class TelegramBotService
             $giftCard->save();
             $user->save();
 
+            // Days added (2) or a plan handed over (5) move the plan's expiry;
+            // paid add-on grants ride on it, as after any purchase.
+            if (in_array((int)$giftCard->type, [2, 5], true)) {
+                \App\Services\AddonBillingService::syncGrantExpiry($user->id, $user->expired_at);
+            }
+
             return [true, $resultText];
         });
 
@@ -1100,6 +1143,8 @@ class TelegramBotService
                 $this->sendMessage($chatId, "❌ نمی‌توانید از کد دعوت خودتان استفاده کنید.");
             } elseif ($this->user->invite_user_id) {
                 $this->sendMessage($chatId, "ℹ️ شما قبلاً با کد دعوت دیگری ثبت‌نام کرده‌اید.");
+            } elseif (!$this->canAttachInviter()) {
+                $this->sendMessage($chatId, "ℹ️ کد دعوت فقط هنگام ساخت حساب جدید قابل استفاده است.");
             } else {
                 $this->user->update(['invite_user_id' => $code->user_id]);
                 $code->increment('pv');
@@ -1114,7 +1159,7 @@ class TelegramBotService
             $refCode = \Illuminate\Support\Str::after($param, 'ref_');
             $referrer = User::where('bot_ref_code', $refCode)->first();
             
-            if ($referrer && $referrer->id !== $this->user->id && !$this->user->invite_user_id) {
+            if ($referrer && $referrer->id !== $this->user->id && !$this->user->invite_user_id && $this->canAttachInviter()) {
                 $this->user->update(['invite_user_id' => $referrer->id]);
             }
         }
@@ -1124,9 +1169,13 @@ class TelegramBotService
             $existingUser = User::where('token', $token)->first();
             
             if ($existingUser && !$existingUser->telegram_id) {
-                $existingUser->update(['telegram_id' => $chatId]);
-                $this->user = $existingUser;
-                $this->sendMessage($chatId, "✅ حساب شما با موفقیت به تلگرام متصل شد!");
+                if ($this->isPrivilegedAccount($existingUser)) {
+                    $this->sendMessage($chatId, self::PRIVILEGED_BIND_MESSAGE);
+                } else {
+                    $existingUser->update(['telegram_id' => $chatId]);
+                    $this->user = $existingUser;
+                    $this->sendMessage($chatId, "✅ حساب شما با موفقیت به تلگرام متصل شد!");
+                }
             }
         }
         
@@ -1170,7 +1219,9 @@ class TelegramBotService
     protected function handleBuyPlan(int $chatId, string $data): void
     {
         // parse data: buy_planId_period
-        $parts = explode("_", $data);
+        // At most three parts: the period itself may contain "_" (half_year),
+        // and splitting it made the six-month button ask for "half_price".
+        $parts = explode("_", $data, 3);
         if (count($parts) < 3) {
             $this->sendMessage($chatId, "❌ خطا در پردازش درخواست.");
             return;
@@ -1392,10 +1443,21 @@ class TelegramBotService
 
     /**
      * پردازش کد تخفیف
+     *
+     * The website's rules through CouponService: visibility, dates, usage and
+     * per-user limits, plan and period limits, and the use is counted. The bot
+     * used to check only dates and the plan (and crashed on the plan list),
+     * read the coupon types the wrong way round - a fixed-amount coupon became
+     * a percentage of thousands and zeroed the order - and let the same code
+     * be applied to the same order again and again.
+     *
+     * The discount is taken from the plan's price, as on the website. The order
+     * may already be part-paid from the wallet; whatever the discount covers
+     * beyond the part still due goes back to the wallet.
      */
     protected function processCouponCode(int $chatId, string $code): void
     {
-        $botData = json_decode($this->user->bot_data, true);
+        $botData = json_decode($this->user->bot_data ?? '', true);
         $tradeNo = $botData['trade_no'] ?? null;
         
         if (!$tradeNo) {
@@ -1404,72 +1466,125 @@ class TelegramBotService
             return;
         }
 
-        $order = \App\Models\Order::where('trade_no', $tradeNo)->where('user_id', $this->user->id)->first();
-        if (!$order) {
-            $this->sendMessage($chatId, "❌ سفارش یافت نشد.");
-            $this->user->update(['bot_step' => null, 'bot_data' => null]);
+        $code = trim($code);
+        try {
+            $result = \Illuminate\Support\Facades\DB::transaction(function () use ($tradeNo, $code) {
+                $order = \App\Models\Order::where('trade_no', $tradeNo)
+                    ->where('user_id', $this->user->id)
+                    ->lockForUpdate()
+                    ->first();
+                if (!$order || (int)$order->status !== 0) {
+                    return ['error' => "❌ سفارش یافت نشد یا دیگر در انتظار پرداخت نیست.", 'reset' => true];
+                }
+                if (!$order->plan_id) {
+                    return ['error' => "❌ کد تخفیف برای شارژ کیف پول قابل استفاده نیست.", 'reset' => true];
+                }
+                if ($order->coupon_id) {
+                    return ['error' => "❌ برای این سفارش قبلاً کد تخفیف ثبت شده است.", 'reset' => true];
+                }
+                $plan = Plan::find($order->plan_id);
+                $price = $plan ? $plan->{$order->period} : null;
+                if ($price === null) {
+                    return ['error' => "❌ این دوره از پلن دیگر قابل خرید نیست.", 'reset' => true];
+                }
+
+                $couponService = new \App\Services\CouponService($code);
+                $probe = new \App\Models\Order();
+                $probe->user_id = $order->user_id;
+                $probe->plan_id = $order->plan_id;
+                $probe->period = $order->period;
+                $probe->total_amount = $price;
+                // Throws an HttpException with the reason when the coupon may
+                // not be used; counts the use when it may.
+                if (!$couponService->use($probe)) {
+                    return ['error' => "❌ این کد تخفیف دیگر قابل استفاده نیست."];
+                }
+                $coupon = $couponService->getCoupon();
+
+                $payable = (int)$order->total_amount;
+                $walletPart = (int)$order->balance_amount;
+                $discount = max(0, (int)round($probe->discount_amount));
+                $discount = min($discount, $payable + $walletPart);
+
+                $refund = 0;
+                if ($discount <= $payable) {
+                    $order->total_amount = $payable - $discount;
+                } else {
+                    $refund = $discount - $payable;
+                    $order->total_amount = 0;
+                    $order->balance_amount = $walletPart - $refund;
+                }
+                $order->discount_amount = (int)$order->discount_amount + $discount;
+                $order->coupon_id = $coupon->id;
+
+                // Commission follows what is actually paid, as on the website
+                // where the coupon is applied before it is worked out.
+                $user = \App\Models\User::find($order->user_id);
+                $order->commission_balance = 0;
+                $order->invite_user_id = null;
+                if ($user) {
+                    (new \App\Services\OrderService($order))->setInvite($user);
+                }
+
+                if ($refund > 0 && !(new \App\Services\UserService())->addBalance($order->user_id, $refund)) {
+                    throw new \RuntimeException('wallet refund failed');
+                }
+                if (!$order->save()) {
+                    throw new \RuntimeException('order save failed');
+                }
+
+                return [
+                    'order' => $order,
+                    'coupon' => $coupon,
+                    'original' => $payable,
+                    'discount' => $discount,
+                    'refund' => $refund,
+                ];
+            });
+        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
+            // CouponService's own reason (expired, limit reached, not for this
+            // plan...). The step stays, so another code can be tried.
+            $this->sendMessage($chatId, "❌ " . $e->getMessage() . "\nدوباره تلاش کنید یا روی انصراف بزنید.");
+            return;
+        } catch (\Throwable $e) {
+            Log::error('Telegram coupon failed', ['trade_no' => $tradeNo, 'error' => $e->getMessage()]);
+            $this->sendMessage($chatId, "❌ خطا در اعمال کد تخفیف. لطفاً دوباره تلاش کنید.");
             return;
         }
 
-        $coupon = \App\Models\Coupon::where('code', $code)->first();
-        
-        if (!$coupon) {
-            $this->sendMessage($chatId, "❌ کد تخفیف نامعتبر است. دوباره تلاش کنید یا روی انصراف بزنید.");
-            return;
-        }
-
-        // بررسی تاریخ
-        $now = time();
-        if ($coupon->started_at && $coupon->started_at > $now) {
-            $this->sendMessage($chatId, "❌ این کد تخفیف هنوز فعال نشده است.");
-            return;
-        }
-        if ($coupon->ended_at && $coupon->ended_at < $now) {
-            $this->sendMessage($chatId, "❌ این کد تخفیف منقضی شده است.");
-            return;
-        }
-
-        // بررسی محدودیت پلن
-        if ($coupon->limit_plan_ids) {
-            $limitPlanIds = json_decode($coupon->limit_plan_ids, true) ?? [];
-            if (!empty($limitPlanIds) && !in_array($order->plan_id, $limitPlanIds)) {
-                $this->sendMessage($chatId, "❌ این کد تخفیف برای پلن انتخابی شما قابل استفاده نیست.");
-                return;
+        if (isset($result['error'])) {
+            if (!empty($result['reset'])) {
+                $this->user->update(['bot_step' => null, 'bot_data' => null]);
             }
+            $this->sendMessage($chatId, $result['error']);
+            return;
         }
-
-        // محاسبه تخفیف
-        $originalAmount = $order->total_amount;
-        if ($coupon->type == 1) {
-            // درصدی
-            $discount = round($originalAmount * $coupon->value / 100);
-            $discountText = $coupon->value . '%';
-        } else {
-            // مبلغ ثابت
-            $discount = $coupon->value;
-            $discountText = number_format($coupon->value) . ' تومان';
-        }
-
-        $newAmount = max(0, $originalAmount - $discount);
-
-        // اعمال تخفیف به سفارش
-        $order->discount_amount = $discount;
-        $order->total_amount = $newAmount;
-        $order->coupon_id = $coupon->id;
-        $order->save();
 
         $this->user->update(['bot_step' => null, 'bot_data' => null]);
 
+        $order = $result['order'];
+        $coupon = $result['coupon'];
+        $discount = $result['discount'];
+        $newAmount = (int)$order->total_amount;
+        $discountText = (int)$coupon->type === 2
+            ? $coupon->value . '%'
+            : number_format($coupon->value) . ' تومان';
+
         $text = "✅ کد تخفیف اعمال شد!\n\n";
-        $text .= "💰 مبلغ اولیه: " . number_format($originalAmount) . " تومان\n";
+        $text .= "💰 مبلغ اولیه: " . number_format($result['original']) . " تومان\n";
         $text .= "🎫 تخفیف: " . $discountText . " (" . number_format($discount) . " تومان)\n";
+        if ($result['refund'] > 0) {
+            $text .= "👛 بازگشت به کیف پول: " . number_format($result['refund']) . " تومان\n";
+        }
         $text .= "💵 مبلغ نهایی: " . number_format($newAmount) . " تومان\n\n";
 
         if ($newAmount <= 0) {
             // پرداخت رایگان
             $orderService = new \App\Services\OrderService($order);
-            $orderService->paid($tradeNo);
-            $text .= "🎉 سفارش شما رایگان شد و فعال گردید!";
+            $orderService->paid($order->trade_no);
+            $text .= \App\Services\OrderService::isReserved($order)
+                ? "📦 سفارش شما رایگان شد و بسته رزرو شد؛ بعد از تمام شدن اشتراک فعلی، خودکار فعال می‌شود."
+                : "🎉 سفارش شما رایگان شد و فعال گردید!";
             $this->sendMessage($chatId, $text);
         } else {
             $text .= "درگاه پرداخت را انتخاب کنید:";
@@ -1477,9 +1592,9 @@ class TelegramBotService
             
             $buttons = [];
             foreach ($payments as $p) {
-                $buttons[] = [['text' => '💳 ' . $p['name'], 'callback_data' => 'pay_' . $tradeNo . '_' . $p['id']]];
+                $buttons[] = [['text' => '💳 ' . $p['name'], 'callback_data' => 'pay_' . $order->trade_no . '_' . $p['id']]];
             }
-            $buttons[] = [['text' => '❌ لغو سفارش', 'callback_data' => 'cancel_order_' . $tradeNo]];
+            $buttons[] = [['text' => '❌ لغو سفارش', 'callback_data' => 'cancel_order_' . $order->trade_no]];
 
             $this->sendMessage($chatId, $text, null, $buttons);
         }
@@ -1642,6 +1757,11 @@ class TelegramBotService
         // بررسی اینکه آیا این اکانت سایت قبلاً به تلگرام دیگری متصل شده
         if ($siteUser->telegram_id && $siteUser->telegram_id != $chatId) {
             $this->sendMessage($chatId, "❌ این اکانت قبلاً به یک حساب تلگرام دیگر متصل شده است.\n\nبرای تغییر، ابتدا از طریق آن حساب /unbind کنید.");
+            return;
+        }
+
+        if ($siteUser->telegram_id != $chatId && $this->isPrivilegedAccount($siteUser)) {
+            $this->sendMessage($chatId, self::PRIVILEGED_BIND_MESSAGE);
             return;
         }
         
@@ -1837,6 +1957,12 @@ class TelegramBotService
         // بررسی اینکه آیا این اکانت سایت قبلاً به تلگرام دیگری متصل شده
         if ($siteUser->telegram_id && $siteUser->telegram_id != $chatId) {
             $this->sendMessage($chatId, "❌ این اکانت قبلاً به یک حساب تلگرام دیگر متصل شده است.\n\nبرای تغییر، ابتدا از طریق آن حساب /unbind کنید.");
+            $this->sendMainMenu($chatId);
+            return;
+        }
+
+        if ($siteUser->telegram_id != $chatId && $this->isPrivilegedAccount($siteUser)) {
+            $this->sendMessage($chatId, self::PRIVILEGED_BIND_MESSAGE);
             $this->sendMainMenu($chatId);
             return;
         }
@@ -2501,6 +2627,11 @@ class TelegramBotService
      */
     protected function processCardDiffAmount(int $chatId, string $text): void
     {
+        if (!$this->user->is_admin) {
+            $this->user->update(['bot_step' => null, 'bot_data' => null]);
+            $this->sendMainMenu($chatId);
+            return;
+        }
         $botData = json_decode($this->user->bot_data, true);
         $paymentId = $botData['payment_id'] ?? null;
 
@@ -2579,20 +2710,41 @@ class TelegramBotService
             return;
         }
 
-        if ($cardPayment->status !== \App\Models\CardPayment::STATUS_PENDING) {
+        if ($cardPayment->status !== \App\Models\CardPayment::STATUS_PENDING
+            || (int)$cardPayment->user_id !== (int)$this->user->id) {
             $this->sendMessage($chatId, '❌ این پرداخت قبلاً پردازش شده.');
             $this->user->update(['bot_step' => null, 'bot_data' => null]);
             return;
         }
 
+        // The order must still be waiting for this payment: a card record can
+        // outlive an order that was cancelled (and its wallet part given back).
+        $pendingOrder = Order::find($cardPayment->order_id);
+        if (!$pendingOrder || (int)$pendingOrder->status !== 0) {
+            $this->sendMessage($chatId, '❌ سفارش این پرداخت دیگر در انتظار پرداخت نیست. لطفاً سفارش جدید ثبت کنید.');
+            $this->user->update(['bot_step' => null, 'bot_data' => null]);
+            return;
+        }
+
         // ثبت claim
-        $cardPayment->status = \App\Models\CardPayment::STATUS_CLAIMED;
-        $cardPayment->claimed_at = time();
-        $cardPayment->tracking_number = 'receipt_photo';
         // Keep the Telegram photo file_id so the admin app can fetch & show the
         // receipt (getFile → download). Without this only Telegram admins see it.
-        $cardPayment->receipt_file_id = $fileId;
-        $cardPayment->save();
+        // Conditional on the record still being pending, decided in the UPDATE.
+        $claimed = \App\Models\CardPayment::where('id', $cardPayment->id)
+            ->where('status', \App\Models\CardPayment::STATUS_PENDING)
+            ->update([
+                'status' => \App\Models\CardPayment::STATUS_CLAIMED,
+                'claimed_at' => time(),
+                'tracking_number' => 'receipt_photo',
+                'receipt_file_id' => $fileId,
+                'updated_at' => time(),
+            ]);
+        if (!$claimed) {
+            $this->sendMessage($chatId, '❌ این پرداخت قبلاً پردازش شده.');
+            $this->user->update(['bot_step' => null, 'bot_data' => null]);
+            return;
+        }
+        $cardPayment = \App\Models\CardPayment::find($cardPayment->id);
 
         // پاک کردن step
         $this->user->update(['bot_step' => null, 'bot_data' => null]);

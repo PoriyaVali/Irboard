@@ -10,6 +10,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Redis;
 
 class TrafficFetchJob implements ShouldQueue
@@ -43,24 +44,50 @@ class TrafficFetchJob implements ShouldQueue
     public function handle()
     {
         $billable = $this->billableUsers();
+        $jobId = ($this->job && method_exists($this->job, 'uuid')) ? $this->job->uuid() : null;
 
+        $increments = [];
         foreach(array_keys($this->data) as $userId){
             $up   = $this->data[$userId][0] * $this->server['rate'];
             $down = $this->data[$userId][1] * $this->server['rate'];
 
             if (isset($billable[$userId])) {
-                $groupId = $billable[$userId];
-                $amount = AddonBillingService::charge($userId, $groupId, (int)($up + $down));
-                AddonBillingService::record($userId, $groupId, (int)$up, (int)$down, $amount);
+                // This job is retried from the top when it fails. A user it
+                // already charged on an earlier attempt must not be charged
+                // again for the same bytes.
+                $marker = $jobId !== null ? "traffic_fetch_billed:{$jobId}:{$userId}" : null;
+                if ($marker !== null && !Cache::add($marker, 1, 86400)) {
+                    continue;
+                }
+                try {
+                    $groupId = $billable[$userId];
+                    $amount = AddonBillingService::charge($userId, $groupId, (int)($up + $down));
+                    AddonBillingService::record($userId, $groupId, (int)$up, (int)$down, $amount);
+                } catch (\Throwable $e) {
+                    if ($marker !== null) Cache::forget($marker);
+                    throw $e;
+                }
                 // Deliberately NOT added to the counters below. These bytes
                 // were paid for from the wallet; taking them out of the plan's
                 // quota as well would charge for one download twice.
                 continue;
             }
 
-            Redis::hincrby('v2board_upload_traffic', $userId, $up);
-            Redis::hincrby('v2board_download_traffic', $userId, $down);
+            $increments[$userId] = [(int)$up, (int)$down];
         }
+
+        if (!$increments) return;
+
+        // Every plan counter in one MULTI/EXEC: all of this batch is counted
+        // or none of it. They were added one user at a time, so a job that
+        // died part way (it has ten seconds) was retried from the top and
+        // counted the users it had already done a second time.
+        Redis::transaction(function ($redis) use ($increments) {
+            foreach ($increments as $userId => [$up, $down]) {
+                $redis->hIncrBy('v2board_upload_traffic', (string)$userId, $up);
+                $redis->hIncrBy('v2board_download_traffic', (string)$userId, $down);
+            }
+        });
     }
 
     /**

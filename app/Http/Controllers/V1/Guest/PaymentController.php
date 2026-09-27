@@ -28,38 +28,27 @@ class PaymentController extends Controller
         // ✅ چک اولیه: آیا order قبلاً پردازش شده؟ (Idempotency Check)
         $order = Order::where('trade_no', $uuid)->first();
         if ($order && $order->status !== 0) {
-            $this->logInfo('Order already processed', [
-                'trade_no' => $uuid,
-                'status' => $order->status
-            ]);
-            
-            // فقط status = 3 (پرداخت شده) موفقیت است
-            if ($order->status == 3) {
-                return $this->renderPaymentResult(true, 'پرداخت با موفقیت انجام شد.', $uuid);
-            }
-            // status = 2 (لغو شده)
-            if ($order->status == 2) {
-                return $this->renderPaymentResult(false, 'این سفارش لغو شده است.', $uuid);
-            }
-            // سایر حالات
-            return $this->renderPaymentResult(false, 'سفارش قبلاً پردازش شده است.', $uuid);
+            return $this->alreadyProcessed($order, $uuid);
         }
 
         // جلوگیری از پردازش همزمان
+        // Wait for a callback already being handled for this order (the return
+        // page submitted twice) rather than run beside it. If the lock could
+        // not be had, this used to carry on without it after two seconds.
         $lockKey = "payment_lock_{$uuid}";
         $lock = Cache::lock($lockKey, 30);
-    
-        if (!$lock->get()) {
-            // اگر locked است، احتمالا در حال پردازش است
-            sleep(2);
-            $previousResult = Cache::get("payment_response_{$uuid}");
-            if ($previousResult && is_array($previousResult)) {
-                return $this->renderPaymentResult(
-                    $previousResult['success'], 
-                    $previousResult['success'] ? 'پرداخت با موفقیت انجام شد.' : 'خطا در پردازش پرداخت.',
-                    $previousResult['trade_no'] ?? null
-                );
-            }
+        try {
+            $lock->block(10);
+        } catch (\Illuminate\Contracts\Cache\LockTimeoutException $e) {
+            return $this->renderPaymentResult(false, 'پرداخت در حال پردازش است؛ چند لحظه دیگر وضعیت سفارش را بررسی کنید.', $uuid);
+        }
+
+        // Again under the lock: the callback it waited for may have finished
+        // the order.
+        $order = Order::where('trade_no', $uuid)->first();
+        if ($order && $order->status !== 0) {
+            $lock->release();
+            return $this->alreadyProcessed($order, $uuid);
         }
 
         DB::beginTransaction();
@@ -94,7 +83,7 @@ class PaymentController extends Controller
         
             return $this->renderPaymentResult(true, 'پرداخت با موفقیت انجام شد.', $verificationResult['trade_no']);
         
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
             $lock->release();
             $this->logError('Payment notification error', $e);
@@ -102,6 +91,26 @@ class PaymentController extends Controller
         }
     }
 	
+    private function alreadyProcessed(Order $order, $uuid)
+    {
+        $this->logInfo('Order already processed', [
+            'trade_no' => $uuid,
+            'status' => $order->status
+        ]);
+
+        // 3 = opened; 1 = payment recorded and the order is being opened
+        // (the second of two callbacks for one payment lands here).
+        if ($order->status == 3 || $order->status == 1) {
+            return $this->renderPaymentResult(true, 'پرداخت با موفقیت انجام شد.', $uuid);
+        }
+        // status = 2 (لغو شده)
+        if ($order->status == 2) {
+            return $this->renderPaymentResult(false, 'این سفارش لغو شده است.', $uuid);
+        }
+        // سایر حالات
+        return $this->renderPaymentResult(false, 'سفارش قبلاً پردازش شده است.', $uuid);
+    }
+
     private function handleOrder($tradeNo, $transactionId, $cardNumber = 'N/A')
     {
         $this->logInfo('Handling payment', [
@@ -110,9 +119,9 @@ class PaymentController extends Controller
             'card_number' => $cardNumber
         ]);
         
-        $order = Cache::remember("order_{$tradeNo}", 60, function() use ($tradeNo) {
-            return Order::where('trade_no', $tradeNo)->first();
-        });
+        // Read fresh, not from a minute-old cache: the status decides whether
+        // this payment is recorded.
+        $order = Order::where('trade_no', $tradeNo)->first();
         
         if (!$order) {
             $this->logError('Order not found', ['trade_no' => $tradeNo]);
@@ -145,10 +154,12 @@ class PaymentController extends Controller
                 'balance_used' => $order->balance_amount
             ]);
         
-            $order->status = 3;
-            $order->paid_at = now();
-            $order->updated_at = now();
-            $order->save();
+            // Through paid() like any other payment, so the order is opened
+            // (plan applied), not merely marked done.
+            $orderService = new OrderService($order);
+            if (!$orderService->paid($transactionId)) {
+                return false;
+            }
         
             Cache::forget("order_{$tradeNo}");
 
@@ -248,7 +259,7 @@ class PaymentController extends Controller
         $orderInfo = '';
         $order = null;
         if ($tradeNo) {
-            $order = Cache::get("order_{$tradeNo}") ?: Order::where('trade_no', $tradeNo)->first();
+            $order = Order::where('trade_no', $tradeNo)->first();
             
             if ($order && $success) {
                 $adjustedAmount = ($order->total_amount > 0) ? $order->total_amount : $order->balance_amount;
@@ -457,7 +468,7 @@ h1{color:' . $color . ';margin-bottom:10px}
     
     private function logError($message, $data)
     {
-        if ($data instanceof \Exception) {
+        if ($data instanceof \Throwable) {
             Log::channel('payment')->error($message, [
                 'timestamp' => now(),
                 'error' => $data->getMessage(),
