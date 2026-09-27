@@ -23,6 +23,8 @@ class MirrorRoute
             'middleware' => 'mirror',
         ], function ($router) {
             $router->get('/export', 'V1\\Mirror\\MirrorController@export');
+            // The relay's admin sign-in: a verdict on an admin's email and password.
+            $router->post('/admin-verify', 'V1\\Mirror\\MirrorController@adminVerify');
         });
     }
 }

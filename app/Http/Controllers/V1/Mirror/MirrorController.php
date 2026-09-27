@@ -3,7 +3,11 @@
 namespace App\Http\Controllers\V1\Mirror;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Utils\CacheKey;
+use App\Utils\Helper;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -57,5 +61,56 @@ class MirrorController extends Controller
             'built_at_min' => (int) DB::table('v2_mirror_export')->min('built_at'),
             'total' => (int) DB::table('v2_mirror_export')->count(),
         ]);
+    }
+
+    /**
+     * Yes or no: are these an admin's email and password?
+     *
+     * The relay's admin area signs in with the panel's own admin accounts
+     * instead of a password of its own - one fewer secret to keep, change and
+     * lose. This is how it asks. It returns a verdict and nothing else: the
+     * passport login would mint a session and a token for every sign-in on the
+     * relay and leave them in the admin's session list.
+     *
+     * 🔑 The wrong-password counter is the login page's own, so the relay is not
+     * a second door with a fresh set of guesses.
+     *
+     * The reason is for the relay, never shown as-is: "password" means keep what
+     * it remembers (a typo), "account" means forget it (no longer an admin).
+     */
+    public function adminVerify(Request $request)
+    {
+        $email = (string) $request->input('email', '');
+        $password = (string) $request->input('password', '');
+        if ($email === '' || $password === '') {
+            return response(['data' => ['ok' => false, 'reason' => 'password']]);
+        }
+
+        $limitEnabled = (int) config('v2board.password_limit_enable', 1);
+        $limitKey = CacheKey::get('PASSWORD_ERROR_LIMIT', $email);
+        $errors = (int) Cache::get($limitKey, 0);
+        if ($limitEnabled && $errors >= (int) config('v2board.password_limit_count', 5)) {
+            return response(['data' => [
+                'ok' => false,
+                'reason' => 'locked',
+                'minutes' => (int) config('v2board.password_limit_expire', 60),
+            ]]);
+        }
+
+        $user = User::where('email', $email)->first();
+        if (!$user) {
+            return response(['data' => ['ok' => false, 'reason' => 'account']]);
+        }
+        if (!Helper::multiPasswordVerify($user->password_algo, $user->password_salt, $password, $user->password)) {
+            if ($limitEnabled) {
+                Cache::put($limitKey, $errors + 1, 60 * (int) config('v2board.password_limit_expire', 60));
+            }
+            return response(['data' => ['ok' => false, 'reason' => 'password']]);
+        }
+        if (!$user->is_admin || $user->banned) {
+            return response(['data' => ['ok' => false, 'reason' => 'account']]);
+        }
+
+        return response(['data' => ['ok' => true]]);
     }
 }
