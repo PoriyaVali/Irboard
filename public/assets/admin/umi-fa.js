@@ -6292,7 +6292,7 @@
                     title: "\u202b\u062d\u062f\u0627\u0642\u0644 \u0622\u0633\u062a\u0627\u0646\u0647 \u06af\u0632\u0627\u0631\u0634 \u062a\u0631\u0627\u0641\u06cc\u06a9 \u06a9\u0627\u0631\u0628\u0631\u0627\u0646 \u0646\u0648\u062f\u202c",
                     description: "\u202b\u062f\u0631 \u0647\u0631 \u0628\u0627\u0631 \u0627\u0631\u0633\u0627\u0644\u060c \u0641\u0642\u0637 \u0627\u0637\u0644\u0627\u0639\u0627\u062a \u06a9\u0627\u0631\u0628\u0631\u0627\u0646\u06cc \u06a9\u0647 \u0645\u0635\u0631\u0641 \u062a\u062c\u0645\u06cc\u0639\u06cc \u0622\u0646\u200c\u0647\u0627 \u0628\u0627\u0644\u0627\u062a\u0631 \u0627\u0632 \u0622\u0633\u062a\u0627\u0646\u0647 \u0628\u0627\u0634\u062f \u06af\u0632\u0627\u0631\u0634 \u0645\u06cc\u200c\u0634\u0648\u062f. \u062a\u0631\u0627\u0641\u06cc\u06a9 \u06af\u0632\u0627\u0631\u0634\u200c\u0646\u0634\u062f\u0647 \u062a\u062c\u0645\u06cc\u0639 \u0645\u06cc\u200c\u0634\u0648\u062f\u202c"
                 }, f.a.createElement(a["a"], {
-                    addonAfter: "Kb",
+                    addonAfter: "KB",
                     size: "large",
                     type: "number",
                     placeholder: "وارد کنید",
@@ -6304,7 +6304,7 @@
                     title: "\u202b\u062d\u062f\u0627\u0642\u0644 \u0622\u0633\u062a\u0627\u0646\u0647 \u0622\u0645\u0627\u0631 \u062a\u0639\u062f\u0627\u062f \u062f\u0633\u062a\u06af\u0627\u0647 \u06a9\u0627\u0631\u0628\u0631\u0627\u0646 \u0646\u0648\u062f\u202c",
                     description: "در هر گزارش، فقط آدرس IP دستگاه‌های آنلاینی که ترافیک‌شان از حد آستانه بیشتر است گزارش و توسط نود شمارش می‌شود"
                 }, f.a.createElement(a["a"], {
-                    addonAfter: "Kb",
+                    addonAfter: "KB",
                     size: "large",
                     type: "number",
                     placeholder: "وارد کنید",
@@ -107496,7 +107496,7 @@ callTrusttunnel: function(e, t, n) {
                     render: (e,t)=>{
                         return y.a.createElement(y.a.Fragment, null, y.a.createElement(h["a"], {
                             status: D[t.available_status]
-                        }), y.a.createElement("span", null, e))
+                        }), y.a.createElement("span", null, e), /*__NODELOAD__*/(function(s){if(!s||typeof s!=="object")return null;var p=function(m){return m&&m.total>0?Math.round(m.used*100/m.total)+"%":null};var parts=["CPU "+Math.round(Number(s.cpu)||0)+"%"];var r=p(s.mem);if(r)parts.push("RAM "+r);var d=p(s.disk);if(d)parts.push("Disk "+d);return y.a.createElement("div",{style:{fontSize:11,opacity:.65,marginTop:2,direction:"ltr",textAlign:"right"}},parts.join(" \u00b7 "))})(t.load_status)/*__NODELOAD_END__*/)
                     }
                 }, {
                     title: "آدرس",

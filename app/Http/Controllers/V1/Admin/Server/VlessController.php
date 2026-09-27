@@ -10,6 +10,33 @@ use App\Utils\Helper;
 
 class VlessController extends Controller
 {
+    /**
+     * mlkem768x25519plus settings with nothing left empty that the node and
+     * the subscriptions both need.
+     *
+     * Only the ticket was ever filled in, and only for 1-RTT. A node saved
+     * with mode or RTT left blank got a decryption string with empty parts,
+     * which xray rejected - the node never came up - while subscribers were
+     * given "native" and "1rtt". The same defaults now go to both sides; a
+     * 0-RTT node without a ticket lifetime gets 600s, xray's own example,
+     * since 0-RTT needs tickets to resume with.
+     */
+    public static function encryptionDefaults(array $settings): array
+    {
+        if (empty($settings['mode'])) {
+            $settings['mode'] = 'native';
+        }
+        if (empty($settings['rtt'])) {
+            $settings['rtt'] = '1rtt';
+        }
+        if ($settings['rtt'] === '1rtt') {
+            $settings['ticket'] = '0s';
+        } elseif (empty($settings['ticket'])) {
+            $settings['ticket'] = '600s';
+        }
+        return $settings;
+    }
+
     public function save(Request $request)
     {
         $params = $request->validate([
@@ -85,12 +112,7 @@ class VlessController extends Controller
         }
         if (isset($params['encryption']) && $params['encryption'] == 'mlkem768x25519plus') {
             $keyPair = SodiumCompat::crypto_box_keypair();
-            $params['encryption_settings'] = $params['encryption_settings'] ?? [];
-            if (isset($params['encryption_settings']['rtt'])) {
-                if ($params['encryption_settings']['rtt'] == '1rtt') {
-                    $params['encryption_settings']['ticket'] = '0s';
-                }
-            }
+            $params['encryption_settings'] = self::encryptionDefaults($params['encryption_settings'] ?? []);
             if (!isset($params['encryption_settings']['private_key'])) {
                 $params['encryption_settings']['private_key'] = Helper::base64EncodeUrlSafe(SodiumCompat::crypto_box_secretkey($keyPair));
             }

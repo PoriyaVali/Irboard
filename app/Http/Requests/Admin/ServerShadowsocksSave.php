@@ -23,7 +23,10 @@ class ServerShadowsocksSave extends FormRequest
             'port' => 'required',
             'server_port' => 'required',
             'cipher' => 'required|in:aes-128-gcm,aes-192-gcm,aes-256-gcm,chacha20-ietf-poly1305,2022-blake3-aes-128-gcm,2022-blake3-aes-256-gcm',
-            'obfs' => 'nullable|in:http',
+            // V2bX serves plain shadowsocks only: neither of its cores has a
+            // simple-obfs server, so a node saved with obfs was offered to
+            // clients with a plugin that failed every connection.
+            'obfs' => 'nullable|prohibited',
             'obfs_settings' => 'nullable|array',
             'tags' => 'nullable|array',
             'rate' => 'required|numeric'
@@ -43,6 +46,7 @@ class ServerShadowsocksSave extends FormRequest
             'server_port.required' => 'پورت سرویس بک‌اند نمی‌تواند خالی باشد',
             'cipher.required' => 'روش رمزنگاری نمی‌تواند خالی باشد',
             'tags.array' => 'برچسب دارای فرمت نادرست است',
+            'obfs.prohibited' => 'obfs روی نود V2bX پشتیبانی نمی‌شود؛ آن را روی «ندارد» بگذارید',
             'rate.required' => 'ضریب نمی‌تواند خالی باشد',
             'rate.numeric' => 'ضریب دارای فرمت نادرست است',
             'obfs.in' => '混淆 دارای فرمت نادرست است',
