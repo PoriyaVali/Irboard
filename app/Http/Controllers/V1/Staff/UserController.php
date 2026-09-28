@@ -17,9 +17,11 @@ class UserController extends Controller
         if (empty($request->input('id'))) {
             abort(500, 'پارامتر نادرست است');
         }
+        // A staff account is a reseller: it sees its own customers only.
         $user = User::where('is_admin', 0)
             ->where('id', $request->input('id'))
             ->where('is_staff', 0)
+            ->where('invite_user_id', $request->user['id'])
             ->first();
         if (!$user) abort(500, 'کاربر یافت نشد');
         return response([
@@ -27,12 +29,39 @@ class UserController extends Controller
         ]);
     }
 
+    /**
+     * Fields a reseller may change on its own customer. Everything that is
+     * money or service - balance, commission, discount, plan, expiry, traffic -
+     * is sold through ResellerController::assignPlan, which charges the
+     * reseller's balance; setting it here gave it away.
+     */
+    private const EDITABLE = ['email', 'password', 'banned'];
+
     public function update(UserUpdate $request)
     {
         $params = $request->validated();
-        $user = User::find($request->input('id'));
+        // Only the reseller's own customers, never an admin or another
+        // reseller (this could rewrite any account, the caller's own balance
+        // and an admin's password included).
+        $user = User::where('id', $request->input('id'))
+            ->where('invite_user_id', $request->user['id'])
+            ->where('is_admin', 0)
+            ->where('is_staff', 0)
+            ->first();
         if (!$user) {
             abort(500, 'کاربر یافت نشد');
+        }
+        // An edit form may post the whole record back; values it did not
+        // change are fine, a changed one is refused rather than dropped.
+        foreach ($params as $key => $value) {
+            if (in_array($key, self::EDITABLE, true)) continue;
+            $current = $user->{$key};
+            $same = ($value === null && $current === null)
+                || ($value !== null && $current !== null && (string)$value === (string)$current);
+            if (!$same) {
+                abort(500, 'این مورد توسط نماینده قابل تغییر نیست؛ برای تخصیص پلن از بخش نمایندگی استفاده کنید');
+            }
+            unset($params[$key]);
         }
         if (User::where('email', $params['email'])->first() && $user->email !== $params['email']) {
             abort(500, 'این ایمیل قبلاً استفاده شده است');
@@ -43,16 +72,11 @@ class UserController extends Controller
         } else {
             unset($params['password']);
         }
-        if (isset($params['plan_id'])) {
-            $plan = Plan::find($params['plan_id']);
-            if (!$plan) {
-                abort(500, 'پلن اشتراک یافت نشد');
-            }
-            $params['group_id'] = $plan->group_id;
-        }
-
         try {
             $user->update($params);
+            if (isset($params['password'])) {
+                (new \App\Services\AuthService($user))->removeAllSession();
+            }
         } catch (\Exception $e) {
             abort(500, 'ذخیره ناموفق بود');
         }

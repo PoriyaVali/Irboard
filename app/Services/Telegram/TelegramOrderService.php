@@ -22,14 +22,27 @@ class TelegramOrderService
         $this->user = $user;
     }
 
+    /** Periods a plan order may name - the same list the website accepts. */
+    private const PLAN_PERIODS = [
+        'month_price', 'quarter_price', 'half_year_price', 'year_price',
+        'two_year_price', 'three_year_price', 'onetime_price', 'reset_price',
+    ];
+
     /**
      * ساخت سفارش برای خرید پلن
+     *
+     * The same rules as the website's order form (User\OrderController::save).
+     * The period comes from callback data, which a modified client can set to
+     * anything, so it is checked against the list above and every sale rule is
+     * applied here rather than trusted to the buttons the bot showed.
      */
     public function createPlanOrder(int $planId, string $period): array
     {
-        // لغو سفارش‌های ناتمام قبلی
-        $this->cancelPendingOrders();
-        
+        $periodField = $period . '_price';
+        if (!in_array($periodField, self::PLAN_PERIODS, true)) {
+            return ['success' => false, 'message' => 'این دوره قابل خرید نیست.'];
+        }
+
         $userService = new UserService();
 
         $planService = new PlanService($planId);
@@ -39,49 +52,87 @@ class TelegramOrderService
             return ['success' => false, 'message' => 'پلن یافت نشد.'];
         }
 
+        $user = User::find($this->user->id);
+        if (!$user) {
+            return ['success' => false, 'message' => 'کاربر یافت نشد.'];
+        }
+        $isReset = $periodField === 'reset_price';
+
         // بررسی ظرفیت
-        if ($this->user->plan_id !== $plan->id && !$planService->haveCapacity() && $period !== 'reset_price') {
+        if ($user->plan_id !== $plan->id && !$planService->haveCapacity() && !$isReset) {
             return ['success' => false, 'message' => 'این محصول فروخته شده است.'];
         }
 
-        $periodField = $period . '_price';
         if ($plan->$periodField === null) {
             return ['success' => false, 'message' => 'این دوره قابل خرید نیست.'];
         }
 
+        if ($isReset && (!$userService->isAvailable($user) || $plan->id !== $user->plan_id)) {
+            return ['success' => false, 'message' => 'اشتراک فعالی از این پلن ندارید؛ خرید بسته بازنشانی ترافیک ممکن نیست.'];
+        }
+
+        if (!$isReset && ((!$plan->show && !$plan->renew) || (!$plan->show && $user->plan_id !== $plan->id))) {
+            return ['success' => false, 'message' => 'این اشتراک فروخته شده است، لطفاً اشتراک دیگری انتخاب کنید.'];
+        }
+
+        if (!$isReset && !$plan->renew && $user->plan_id == $plan->id) {
+            return ['success' => false, 'message' => 'این اشتراک قابل تمدید نیست، لطفاً اشتراک دیگری انتخاب کنید.'];
+        }
+
+        if (!$plan->show && $plan->renew && !$userService->isAvailable($user)) {
+            return ['success' => false, 'message' => 'این اشتراک منقضی شده است، لطفاً اشتراک دیگری انتخاب کنید.'];
+        }
+
+        if (OrderService::reservationLimitReached($user, $periodField)) {
+            return ['success' => false, 'message' => 'حداکثر ۱۰ بسته رزرو مجاز است.'];
+        }
+
+        // لغو سفارش‌های ناتمام قبلی (با بازگشت مبلغ کیف پول)
+        $this->cancelPendingOrders();
+
         DB::beginTransaction();
         try {
+            // The wallet is read and charged on a locked row. The bot used the
+            // user it loaded when the update arrived and ignored whether the
+            // charge succeeded, so a double tap charged the wallet once and
+            // still produced two orders marked as paid from it.
+            $user = User::lockForUpdate()->find($this->user->id);
+
             $order = new Order();
             $orderService = new OrderService($order);
             
-            $order->user_id = $this->user->id;
+            $order->user_id = $user->id;
             $order->plan_id = $plan->id;
             $order->period = $periodField;
             $order->trade_no = Helper::generateOrderNo();
             $order->total_amount = $plan->$periodField;
 
-            $orderService->setVipDiscount($this->user);
-            $orderService->setOrderType($this->user);
+            $orderService->setVipDiscount($user);
+            $orderService->setOrderType($user);
 
             // کسر از کیف پول
-            if ($this->user->balance > 0 && $order->total_amount > 0) {
-                $remainingBalance = $this->user->balance - $order->total_amount;
+            if ($user->balance > 0 && $order->total_amount > 0 && !$user->is_staff) {
+                $remainingBalance = $user->balance - $order->total_amount;
                 
                 if ($remainingBalance >= 0) {
-                    $userService->addBalance($order->user_id, -$order->total_amount);
+                    $charged = $userService->addBalance($order->user_id, -$order->total_amount);
                     $order->balance_amount = $order->total_amount;
                     $order->total_amount = 0;
                 } else {
-                    $userService->addBalance($order->user_id, -$this->user->balance);
-                    $order->balance_amount = $this->user->balance;
-                    $order->total_amount -= $this->user->balance;
+                    $charged = $userService->addBalance($order->user_id, -$user->balance);
+                    $order->balance_amount = $user->balance;
+                    $order->total_amount -= $user->balance;
+                }
+                if (!$charged) {
+                    DB::rollBack();
+                    return ['success' => false, 'message' => 'موجودی کیف پول کافی نیست.'];
                 }
             }
 
             $order->status = 0;
             $order->exchange_rate = \App\Services\ExchangeService::getCurrentRate();
             $order->source = 'telegram';
-            $orderService->setInvite($this->user);
+            $orderService->setInvite($user);
 
             if (!$order->save()) {
                 DB::rollback();
@@ -120,12 +171,6 @@ class TelegramOrderService
      */
     public function createDepositOrder(int $amount): array
     {
-        // لغو سفارش‌های ناتمام قبلی
-        $this->cancelPendingOrders();
-        
-        $userService = new UserService();
-
-
         if ($amount < 10000) {
             return ['success' => false, 'message' => 'حداقل مبلغ شارژ 10,000 تومان است.'];
         }
@@ -133,6 +178,9 @@ class TelegramOrderService
         if ($amount > 9999999) {
             return ['success' => false, 'message' => 'مبلغ شارژ بیش از حد مجاز است.'];
         }
+
+        // لغو سفارش‌های ناتمام قبلی
+        $this->cancelPendingOrders();
 
         DB::beginTransaction();
         try {
@@ -274,8 +322,20 @@ class TelegramOrderService
     protected function cancelPendingOrders(): void
     {
         // لغو سفارش‌های در انتظار پرداخت (status = 0)
-        Order::where('user_id', $this->user->id)
+        // One by one through OrderService::cancel(), which gives back what the
+        // order took from the wallet. A bulk status update cancelled the order
+        // and kept that money.
+        $orders = Order::where('user_id', $this->user->id)
             ->where('status', 0)
-            ->update(['status' => 2]);
+            ->get();
+        foreach ($orders as $order) {
+            // A card-to-card payment the customer has already reported as sent
+            // is waiting for the admin, not abandoned.
+            $claimed = \App\Models\CardPayment::where('order_id', $order->id)
+                ->where('status', \App\Models\CardPayment::STATUS_CLAIMED)
+                ->exists();
+            if ($claimed) continue;
+            (new OrderService($order))->cancel();
+        }
     }
 }

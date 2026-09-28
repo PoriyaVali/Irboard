@@ -79,8 +79,12 @@ class Card2Card
         }
 
         // بررسی محدودیت مبلغ
-        $minAmount = ($this->config['min_amount'] ?? 50000) * 10; // تبدیل به ریال
-        $maxAmount = ($this->config['max_amount'] ?? 50000000) * 10;
+        // Both the settings and the order amount are in toman. Multiplying the
+        // settings by ten ("to rial") compared rial with toman: every limit was
+        // ten times what the admin set, so with the defaults nothing under
+        // 500,000 toman could be paid by card.
+        $minAmount = (int)(($this->config['min_amount'] ?? '') !== '' ? $this->config['min_amount'] : 50000);
+        $maxAmount = (int)(($this->config['max_amount'] ?? '') !== '' ? $this->config['max_amount'] : 50000000);
         
         if ($order['total_amount'] < $minAmount) {
             throw new \Exception('مبلغ سفارش کمتر از حداقل مجاز است');

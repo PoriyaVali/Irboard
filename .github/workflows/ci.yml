@@ -261,8 +261,6 @@ jobs:
               'App\Http\Controllers\V1\Admin\StatController::getRanking',
               'App\Http\Controllers\V1\Admin\StatController::getStatRecord',
               'App\Http\Controllers\V1\Admin\UserController::setInviteUser',
-              'App\Http\Controllers\V1\Guest\PaymentController::aghayehpardakhtCallback',
-              'App\Http\Controllers\V1\Guest\PaymentController::zibalCallback',
           ];
           // Signature mismatches, keyed by URI (these live in routes/web.php, which has
           // no per-install prefix). payment/notify/zibal/{uuid} is unreachable in any

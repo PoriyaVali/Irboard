@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\CardPayment;
 use App\Models\Order;
+use App\Services\OrderService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -43,10 +44,9 @@ class ExpirePendingCardPayments extends Command
             $expired++;
 
             // اگه سفارش هنوز بازه، کنسلش کن
-            if ($order && $order->status == 0) {
-                $order->status = 2;
-                $order->updated_at = $now;
-                $order->save();
+            // Through OrderService, which gives back the wallet part of the
+            // order; the bare status write here kept it.
+            if ($order && $order->status == 0 && (new OrderService($order))->cancel()) {
                 $cancelledOrders++;
             }
         }

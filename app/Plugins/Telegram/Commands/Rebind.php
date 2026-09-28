@@ -49,7 +49,9 @@ class Rebind extends Telegram {
        }
        $currentUser = User::where('telegram_id', $message->chat_id)->first();
        $isCurrentUserAdmin = $currentUser ? $currentUser->is_admin : false;
-       $isTargetUserAdmin = $targetUser->is_admin;
+       // A reseller account is guarded like an admin one: it can sell plans
+       // from its balance, so a subscription link alone is not enough.
+       $isTargetUserAdmin = $targetUser->is_admin || $targetUser->is_staff;
        if ($this->needsPasswordVerification($isCurrentUserAdmin, $isTargetUserAdmin)) {
            if (!$password) {
                $this->telegramService->sendMessage($message->chat_id, 
@@ -59,7 +61,15 @@ class Rebind extends Telegram {
                    'markdown');
                return;
            }
-           if (!password_verify($password, $targetUser->password)) {
+           // The login page's check and wrong-password limit, so this is not a
+           // second door with unlimited guesses (and old-algorithm passwords
+           // that password_verify cannot read still work).
+           $verdict = \App\Services\AuthService::checkPasswordWithLimit($targetUser, (string)$password);
+           if ($verdict === 'locked') {
+               $this->telegramService->sendMessage($message->chat_id, '❌ تعداد تلاش‌های ناموفق زیاد است؛ بعداً دوباره تلاش کنید', 'markdown');
+               return;
+           }
+           if ($verdict !== null) {
                $this->telegramService->sendMessage($message->chat_id, '❌ رمز عبور اشتباه است', 'markdown');
                return;
            }

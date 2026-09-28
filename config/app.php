@@ -237,5 +237,11 @@ return [
     | The only modification by laravel config
     |
     */
-    'version' => '1.7.5.2685.2222'
+    'version' => '1.7.5.2685.2222',
+
+    /*
+    | Addresses allowed to set X-Forwarded-For (comma-separated IPs or CIDR
+    | ranges). Empty keeps the long-standing '*': see App\Http\Middleware\TrustProxies.
+    */
+    'trusted_proxies' => env('TRUSTED_PROXIES', '')
 ];

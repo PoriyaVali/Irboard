@@ -87,7 +87,7 @@ class MirrorController extends Controller
         }
 
         $limitEnabled = (int) config('v2board.password_limit_enable', 1);
-        $limitKey = CacheKey::get('PASSWORD_ERROR_LIMIT', $email);
+        $limitKey = \App\Services\AuthService::passwordLimitKey($email);
         $errors = (int) Cache::get($limitKey, 0);
         if ($limitEnabled && $errors >= (int) config('v2board.password_limit_count', 5)) {
             return response(['data' => [

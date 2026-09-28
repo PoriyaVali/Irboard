@@ -168,6 +168,12 @@ class CardPaymentService
 
         DB::beginTransaction();
         try {
+            // Decided again on the locked row: two admins (or one double tap)
+            // acting on the same payment both passed the check above.
+            if (!$this->lockPending($cardPayment)) {
+                DB::rollBack();
+                return ['success' => false, 'message' => 'این پرداخت قبلاً پردازش شده است'];
+            }
             $now = time();
 
             // بروزرسانی پرداخت
@@ -182,7 +188,9 @@ class CardPaymentService
             $order = Order::find($cardPayment->order_id);
             if ($order) {
                 $orderService = new OrderService($order);
-                $orderService->paid($order->trade_no);
+                if (!$orderService->paid($order->trade_no)) {
+                    throw new \RuntimeException('order could not be marked paid');
+                }
             }
 
             DB::commit();
@@ -191,7 +199,10 @@ class CardPaymentService
             $this->updateTelegramMessage($cardPayment, '✅ تأیید شد', $adminId);
 
             // اطلاع به کاربر
-            $this->notifyUser($cardPayment, 'verified');
+            // An order cancelled before this approval had its wallet part given
+            // back; paid() then credits the payment to the wallet (status 4)
+            // instead of opening the order.
+            $this->notifyUser($cardPayment, ($order && (int)$order->status === 4) ? 'credited' : 'verified');
 
             Log::channel('payment')->info('Card payment verified fully', [
                 'payment_id' => $cardPayment->id,
@@ -225,6 +236,12 @@ class CardPaymentService
 
         DB::beginTransaction();
         try {
+            // Decided again on the locked row: a second click credited the
+            // wallet a second time.
+            if (!$this->lockPending($cardPayment)) {
+                DB::rollBack();
+                return ['success' => false, 'message' => 'این پرداخت قبلاً پردازش شده است'];
+            }
             $now = time();
             $expectedAmount = $cardPayment->expected_amount;
             $user = User::find($cardPayment->user_id);
@@ -237,13 +254,16 @@ class CardPaymentService
 
                 // اضافه کردن به کیف پول
                 $userService = new UserService();
-                $userService->addBalance($user->id, $actualAmount);
+                if (!$userService->addBalance($user->id, $actualAmount)) {
+                    throw new \RuntimeException('wallet credit failed');
+                }
 
                 // کنسل کردن سفارش
-                if ($order) {
-                    $order->status = 2; // cancelled
-                    $order->updated_at = $now;
-                    $order->save();
+                // Through OrderService, which also gives back the part of the
+                // order paid from the wallet (a no-op if it is already
+                // cancelled - the expiry job may have done it).
+                if ($order && (int)$order->status === 0) {
+                    (new OrderService($order))->cancel();
                 }
 
                 $resultMessage = "مبلغ {$this->formatAmount($actualAmount)} به کیف پول اضافه شد. سفارش لغو شد.";
@@ -257,13 +277,17 @@ class CardPaymentService
                 // فعال کردن سفارش
                 if ($order) {
                     $orderService = new OrderService($order);
-                    $orderService->paid($order->trade_no);
+                    if (!$orderService->paid($order->trade_no)) {
+                        throw new \RuntimeException('order could not be marked paid');
+                    }
                 }
 
                 // اضافه کردن مابقی به کیف پول
                 if ($excessAmount > 0) {
                     $userService = new UserService();
-                    $userService->addBalance($user->id, $excessAmount);
+                    if (!$userService->addBalance($user->id, $excessAmount)) {
+                        throw new \RuntimeException('wallet credit failed');
+                    }
                 }
 
                 $resultMessage = "سفارش فعال شد. مبلغ اضافی {$this->formatAmount($excessAmount)} به کیف پول اضافه شد.";
@@ -316,19 +340,34 @@ class CardPaymentService
 
         $now = time();
 
-        $cardPayment->status = CardPayment::STATUS_REJECTED;
-        $cardPayment->verified_at = $now;
-        $cardPayment->verified_by = $adminId;
-        $cardPayment->reject_reason = $reason ?: 'واریز تأیید نشد';
-        $cardPayment->updated_at = $now;
-        $cardPayment->save();
+        DB::beginTransaction();
+        try {
+            if (!$this->lockPending($cardPayment)) {
+                DB::rollBack();
+                return ['success' => false, 'message' => 'این پرداخت قبلاً پردازش شده است'];
+            }
+            $cardPayment->status = CardPayment::STATUS_REJECTED;
+            $cardPayment->verified_at = $now;
+            $cardPayment->verified_by = $adminId;
+            $cardPayment->reject_reason = $reason ?: 'واریز تأیید نشد';
+            $cardPayment->updated_at = $now;
+            $cardPayment->save();
 
-        // کنسل کردن سفارش
-        $order = Order::find($cardPayment->order_id);
-        if ($order && $order->status === 0) {
-            $order->status = 2;
-            $order->updated_at = $now;
-            $order->save();
+            // کنسل کردن سفارش
+            // Through OrderService, which gives back the wallet part of the
+            // order; the bare status write kept it.
+            $order = Order::find($cardPayment->order_id);
+            if ($order && (int)$order->status === 0) {
+                (new OrderService($order))->cancel();
+            }
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::channel('payment')->error('Card payment reject failed', [
+                'payment_id' => $cardPayment->id,
+                'error' => $e->getMessage()
+            ]);
+            return ['success' => false, 'message' => 'خطا در رد پرداخت: ' . $e->getMessage()];
         }
 
         // بروزرسانی پیام تلگرام
@@ -344,6 +383,20 @@ class CardPaymentService
         ]);
 
         return ['success' => true, 'message' => 'پرداخت رد شد'];
+    }
+
+    /**
+     * Lock the payment row inside the caller's transaction and confirm it is
+     * still waiting for a decision. Refreshes the caller's model from it.
+     */
+    private function lockPending(CardPayment $cardPayment): bool
+    {
+        $locked = CardPayment::lockForUpdate()->find($cardPayment->id);
+        if (!$locked || !in_array($locked->status, [CardPayment::STATUS_CLAIMED, CardPayment::STATUS_EXPIRED], true)) {
+            return false;
+        }
+        $cardPayment->setRawAttributes($locked->getAttributes(), true);
+        return true;
     }
 
     /**
@@ -413,6 +466,13 @@ class CardPaymentService
                 $text = "✅ پرداخت شما تأیید شد!\n\n";
                 $text .= "سفارش فعال شد.\n";
                 $text .= "مبلغ اضافی ({$excessToman} تومان) به کیف پول شما اضافه شد. 🎉";
+                break;
+
+            case 'credited':
+                $text = "✅ پرداخت شما تأیید شد\n\n";
+                $text .= "💰 مبلغ: {$amountToman} تومان\n";
+                $text .= "🔢 سفارش: {$cardPayment->trade_no}\n\n";
+                $text .= "این سفارش پیش از تأیید لغو شده بود؛ مبلغ به کیف پول شما اضافه شد و می‌توانید سفارش جدید ثبت کنید.";
                 break;
 
             case 'rejected':

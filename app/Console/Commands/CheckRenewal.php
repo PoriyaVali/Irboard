@@ -119,6 +119,10 @@ class CheckRenewal extends Command
         $criticalTrafficBytes = self::TRAFFIC_REMAINING_MB * 1024 * 1024; // 200 MB
 
         return User::whereNotNull('plan_id')
+            // A one-time plan never expires, so there is nothing to renew. Its
+            // users were caught by the traffic condition, charged a periodic
+            // price and turned into a 30-day plan.
+            ->whereNotNull('expired_at')
             ->where('auto_renewal', 1)
             ->whereNotIn('id', function ($q) {
                 $q->select('user_id')->from('v2_reserved_plans')->where('status', 0);
@@ -126,7 +130,12 @@ class CheckRenewal extends Command
             ->where(function ($query) use ($criticalTimeThreshold, $recoveryThreshold, $criticalTrafficBytes, $now) {
                 
                 // ✅ شرط 1: حجم باقیمانده کمتر از 200 مگابایت
-                $query->whereRaw('(transfer_enable - (u + d)) <= ?', [$criticalTrafficBytes])
+                // (on a plan that is live or expired within the recovery
+                // window - older expiries are what condition 3 leaves alone)
+                $query->where(function ($subQuery) use ($criticalTrafficBytes, $recoveryThreshold) {
+                    $subQuery->whereRaw('(transfer_enable - (u + d)) <= ?', [$criticalTrafficBytes])
+                             ->where('expired_at', '>=', $recoveryThreshold->timestamp);
+                })
                 
                 // ✅ شرط 2: زمان باقیمانده کمتر از 1 ساعت (و هنوز منقضی نشده)
                 ->orWhere(function ($subQuery) use ($criticalTimeThreshold, $now) {
@@ -235,45 +244,39 @@ class CheckRenewal extends Command
 
     protected function getPlanPrice(Plan $plan, User $user = null)
     {
-        if ($user && isset($user->plan_type)) {
-            $planType = $user->plan_type;
-            
-            $priceMap = [
-                'month' => 'month_price',
-                'quarter' => 'quarter_price',
-                'half_year' => 'half_year_price',
-                'year' => 'year_price',
-                'two_year' => 'two_year_price',
-                'three_year' => 'three_year_price',
-                'onetime' => 'onetime_price',
-                'reset' => 'reset_price'
-            ];
-            
-            if (isset($priceMap[$planType]) && isset($plan->{$priceMap[$planType]})) {
-                $price = $plan->{$priceMap[$planType]};
-                if ($price !== null && $price > 0) {
-                    return $price;
-                }
+        // Price and length both come from renewalPeriod(), so what is charged
+        // and what is added always match. (A per-user plan_type used to be
+        // read here; v2_user has no such column.)
+        $field = self::renewalPeriod($plan);
+        return $field === null ? null : $plan->$field;
+    }
+
+    /**
+     * Days each period buys, so the renewal lasts as long as what it charges
+     * for. A month stays 30 days, as renewals always were.
+     */
+    const PERIOD_DAYS = [
+        'month_price' => 30,
+        'quarter_price' => 90,
+        'half_year_price' => 180,
+        'year_price' => 365,
+        'two_year_price' => 730,
+        'three_year_price' => 1095,
+    ];
+
+    /**
+     * The shortest period this plan is sold for. Only real periods: a one-time
+     * price buys a plan that never expires and a reset price buys traffic, so
+     * neither is a renewal. Picking the first price regardless charged a
+     * yearly price (when a plan had no monthly one) for thirty days.
+     */
+    protected static function renewalPeriod(Plan $plan): ?string
+    {
+        foreach (array_keys(self::PERIOD_DAYS) as $field) {
+            if ($plan->$field !== null && $plan->$field > 0) {
+                return $field;
             }
         }
-        
-        $priceFields = [
-            'month_price',
-            'quarter_price',
-            'half_year_price',
-            'year_price',
-            'two_year_price',
-            'three_year_price',
-            'onetime_price',
-            'reset_price'
-        ];
-        
-        foreach ($priceFields as $field) {
-            if (isset($plan->$field) && $plan->$field !== null && $plan->$field > 0) {
-                return $plan->$field;
-            }
-        }
-        
         return null;
     }
 
@@ -388,17 +391,17 @@ class CheckRenewal extends Command
 
     protected function convertTransferEnable($value)
     {
-        if ($value < 1000) {
-            return $value * 1024 * 1024 * 1024;
-        }
-        return $value;
+        // v2_plan.transfer_enable is always GB, as everywhere else that reads
+        // it. The "< 1000 means GB" guess gave a 1000 GB plan 1000 bytes.
+        return (int)$value * 1073741824;
     }
 
     protected function calculateNewExpiry(User $user, Plan $plan, bool $isExpired)
     {
         $now = Carbon::now();
         $currentExpiry = Carbon::createFromTimestamp($user->expired_at);
-        $duration = $plan->duration ?? 30;
+        $period = self::renewalPeriod($plan);
+        $duration = $period !== null ? self::PERIOD_DAYS[$period] : 30;
 
         if ($isExpired) {
             return $now->addDays($duration)->timestamp;

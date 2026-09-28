@@ -20,6 +20,8 @@ class OrderService
         'two_year_price' => 24,
         'three_year_price' => 36
     ];
+    public const MAX_RESERVED_PLANS = 10;
+
     public $order;
     public $user;
 
@@ -48,6 +50,7 @@ class OrderService
         if ($lock && !$lock->get()) {
             return; // another worker is opening this order right now
         }
+        $level = DB::transactionLevel();
         try {
             $fresh = Order::find($this->order->id);
             if (!$fresh || (int)$fresh->status === 3) {
@@ -55,6 +58,12 @@ class OrderService
             }
             $this->openOnce();
         } finally {
+            // A failure half way through openOnce() must not leave its
+            // transaction open on a queue worker's long-lived connection,
+            // where every later job would write into it and never commit.
+            while (DB::transactionLevel() > $level) {
+                DB::rollBack();
+            }
             if ($lock) {
                 $lock->release();
             }
@@ -88,9 +97,18 @@ class OrderService
         }
 
         $plan = Plan::find($order->plan_id);
+        if (!$plan) {
+            abort(500, 'پلن این سفارش یافت نشد');
+        }
 
         // بررسی رزرو بسته
-        if ($order->period !== 'reset_price' && $this->shouldReserve($order)) {
+        // An order that carries a surplus credit was priced as a plan CHANGE:
+        // the unused part of the current plan was taken off its price. It must
+        // replace the current plan, as a change always did - queueing it kept
+        // the old plan running as well, so the same remaining value was both
+        // credited and used (and, since the old orders stayed un-offset, could
+        // be credited again on the next order).
+        if ($order->period !== 'reset_price' && empty($order->surplus_order_ids) && $this->shouldReserve($order)) {
             $this->reservePlan($order, $plan);
             return;
         }
@@ -167,7 +185,10 @@ class OrderService
         } else if ($user->plan_id !== NULL && $order->plan_id !== $user->plan_id && ($user->expired_at > time() || $user->expired_at === NULL)) {
             if (!(int)config('v2board.plan_change_enable', 1)) abort(500, 'در حال حاضر تغییر اشتراک مجاز نیست؛ لطفاً با پشتیبانی تماس بگیرید یا تیکت ثبت کنید');
             $order->type = 3;
-            if ((int)config('v2board.surplus_enable', 1)) $this->getSurplusValue($user, $order);
+            // No surplus credit when the new plan is going to be queued behind
+            // the current one: the current plan keeps running to its end, so
+            // its remaining value is used, not handed back as a discount.
+            if ((int)config('v2board.surplus_enable', 1) && !self::hasPlanToWaitFor($user)) $this->getSurplusValue($user, $order);
             if ($order->surplus_amount >= $order->total_amount) {
                 $order->refund_amount = $order->surplus_amount - $order->total_amount;
                 $order->total_amount = 0;
@@ -309,39 +330,119 @@ class OrderService
         $order->surplus_order_ids = array_column($orders, 'id');
     }
 
+    /**
+     * Record a payment for this order and queue its fulfilment - once.
+     *
+     * The status is decided on the row read under a lock, not on the copy the
+     * caller holds. That copy can be minutes old (the payment recovery job
+     * loads its whole batch first), and writing status 1 from it over an order
+     * that meanwhile reached 3 made the order open a second time: a second
+     * top-up, a second plan.
+     *
+     * A cancelled order can still be paid late (the customer finished at the
+     * gateway after cancelling, or after the pending order timed out). If part
+     * of it was paid from the wallet, cancelling gave that part back, so
+     * opening the order now would hand the plan over for only the gateway
+     * share. Such a payment is credited to the wallet instead, where it buys
+     * the plan again at its full price.
+     */
     public function paid(string $callbackNo)
     {
         $order = $this->order;
-        if ($order->status !== 0 && $order->status !== 2) return true;
-        $order->status = 1;
-        $order->paid_at = time();
-        $order->callback_no = $callbackNo;
-        if (!$order->save()) return false;
+        $dispatch = false;
+        DB::beginTransaction();
         try {
-            OrderHandleJob::dispatch($order->trade_no);
+            $fresh = Order::lockForUpdate()->find($order->id);
+            if (!$fresh) {
+                DB::rollBack();
+                return false;
+            }
+            $status = (int)$fresh->status;
+            if ($status !== 0 && $status !== 2) {
+                DB::rollBack();
+                return true;
+            }
+            if ($status === 2 && (int)$fresh->balance_amount > 0) {
+                $user = User::lockForUpdate()->find($fresh->user_id);
+                if (!$user) {
+                    DB::rollBack();
+                    return false;
+                }
+                $user->balance = (int)$user->balance + (int)$fresh->total_amount;
+                $fresh->status = 4;
+            } else {
+                $fresh->status = 1;
+                $dispatch = true;
+            }
+            $fresh->paid_at = time();
+            $fresh->callback_no = $callbackNo;
+            if ((isset($user) && !$user->save()) || !$fresh->save()) {
+                DB::rollBack();
+                return false;
+            }
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return false;
+        }
+
+        foreach (['status', 'paid_at', 'callback_no'] as $key) {
+            $order->{$key} = $fresh->{$key};
+        }
+        $order->syncOriginalAttributes(['status', 'paid_at', 'callback_no']);
+
+        if (!$dispatch) return true;
+        try {
+            // After the commit of whatever transaction the caller runs this
+            // in, so the job never reads the order before its status 1 exists.
+            OrderHandleJob::dispatch($order->trade_no)->afterCommit();
         } catch (\Exception $e) {
             return false;
         }
         return true;
     }
 
+    /**
+     * Cancel a pending order and give back what it took from the wallet.
+     *
+     * Only an order still waiting for payment (status 0) is cancelled, checked
+     * on the locked row: an order paid in the meantime must not be cancelled
+     * and refunded on top. Cancelling one that is already cancelled is a no-op
+     * that reports success, so a repeated cancel never refunds twice.
+     */
     public function cancel():bool
     {
         $order = $this->order;
         DB::beginTransaction();
-        $order->status = 2;
-        if (!$order->save()) {
-            DB::rollBack();
-            return false;
-        }
-        if ($order->balance_amount) {
-            $userService = new UserService();
-            if (!$userService->addBalance($order->user_id, $order->balance_amount)) {
+        try {
+            $fresh = Order::lockForUpdate()->find($order->id);
+            if (!$fresh) {
                 DB::rollBack();
                 return false;
             }
+            if ((int)$fresh->status !== 0) {
+                DB::rollBack();
+                return (int)$fresh->status === 2;
+            }
+            $fresh->status = 2;
+            if (!$fresh->save()) {
+                DB::rollBack();
+                return false;
+            }
+            if ($fresh->balance_amount) {
+                $userService = new UserService();
+                if (!$userService->addBalance($fresh->user_id, (int)$fresh->balance_amount)) {
+                    DB::rollBack();
+                    return false;
+                }
+            }
+            DB::commit();
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return false;
         }
-        DB::commit();
+        $order->status = 2;
+        $order->syncOriginalAttribute('status');
         return true;
     }
 
@@ -464,14 +565,23 @@ class OrderService
 
     private function shouldReserve($order)
     {
-        $user = $this->user;
+        // The ten-reservation limit is enforced when the order is created
+        // (reservationLimitReached). Here the customer has already paid, and an
+        // abort left the order stuck at "processing" for good - retried every
+        // minute, never opened and never refunded.
+        return self::hasPlanToWaitFor($this->user);
+    }
+
+    /**
+     * Whether a new plan order for this user would be queued and the user
+     * already holds the maximum number of queued plans. Checked before an
+     * order is created, while it can still be refused without taking money.
+     */
+    public static function reservationLimitReached(User $user, ?string $period = null): bool
+    {
+        if ($period === 'reset_price' || $period === 'deposit') return false;
         if (!self::hasPlanToWaitFor($user)) return false;
-
-        // بررسی محدودیت 10 بسته رزرو
-        $reservedCount = ReservedPlan::where('user_id', $user->id)->where('status', 0)->count();
-        if ($reservedCount >= 10) abort(500, 'حداکثر ۱۰ بسته رزرو مجاز است');
-
-        return true;
+        return ReservedPlan::where('user_id', $user->id)->where('status', 0)->count() >= self::MAX_RESERVED_PLANS;
     }
 
     /**
@@ -512,7 +622,9 @@ class OrderService
         if ((int)Order::where('id', $order->id)->value('status') === 3) {
             return ReservedPlan::where('order_id', $order->id)->exists();
         }
-        return $user && self::hasPlanToWaitFor($user);
+        // An order carrying a surplus credit is a plan change that replaces the
+        // current plan (see openOnce), so it is never queued.
+        return $user && empty($order->surplus_order_ids) && self::hasPlanToWaitFor($user);
     }
 
     private function reservePlan($order, $plan)

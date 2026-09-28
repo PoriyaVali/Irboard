@@ -67,5 +67,37 @@ function run()
 
     $kernel->terminate($request, $response);
 
+    rollBackLeftoverTransactions();
+
     return ob_get_clean();
+}
+
+/**
+ * A worker serves thousands of requests on one database connection. A request
+ * that ends inside DB::beginTransaction() - an abort() between begin and
+ * commit, e.g. a coupon refused while an order is being built - leaves that
+ * transaction open, and under php-fpm the connection closing rolled it back.
+ * Here the next requests on the worker would run inside it: their writes
+ * never committed and vanished when the worker recycled. Close it now.
+ */
+function rollBackLeftoverTransactions()
+{
+    try {
+        foreach (app('db')->getConnections() as $name => $connection) {
+            $level = $connection->transactionLevel();
+            if ($level > 0) {
+                while ($connection->transactionLevel() > 0) {
+                    $connection->rollBack();
+                }
+                // Logged after the rollback: a log channel that writes to the
+                // database would otherwise have its row rolled back too.
+                \Illuminate\Support\Facades\Log::warning('Rolled back a transaction a request left open', [
+                    'connection' => $name,
+                    'level' => $level,
+                ]);
+            }
+        }
+    } catch (\Throwable $e) {
+        // A broken connection is reconnected by the next query.
+    }
 }

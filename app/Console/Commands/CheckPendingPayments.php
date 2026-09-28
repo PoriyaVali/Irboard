@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\User;
 use App\Models\PaymentTrack;
 use App\Payments\ZibalPayment;
+use App\Services\OrderService;
 use App\Services\TelegramService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -79,7 +80,10 @@ class CheckPendingPayments extends Command
         if ($checkExpired) $statusesToCheck[] = 4;
 
         $pendingOrders = Order::whereIn('status', $statusesToCheck)
-            ->where('created_at', '>=', now()->subHours($hours))
+            // created_at is a unix timestamp. Compared with a Carbon (bound as
+            // 'Y-m-d H:i:s') MySQL reads the date as the number 2026, so every
+            // order ever made passed and --hours limited nothing.
+            ->where('created_at', '>=', now()->subHours($hours)->timestamp)
             ->whereExists(function($query) {
                 $query->select(DB::raw(1))
                       ->from('payment_tracks')
@@ -148,7 +152,7 @@ class CheckPendingPayments extends Command
             }
 
             try {
-                $paymentConfig = $this->getPaymentConfig();
+                $paymentConfig = $this->getPaymentConfig($order);
                 
                 if (!$paymentConfig) {
                     if ($debug) {
@@ -291,8 +295,12 @@ class CheckPendingPayments extends Command
 
                         if ($checkCancelled && $order->status == 0) {
                             try {
-                                $order->status = 2;
-                                $order->save();
+                                // Through OrderService: gives back what the
+                                // order took from the wallet (a bare status
+                                // write kept it).
+                                if (!(new OrderService($order))->cancel()) {
+                                    throw new \RuntimeException('order is no longer pending');
+                                }
                                 
                                 if ($debug) {
                                     $this->info("  ✓ Order marked as cancelled");
@@ -330,8 +338,12 @@ class CheckPendingPayments extends Command
 
                         if ($order->status == 0) {
                             try {
-                                $order->status = 2;
-                                $order->save();
+                                // Through OrderService: gives back what the
+                                // order took from the wallet (a bare status
+                                // write kept it).
+                                if (!(new OrderService($order))->cancel()) {
+                                    throw new \RuntimeException('order is no longer pending');
+                                }
                                 
                                 if ($debug) {
                                     $this->info("  ✓ Order marked as cancelled");
@@ -374,8 +386,12 @@ class CheckPendingPayments extends Command
 
                         if ($order->status == 0) {
                             try {
-                                $order->status = 2;
-                                $order->save();
+                                // Through OrderService: gives back what the
+                                // order took from the wallet (a bare status
+                                // write kept it).
+                                if (!(new OrderService($order))->cancel()) {
+                                    throw new \RuntimeException('order is no longer pending');
+                                }
                                 
                                 if ($debug) {
                                     $this->info("  ✓ Order marked as cancelled");
@@ -557,7 +573,7 @@ class CheckPendingPayments extends Command
                 if ((int)$order->status === 0 || (int)$order->status === 2) {
                     // به‌جای ست مستقیم status، از مسیر استاندارد paid() استفاده می‌کنیم
                     // تا OrderHandleJob -> open() اجرا و تعرفه فعال/رزرو شود.
-                    $orderService = new \App\Services\OrderService($order);
+                    $orderService = new OrderService($order);
                     $orderService->paid((string)$trackId);
                     
                     Log::channel('payment')->info('✓ Order verified in recovery (activated)', [
@@ -664,8 +680,11 @@ class CheckPendingPayments extends Command
     private function expireOrder(Order $order): bool
     {
         try {
-            $order->status = 2;
-            $order->save();
+            // Through OrderService, which refunds the wallet part and cancels
+            // only an order that is still pending.
+            if (!(new OrderService($order))->cancel()) {
+                return false;
+            }
 
             $track = PaymentTrack::where('trade_no', $order->trade_no)->first();
             if ($track && !$track->is_used) {
@@ -691,7 +710,7 @@ class CheckPendingPayments extends Command
         }
     }
 
-    private function getPaymentConfig(): ?array
+    private function getPaymentConfig(?Order $order = null): ?array
     {
         $config = config('v2board.zibal');
         
@@ -700,6 +719,19 @@ class CheckPendingPayments extends Command
         }
 
         try {
+            // The gateway the order was actually sent to. With two Zibal
+            // merchants set up, asking the first one about a payment made to
+            // the second finds nothing.
+            if ($order && $order->payment_id) {
+                $payment = DB::table('v2_payment')->where('id', $order->payment_id)->first();
+                if ($payment && in_array($payment->payment, ['ZibalPayment', 'ZibalPay', 'Zibal'], true) && $payment->config) {
+                    $config = json_decode($payment->config, true);
+                    if ($config && isset($config['zibal_merchant'])) {
+                        return $config;
+                    }
+                }
+            }
+
             $paymentNames = ['ZibalPayment', 'ZibalPay', 'Zibal'];
             
             foreach ($paymentNames as $name) {
