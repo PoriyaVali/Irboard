@@ -40,9 +40,41 @@ class UniProxyController extends Controller
     public function status(Request $request)
     {
         Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_LAST_CHECK_AT', $this->nodeInfo->id), time(), 3600);
+        // The load itself used to be thrown away, so the admin had no way to
+        // see a node running out of CPU, memory or disk until users
+        // complained. Kept for five minutes: a node that stops reporting stops
+        // showing a load rather than showing a stale one.
+        $load = self::nodeLoad($request->json()->all());
+        if ($load !== null) {
+            Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_LOAD_STATUS', $this->nodeInfo->id), $load, 300);
+        }
         return response([
             'data' => true
         ]);
+    }
+
+    /**
+     * The parts of V2bX's status report the admin is shown, or null when the
+     * report carries none of them.
+     *
+     * @return array|null
+     */
+    public static function nodeLoad($status): ?array
+    {
+        if (!is_array($status) || !isset($status['cpu'])) {
+            return null;
+        }
+        $pair = function ($v) {
+            if (!is_array($v)) return null;
+            return ['total' => (int)($v['total'] ?? 0), 'used' => (int)($v['used'] ?? 0)];
+        };
+        return [
+            'cpu' => round((float)$status['cpu'], 1),
+            'mem' => $pair($status['mem'] ?? null),
+            'swap' => $pair($status['swap'] ?? null),
+            'disk' => $pair($status['disk'] ?? null),
+            'updated_at' => time(),
+        ];
     }
 
     // 后端获取用户
@@ -180,6 +212,7 @@ class UniProxyController extends Controller
             ], 400);
         }
         $updateAt = time();
+        [$staleAfter, $keepFor] = self::aliveWindows((int)config('v2board.server_push_interval', 60));
         $cacheKeys = array_map(function ($uid) {
             return 'ALIVE_IP_USER_' . $uid;
         }, array_keys($data));
@@ -204,7 +237,7 @@ class UniProxyController extends Controller
             $ips_array[$this->nodeType . $this->nodeId] = ['aliveips' => $ips, 'lastupdateAt' => $updateAt];
             // 清理过期数据
             foreach ($ips_array as $nodetypeid => $oldips) {
-                if ($nodetypeid !== 'alive_ip' && is_array($oldips) && ($updateAt - ($oldips['lastupdateAt'] ?? 0) > 100)) {
+                if ($nodetypeid !== 'alive_ip' && is_array($oldips) && ($updateAt - ($oldips['lastupdateAt'] ?? 0) > $staleAfter)) {
                     unset($ips_array[$nodetypeid]);
                 }
             }
@@ -236,12 +269,53 @@ class UniProxyController extends Controller
 
         // 批量更新缓存
         foreach ($updates as $key => $value) {
-            Cache::put($key, $value, 120);
+            Cache::put($key, $value, $keepFor);
         }
 
         return response([
             'data' => true
         ]);
+    }
+
+    /**
+     * How long one node's report of a user's addresses counts, and how long
+     * the user's record is kept, for a node reporting every $pushInterval
+     * seconds.
+     *
+     * Both were fixed at 100 s and 120 s while nodes report once per push
+     * interval. With that interval set above about 90 s a node's addresses
+     * were dropped before its next report arrived: device counts came out
+     * low and the device limit stopped holding. A report now counts until
+     * the next one is due plus 40 s of slack, which is exactly the old
+     * 100 s / 120 s at the default of 60 s.
+     *
+     * @return int[] [staleAfter, keepFor] in seconds
+     */
+    public static function aliveWindows(int $pushInterval): array
+    {
+        $staleAfter = max(100, $pushInterval + 40);
+        return [$staleAfter, $staleAfter + 20];
+    }
+
+    /**
+     * tls_settings as the node reads it: xver and server_port as strings.
+     *
+     * The admin form saves the REALITY Proxy Protocol choice (xver) as a
+     * number, and V2bX up to 1.6.0 decoded the whole config as broken
+     * because of it - that node never came up. Newer nodes accept either;
+     * this keeps the ones not yet updated working.
+     */
+    public static function nodeTlsSettings($settings)
+    {
+        if (!is_array($settings)) {
+            return $settings;
+        }
+        foreach (['xver', 'server_port'] as $k) {
+            if (isset($settings[$k]) && !is_string($settings[$k]) && is_scalar($settings[$k])) {
+                $settings[$k] = (string)$settings[$k];
+            }
+        }
+        return $settings;
     }
 
     // 后端获取配置
@@ -305,7 +379,7 @@ class UniProxyController extends Controller
                     'networkSettings' => $this->nodeInfo->network_settings,
                     'tls' => $this->nodeInfo->tls,
                     'flow' => $this->nodeInfo->flow,
-                    'tls_settings' => $this->nodeInfo->tls_settings,
+                    'tls_settings' => self::nodeTlsSettings($this->nodeInfo->tls_settings),
                     'encryption' => $this->nodeInfo->encryption,
                     'encryption_settings' => $this->nodeInfo->encryption_settings
                 ];
@@ -362,7 +436,7 @@ class UniProxyController extends Controller
                     // Old nodes ignore the extra keys, so this is safe to ship
                     // before any node is upgraded.
                     'tls' => (int)($this->nodeInfo->tls ?? 1),
-                    'tls_settings' => $this->nodeInfo->tls_settings,
+                    'tls_settings' => self::nodeTlsSettings($this->nodeInfo->tls_settings),
                 ];
                 break;
         }

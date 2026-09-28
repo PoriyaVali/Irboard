@@ -105,12 +105,45 @@ class ServerService
         return (bool)array_intersect($userGroupIds, array_map('strval', $serverGroupIds));
     }
 
+    /**
+     * A relay entry (parent_id set) only points clients at its parent: it is
+     * the parent's node, reached another way, and nothing serves the entry
+     * itself. So what a client authenticates with - the REALITY public key
+     * and short id, the VLESS encryption key - has to be the parent's.
+     *
+     * The save form generates fresh keys for any REALITY or encryption node
+     * that has none, so an entry created as a relay (rather than copied from
+     * its parent) carried keys the node had never heard of, and every client
+     * using it failed the handshake. Returns $row with the parent's keys when
+     * both use REALITY (or encryption); otherwise unchanged.
+     */
+    public static function withParentKeys(array $row, ?array $parent): array
+    {
+        if (!$parent) {
+            return $row;
+        }
+        if ((int)($row['tls'] ?? 0) === 2 && (int)($parent['tls'] ?? 0) === 2
+            && is_array($row['tls_settings'] ?? null) && is_array($parent['tls_settings'] ?? null)) {
+            foreach (['public_key', 'short_id'] as $k) {
+                if (isset($parent['tls_settings'][$k])) {
+                    $row['tls_settings'][$k] = $parent['tls_settings'][$k];
+                }
+            }
+        }
+        if (!empty($row['encryption']) && ($row['encryption'] ?? null) === ($parent['encryption'] ?? null)
+            && is_array($row['encryption_settings'] ?? null) && isset($parent['encryption_settings']['password'])) {
+            $row['encryption_settings']['password'] = $parent['encryption_settings']['password'];
+        }
+        return $row;
+    }
+
     public function getAvailableVless(User $user): array
     {
         $userGroupIds = $this->getUserGroupIds($user);
         $servers = [];
         $model = ServerVless::orderBy('sort', 'ASC');
         $server = $model->get();
+        $byId = $server->keyBy('id');
         foreach ($server as $key => $v) {
             if (!$v['show']) continue;
             $server[$key]['type'] = 'vless';
@@ -136,7 +169,8 @@ class ServerService
                     $server[$key]['encryption_settings'] = array_diff_key($server[$key]['encryption_settings'], array('private_key' => ''));
                 }
             }
-            $servers[] = $server[$key]->toArray();
+            $parent = $v['parent_id'] ? $byId->get($v['parent_id']) : null;
+            $servers[] = self::withParentKeys($server[$key]->toArray(), $parent ? $parent->toArray() : null);
         }
 
 
@@ -250,11 +284,12 @@ class ServerService
                 $shadowsocks[$key]['last_check_at'] = Cache::get(CacheKey::get('SERVER_SHADOWSOCKS_LAST_CHECK_AT', $v['parent_id']));
                 $shadowsocks[$key]['created_at'] = $shadowsocks[$v['parent_id']]['created_at'];
             }
-            if ($v['obfs'] === 'http') {
-                $shadowsocks[$key]['obfs'] = 'http';
-                $shadowsocks[$key]['obfs-host'] = $v['obfs_settings']['host'];
-                $shadowsocks[$key]['obfs-path'] = $v['obfs_settings']['path'];
-            }
+            // The node (V2bX) serves plain shadowsocks: neither of its cores
+            // has a simple-obfs server. Handing clients an obfs plugin made
+            // every connection to such a node fail, so it is never offered;
+            // saving a node with obfs is refused (ServerShadowsocksSave).
+            $shadowsocks[$key]['obfs'] = null;
+            $shadowsocks[$key]['obfs_settings'] = null;
             $servers[] = $shadowsocks[$key]->toArray();
         }
         return $servers;
@@ -289,7 +324,8 @@ class ServerService
                     array_flip(['private_key', 'ech_key'])
                 );
             }
-            $servers[] = $anytls[$key]->toArray();
+            $parent = isset($anytls[$v['parent_id']]) ? $anytls[$v['parent_id']]->toArray() : null;
+            $servers[] = self::withParentKeys($anytls[$key]->toArray(), $parent);
         }
         return $servers;
     }
@@ -654,6 +690,7 @@ class ServerService
             $servers[$k]['online'] = Cache::get(CacheKey::get("SERVER_{$serverType}_ONLINE_USER", $v['parent_id'] ?? $v['id']));
             $servers[$k]['last_check_at'] = Cache::get(CacheKey::get("SERVER_{$serverType}_LAST_CHECK_AT", $v['parent_id'] ?? $v['id']));
             $servers[$k]['last_push_at'] = Cache::get(CacheKey::get("SERVER_{$serverType}_LAST_PUSH_AT", $v['parent_id'] ?? $v['id']));
+            $servers[$k]['load_status'] = Cache::get(CacheKey::get("SERVER_{$serverType}_LOAD_STATUS", $v['parent_id'] ?? $v['id']));
             if ((time() - 300) >= $servers[$k]['last_check_at']) {
                 $servers[$k]['available_status'] = 0;
             } else if ((time() - 300) >= $servers[$k]['last_push_at']) {
