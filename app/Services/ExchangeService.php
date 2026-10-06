@@ -8,6 +8,15 @@ use Illuminate\Support\Facades\Log;
 
 class ExchangeService
 {
+    /** When this panel last got a FRESH reading, from any source. */
+    public const FRESH_AT = 'exchange_fresh_at';
+
+    /** When the relay's last valid reading was taken, by the relay's own clock. */
+    public const RELAY_READ_AT = 'exchange_relay_read_at';
+
+    /** The last fresh reading itself: ['rate' => int, 'source' => string, 'at' => int]. */
+    public const LAST_GOOD = 'exchange_last_good';
+
     public static function getCurrentRate(): int
     {
         $cached = Cache::get('exchange_rate');
@@ -50,7 +59,16 @@ class ExchangeService
             Log::warning('Using old cache', ['rate' => $cached['rate']]);
             return $cached['rate'];
         }
-        
+
+        // The cache entry above expires after an hour; the last real reading
+        // does not. However old, it is a dollar price - the configured
+        // fallback below is a number someone typed in and forgot.
+        $last = Cache::get(self::LAST_GOOD);
+        if (is_array($last) && !empty($last['rate'])) {
+            Log::warning('Using the last good rate', ['rate' => $last['rate'], 'read_at' => date('Y-m-d H:i:s', $last['at'])]);
+            return (int) $last['rate'];
+        }
+
         $fallback = config('exchange.fallback_rate', 107000);
         Log::warning('Using fallback', ['rate' => $fallback]);
         return $fallback;
@@ -84,30 +102,85 @@ class ExchangeService
          * readable, confident, wrong number. At that distance plausible() does
          * not save us either, since a 27% gap sits inside its 35% band. The
          * method is kept for manual diagnosis only.
+         *
+         * 🔴 A STALE relay reading no longer wins. Until 2026-10-06 any answer
+         * from the relay ended the search, so when two of the relay's sources
+         * died and it froze its price, this panel took the frozen number every
+         * fifteen minutes for a day - while fetchFromTgju, a few lines down,
+         * read the live market from here without trouble and was never asked.
+         * Past exchange.relay_max_age the relay's number is only kept as the
+         * last resort, below every source that can say what the dollar costs
+         * now.
          */
-        $sources = array_values(array_filter([
-            config('exchange.relay_url') ? 'fetchFromRelay' : null,
-            'fetchFromAlanchand',
-            'fetchFromTgju',
-        ]));
-        
-        foreach ($sources as $method) {
+        $staleRelay = null;
+
+        if (config('exchange.relay_url')) {
             try {
-                $rate = self::$method();
+                $relay = self::fetchFromRelay();
                 // Two gates, and they ask different questions. isValidRate asks
                 // whether this could be a dollar price at all; plausible() asks
                 // whether it is the same currency we read an hour ago. The
                 // second is the one that catches a parse landing on the euro.
+                if ($relay && self::isValidRate($relay['rate']) && self::plausible($relay['rate'])) {
+                    Cache::forever(self::RELAY_READ_AT, time() - $relay['age']);
+                    if ($relay['age'] <= (int) config('exchange.relay_max_age', 7200)) {
+                        Log::info('✓ fetchFromRelay', ['rate' => $relay['rate']]);
+                        return self::fresh($relay['rate'], 'relay');
+                    }
+                    $staleRelay = $relay['rate'];
+                    Log::warning('Relay rate is stale - reading the market directly', [
+                        'rate' => $relay['rate'],
+                        'age_minutes' => intdiv($relay['age'], 60),
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Log::debug('✗ fetchFromRelay', ['error' => $e->getMessage()]);
+            }
+        }
+
+        $scrapers = ['fetchFromAlanchand' => 'alanchand', 'fetchFromTgju' => 'tgju'];
+        foreach ($scrapers as $method => $source) {
+            try {
+                $rate = self::$method();
                 if (self::isValidRate($rate) && self::plausible($rate)) {
                     Log::info("✓ {$method}", ['rate' => $rate]);
-                    return $rate;
+                    return self::fresh($rate, $source);
                 }
             } catch (\Exception $e) {
                 Log::debug("✗ {$method}", ['error' => $e->getMessage()]);
             }
         }
-        
+
+        // Still a real dollar price, only an old one - better than the cache
+        // or the configured fallback, and exchange:watch reports the freeze.
+        if ($staleRelay !== null) {
+            Log::warning('No fresh source answered - keeping the stale relay rate', ['rate' => $staleRelay]);
+            return $staleRelay;
+        }
+
         return null;
+    }
+
+    /** Record a fresh reading - what exchange:watch and the cold-start fallback rely on. */
+    private static function fresh(int $rate, string $source): int
+    {
+        Cache::forever(self::FRESH_AT, time());
+        Cache::forever(self::LAST_GOOD, ['rate' => $rate, 'source' => $source, 'at' => time()]);
+        return $rate;
+    }
+
+    /**
+     * How fresh the rate is, for exchange:watch.
+     *
+     * @return array{fresh_at: ?int, relay_read_at: ?int, last_good: ?array}
+     */
+    public static function freshness(): array
+    {
+        return [
+            'fresh_at' => Cache::get(self::FRESH_AT),
+            'relay_read_at' => Cache::get(self::RELAY_READ_AT),
+            'last_good' => Cache::get(self::LAST_GOOD),
+        ];
     }
     
     /**
@@ -166,18 +239,16 @@ class ExchangeService
     /**
      * The rate as read from inside Iran, by the relay.
      *
-     * drmobjay.com fetches alanchand hourly from an Iranian address, parses the
-     * دلار آمریکا row and caches it. This just asks it. That is the whole
-     * reason it is first: the same scrape from Germany does not see the row at
-     * all.
+     * The relay reads several Iranian sources every five minutes and publishes
+     * their median. This just asks it, and reports how old that reading is -
+     * by the relay's own `timestamp`, not by when we asked - so fetchRate can
+     * tell a live price from one the relay has been unable to refresh.
      *
-     * ⚠️ A stale answer is still used. The relay marks anything over six hours
-     * old, but a real dollar price from this morning beats a different
-     * currency's price from this second - which is what the alternatives here
-     * offer. The staleness is logged so it is visible if the relay's own cron
-     * has stopped, which is exactly how this was found.
+     * A relay that sends no timestamp is taken as fresh, as before.
+     *
+     * @return array{rate: int, age: int}|null age in seconds
      */
-    private static function fetchFromRelay(): ?int
+    private static function fetchFromRelay(): ?array
     {
         $url = config('exchange.relay_url');
         if (!$url) {
@@ -206,13 +277,9 @@ class ExchangeService
             return null;
         }
 
-        if (!empty($data['stale'])) {
-            Log::warning('Relay price is stale but still the best available', [
-                'age_minutes' => $data['age_minutes'] ?? null,
-            ]);
-        }
+        $readAt = isset($data['timestamp']) && is_numeric($data['timestamp']) ? (int) $data['timestamp'] : time();
 
-        return (int) $data['price'];
+        return ['rate' => (int) $data['price'], 'age' => max(0, time() - $readAt)];
     }
 
     /**

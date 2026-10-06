@@ -23,6 +23,20 @@ return [
     'relay_url' => env('EXCHANGE_RELAY_URL', ''),
 
     /*
+     * Seconds the relay's own reading may age before this panel stops taking
+     * it and reads the market itself (the relay's number is then only the last
+     * resort). A relay publishes every few minutes, so two hours means it has
+     * missed a couple of dozen runs: its sources are broken, not slow.
+     */
+    'relay_max_age' => env('EXCHANGE_RELAY_MAX_AGE', 7200),
+
+    /*
+     * Seconds without a fresh reading before exchange:watch tells the admins on
+     * Telegram - for the rate as a whole, and for the relay on its own.
+     */
+    'alert_after' => env('EXCHANGE_ALERT_AFTER', 7200),
+
+    /*
      * ⚠️ Reached only on a cold start during an outage: every source failed
      * AND no cached rate exists. It is a placeholder, not a price.
      *
