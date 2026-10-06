@@ -62,6 +62,10 @@ class Kernel extends ConsoleKernel
         // already matches - and hourly meant a plan could carry yesterday's
         // dollar for an hour after the rate had been corrected.
         $schedule->command('plan:sync-prices')->everyFifteenMinutes()->withoutOverlapping()->runInBackground();
+        // Tells the admins on Telegram when that rate stops updating - a frozen
+        // feed once went a day unnoticed. Sends only on a change of state (and
+        // every six hours while it lasts), so running often costs nothing.
+        $schedule->command('exchange:watch')->everyFifteenMinutes()->withoutOverlapping();
     }
 
     protected function commands()
