@@ -107496,7 +107496,7 @@ callTrusttunnel: function(e, t, n) {
                     render: (e,t)=>{
                         return y.a.createElement(y.a.Fragment, null, y.a.createElement(h["a"], {
                             status: D[t.available_status]
-                        }), y.a.createElement("span", null, e), /*__NODELOAD__*/(function(s){if(!s||typeof s!=="object")return null;var p=function(m){return m&&m.total>0?Math.round(m.used*100/m.total)+"%":null};var parts=["CPU "+Math.round(Number(s.cpu)||0)+"%"];var r=p(s.mem);if(r)parts.push("RAM "+r);var d=p(s.disk);if(d)parts.push("Disk "+d);return y.a.createElement("div",{style:{fontSize:11,opacity:.65,marginTop:2,direction:"ltr",textAlign:"right"}},parts.join(" \u00b7 "))})(t.load_status)/*__NODELOAD_END__*/)
+                        }), y.a.createElement("span", null, e), /*__NODELOAD__*/(function(s){if(!s||typeof s!=="object")return null;var p=function(m){return m&&m.total>0?Math.round(m.used*100/m.total)+"%":null};var parts=["CPU "+Math.round(Number(s.cpu)||0)+"%"];var r=p(s.mem);if(r)parts.push("RAM "+r);var d=p(s.disk);if(d)parts.push("Disk "+d);if(s.version)parts.push(String(s.version));return y.a.createElement("div",{style:{fontSize:11,opacity:.65,marginTop:2,direction:"ltr",textAlign:"right"}},parts.join(" \u00b7 "))})(t.load_status)/*__NODELOAD_END__*/)
                     }
                 }, {
                     title: "آدرس",

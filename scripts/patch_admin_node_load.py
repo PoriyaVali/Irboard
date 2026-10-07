@@ -8,7 +8,8 @@ thresholds in the unit the node reads them in.
    complained. The panel now keeps the last report for five minutes and the node
    list returns it as `load_status`; this shows it under the node's name as
    "CPU 12% · RAM 40% · Disk 31%". A node that stops reporting simply shows
-   nothing.
+   nothing. A node on V2bX 1.7.2+ also shows its version ("· v1.7.2"); one
+   without it is running an older build.
 
 2. **"Kb" was the wrong unit.** The two traffic thresholds on the node settings
    tab (report threshold, device threshold) are read by V2bX as kilobytes
@@ -42,6 +43,7 @@ LOAD_CELL = START + (
     'var parts=["CPU "+Math.round(Number(s.cpu)||0)+"%"];'
     'var r=p(s.mem);if(r)parts.push("RAM "+r);'
     'var d=p(s.disk);if(d)parts.push("Disk "+d);'
+    'if(s.version)parts.push(String(s.version));'
     'return y.a.createElement("div",{style:{fontSize:11,opacity:.65,marginTop:2,direction:"ltr",textAlign:"right"}},'
     'parts.join(" \\u00b7 "))'
     '})(t.load_status)'

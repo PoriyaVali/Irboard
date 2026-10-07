@@ -67,6 +67,30 @@ class NodeApiCompatTest extends TestCase
         $this->assertNull(UniProxyController::nodeLoad(['mem' => ['total' => 1]]));
     }
 
+    public function testNodeLoadCarriesTheVersionTheNodeNames()
+    {
+        $load = UniProxyController::nodeLoad(['cpu' => 1], 'V2bX/v1.7.2');
+        $this->assertSame('v1.7.2', $load['version']);
+
+        // Builds before 1.7.2 send resty's generic agent: no version to show.
+        $load = UniProxyController::nodeLoad(['cpu' => 1], 'go-resty/2.16.5 (https://github.com/go-resty/resty)');
+        $this->assertNull($load['version']);
+        $this->assertNull(UniProxyController::nodeLoad(['cpu' => 1])['version']);
+    }
+
+    public function testNodeVersionOnlyAcceptsAPlainVersion()
+    {
+        $this->assertSame('v1.7.2', UniProxyController::nodeVersion(' V2bX/v1.7.2 '));
+        $this->assertSame('1.8.0-rc.1', UniProxyController::nodeVersion('V2bX/1.8.0-rc.1'));
+        $this->assertSame('v1.7.2-local', UniProxyController::nodeVersion('V2bX/v1.7.2-local'));
+        // It ends up on the admin page, so nothing that is not a version.
+        $this->assertNull(UniProxyController::nodeVersion('V2bX/<script>'));
+        $this->assertNull(UniProxyController::nodeVersion('V2bX/v1.7.2 extra'));
+        $this->assertNull(UniProxyController::nodeVersion('V2bX/TempVersion'));
+        $this->assertNull(UniProxyController::nodeVersion('V2bX'));
+        $this->assertNull(UniProxyController::nodeVersion(null));
+    }
+
     public function testVlessEncryptionIsNeverSavedWithEmptyParts()
     {
         // Only the method picked: what used to leave the node with an
