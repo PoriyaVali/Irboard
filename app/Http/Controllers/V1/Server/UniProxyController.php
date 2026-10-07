@@ -44,7 +44,7 @@ class UniProxyController extends Controller
         // see a node running out of CPU, memory or disk until users
         // complained. Kept for five minutes: a node that stops reporting stops
         // showing a load rather than showing a stale one.
-        $load = self::nodeLoad($request->json()->all());
+        $load = self::nodeLoad($request->json()->all(), $request->userAgent());
         if ($load !== null) {
             Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_LOAD_STATUS', $this->nodeInfo->id), $load, 300);
         }
@@ -57,9 +57,14 @@ class UniProxyController extends Controller
      * The parts of V2bX's status report the admin is shown, or null when the
      * report carries none of them.
      *
+     * The node's version rides along: V2bX 1.7.2+ names itself in the
+     * User-Agent ("V2bX/v1.7.2"). Older builds sent resty's generic one, so
+     * after an update there was no way to see which nodes still ran the old
+     * build. Null for those, and for anything that is not a plain version.
+     *
      * @return array|null
      */
-    public static function nodeLoad($status): ?array
+    public static function nodeLoad($status, ?string $userAgent = null): ?array
     {
         if (!is_array($status) || !isset($status['cpu'])) {
             return null;
@@ -73,8 +78,21 @@ class UniProxyController extends Controller
             'mem' => $pair($status['mem'] ?? null),
             'swap' => $pair($status['swap'] ?? null),
             'disk' => $pair($status['disk'] ?? null),
+            'version' => self::nodeVersion($userAgent),
             'updated_at' => time(),
         ];
+    }
+
+    /**
+     * "v1.7.2" from "V2bX/v1.7.2", or null. Strict on purpose: the value ends
+     * up in the admin page, and a node's header is not something to echo.
+     */
+    public static function nodeVersion(?string $userAgent): ?string
+    {
+        if ($userAgent !== null && preg_match('#^V2bX/(v?\d[0-9A-Za-z.+-]{0,31})$#', trim($userAgent), $m)) {
+            return $m[1];
+        }
+        return null;
     }
 
     // 后端获取用户
