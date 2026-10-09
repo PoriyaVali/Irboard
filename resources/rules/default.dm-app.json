@@ -58,8 +58,21 @@
   "settings":
   {
       "app": {
-          "_": "Which core the connect button drives.",
-          "selected_core": "mihomo"   // mihomo | singbox | mdns
+          "_": "Which core the connect button drives, and where the app looks for new versions.",
+          "selected_core": "mihomo",   // mihomo | singbox | mdns
+          // Where the app reads version.json (Android) or windows/version.json
+          // (Windows), tried in this order until one can deliver the release.
+          // Each entry is a base laid out like PoriyaVali/drmobile-updates; the
+          // drmobjay one is kept in step with GitHub by its updates:sync
+          // command. https only. The app always appends these two built-ins
+          // after your list, so a mistake here can reorder them but never
+          // leave phones with nowhere to update from.
+          "update_sources": [
+              "https://raw.githubusercontent.com/PoriyaVali/drmobile-updates/main",
+              "https://drmobjay.com/updates"
+          ]
+          // Optional, not published by default:
+          // "profile_update_minutes": 60   // how often panel profiles refresh; minimum 5, 0 = never; absent = the subscription header
       },
       "sing-box": {
           "_": "The sing-box core. Dashed names, matching sing-box own options.",
@@ -99,8 +112,15 @@
           "block-quic": false,   // true | false
           "bypass-lan": false,   // true | false
           "enable-mux": false,   // true | false
+          "mirage-coalesce": false,   // true | false - true sends the records in one TCP write
           "mirage-enable": true,   // true | false
           "mirage-offset": 0,   // bytes kept in the small first record; 0 = the measured default (5)
+          "mirage-records": 0,   // 0 = the default shape, or 2..8 records
+          // Optional, not published by default - the automatic Mirage trial:
+          // "mirage-auto-experiment": false,   // true | false
+          // "mirage-probe-host": "",   // host the trial dials; empty = the app's built-in target
+          // "mirage-probe-port": 443,   // port
+          // "mirage-probe-sni": "",   // server name presented; empty = the host
           "mux-max-streams": 8,   // number (streams)
           "mux-padding": false,   // true | false
           "mux-protocol": "h2mux"   // h2mux | smux | yamux
@@ -178,10 +198,15 @@
           "_": "The MasterDnsVPN DNS-tunnel core.",
           "mdns_adaptive": true,   // true | false
           "mdns_balancing": 3,   // 1..8 (strategy id)
+          "mdns_bypass_domains": "",   // names resolved and reached directly, one per line
+          "mdns_bypass_iran": true,   // true | false - Iranian destinations skip the tunnel
           "mdns_compression": 1,   // 0 off | 1 zstd | 2 lz4 | 3 zlib
           "mdns_dns_cache_persist": false,   // true | false
           "mdns_dns_cache_ttl": 60,   // seconds
+          "mdns_excluded_routes": "",   // CIDRs kept off the tunnel, one per line
           "mdns_listen_port": 18000,   // local SOCKS5 port
+          "mdns_load_balancer": false,   // true | false - run every MDns server at once (core 20261008+)
+          "mdns_load_balancer_strategy": "least_load",   // least_load | round_robin | random | failover
           "mdns_log_level": "INFO",   // INFO | DEBUG | WARN | ERROR
           "mdns_max_down_mtu": 256,   // cap on the discovered download MTU
           "mdns_max_resolvers": 0,   // how many one connect measures; 0 = all of them
@@ -194,6 +219,7 @@
       "trusttunnel": {
           "_": "The TrustTunnel core (HTTP/2-3 tunnel). These are the app defaults; publishing them changes nothing until one is edited.",
           "tt_anti_dpi": "",   // empty follows the node, or on | off
+          "tt_bypass_iran": true,   // true | false - Iranian destinations skip the tunnel
           "tt_custom_sni": "",   // empty follows the node, else the SNI to present
           "tt_dns_upstreams": "",   // encrypted DNS through the tunnel, one per line
           "tt_excluded_routes": "",   // CIDRs kept off the tunnel, one per line
