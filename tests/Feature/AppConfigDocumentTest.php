@@ -37,6 +37,8 @@ class AppConfigDocumentTest extends TestCase
         $this->assertSame('mihomo', $settings['selected_core']);
         $this->assertFalse($settings['mdns_load_balancer']);
         $this->assertTrue($settings['tt_bypass_iran']);
+        $this->assertFalse($settings['mirage-enable']);
+        $this->assertSame('vpn', $settings['service-mode']);
         // The shipped file enforces nothing.
         $this->assertArrayNotHasKey('force', $doc);
     }

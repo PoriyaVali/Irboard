@@ -96,7 +96,7 @@
           "remote-dns-address": "tcp://8.8.8.8",   // local | tcp://8.8.8.8 | tcp://1.1.1.1 | https://1.1.1.1/dns-query | tcp://4.4.2.2
           "remote-dns-domain-strategy": "",   // "" | prefer_ipv6 | prefer_ipv4 | ipv4_only | ipv6_only
           "resolve-destination": false,   // true | false
-          "service-mode": "system-proxy",   // proxy | system-proxy | vpn | vpn-service
+          "service-mode": "vpn",   // proxy | system-proxy | vpn - Windows always uses vpn
           "strict-route": true,   // true | false
           "tls-fragment-size": "10-30",   // range "min-max", e.g. 10-30
           "tls-fragment-sleep": "2-8",   // range "min-max", e.g. 2-8
@@ -113,7 +113,7 @@
           "bypass-lan": false,   // true | false
           "enable-mux": false,   // true | false
           "mirage-coalesce": false,   // true | false - true sends the records in one TCP write
-          "mirage-enable": true,   // true | false
+          "mirage-enable": false,   // true | false - matches the app's compiled default
           "mirage-offset": 0,   // bytes kept in the small first record; 0 = the measured default (5)
           "mirage-records": 0,   // 0 = the default shape, or 2..8 records
           // Optional, not published by default - the automatic Mirage trial:
