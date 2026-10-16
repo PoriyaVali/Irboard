@@ -1,6 +1,29 @@
 # AI work log and handoff
 
-## Active handoff - 2026-10-16 - Codex - GROUPED ADMIN PRICES IMPLEMENTED AND VALIDATED
+## Active handoff - 2026-10-16 - Codex - WEB FIX PUSHED AS PR14; INHERITED PHPUNIT ERRORS VERIFIED
+
+COMMITTED/PUSHED source0042e385ca9b0d7dce9cf88ce9a9e5a45deab0f3,
+OPEN/unmerged https://github.com/PoriyaVali/Irboard/pull/14.
+App counterpart sourcebe7142997dac029344e730b4e5b9602e4c5dca4e is pushed
+to drmobile PR13; owner-requested joint report:
+https://github.com/PoriyaVali/drmobile/pull/13#issuecomment-6218619533.
+Both source commits authored by Codex; earlier app changes are Claude's.
+This follow-up changes only AI_HANDOFF.md, recording publication/CI evidence.
+
+CI run38922474180 for exact source0042e385: four jobs report success.
+The new Admin prices retain thousands separators step PASSED in PHP8.1/8.2.
+CAUTION: overall green does NOT mean the full PHP suite passes. Existing
+Run tests (informational) uses continue-on-error and phpunit ||true. Actual
+logs in both matrix jobs report80tests/390assertions/5ERRORS, all GoogleAuthTest
+SQLite setup missing tablev2_plan. Read baselinefb1c64d CI run38027975879,
+job114142786807: SAME5errors and summary, confirming these predate this fix.
+No PHP source was changed; these inherited test-setup errors remain unresolved.
+Do not claim full Laravel tests passed. Local price11tests/syntax/whitespace
+validation passed as recorded below. No real database or production request,
+browser deployment, merge or release performed. No source changes after the
+validated source commit; handoff-only follow-up needs no product test rerun.
+
+## Previous handoff - 2026-10-16 - Codex - GROUPED ADMIN PRICES IMPLEMENTED AND VALIDATED
 
 Owner requested comma-grouped prices for readability, correction of the
 reproduced web input issue, and a report on drmobile PR13. This repository
