@@ -27774,7 +27774,9 @@
                                     });
                                 case 2:
                                     return Object.keys(a["a"].periodText).forEach(e=>{
-                                        null !== n[e] && (n[e] = null !== n[e] ? Math.round(100 * n[e]) : null)
+                                        null !== n[e] && (n[e] = Math.round(100 * a["a"].normalizePrice(n[e])));
+                                        var t = e + "_usd";
+                                        null != n[t] && (n[t] = a["a"].normalizePrice(n[t]))
                                     }
                                     ),
                                     e.next = 5,
@@ -82647,6 +82649,12 @@ callTrusttunnel: function(e, t, n) {
                         reset_price_usd: null
                     }
                 },
+                this.state.record = d()({}, this.state.record),
+                Object.keys(y["a"].periodText).forEach(e=>{
+                    [e, e + "_usd"].forEach(e=>{
+                        null != this.state.record[e] && (this.state.record[e] = y["a"].formatPrice(this.state.record[e]))
+                    })
+                }),
                 this.show = (()=>{
                     this.setState({
                         visible: !this.state.visible
@@ -82744,7 +82752,7 @@ callTrusttunnel: function(e, t, n) {
                     for: "example-text-input-alt"
                 }, "پرداخت ماهانه"), m.a.createElement(C["a"], {
                     value: null !== this.state.record.month_price ? this.state.record.month_price : void 0,
-                    onChange: e=>this.priceOnChange("month_price", e.target.value)
+                    onBlur: e=>this.priceOnChange("month_price", y["a"].formatPrice(e.target.value)), onChange: e=>this.priceOnChange("month_price", e.target.value)
                 }))), m.a.createElement(S["a"], {
                     md: 4
                 }, m.a.createElement("div", {
@@ -82753,7 +82761,7 @@ callTrusttunnel: function(e, t, n) {
                     for: "example-text-input-alt"
                 }, "پرداخت فصلی"), m.a.createElement(C["a"], {
                     value: null !== this.state.record.quarter_price ? this.state.record.quarter_price : void 0,
-                    onChange: e=>this.priceOnChange("quarter_price", e.target.value)
+                    onBlur: e=>this.priceOnChange("quarter_price", y["a"].formatPrice(e.target.value)), onChange: e=>this.priceOnChange("quarter_price", e.target.value)
                 }))), m.a.createElement(S["a"], {
                     md: 4
                 }, m.a.createElement("div", {
@@ -82762,7 +82770,7 @@ callTrusttunnel: function(e, t, n) {
                     for: "example-text-input-alt"
                 }, "شش‌ماهه"), m.a.createElement(C["a"], {
                     value: null !== this.state.record.half_year_price ? this.state.record.half_year_price : void 0,
-                    onChange: e=>this.priceOnChange("half_year_price", e.target.value)
+                    onBlur: e=>this.priceOnChange("half_year_price", y["a"].formatPrice(e.target.value)), onChange: e=>this.priceOnChange("half_year_price", e.target.value)
                 }))), m.a.createElement(S["a"], {
                     md: 4
                 }, m.a.createElement("div", {
@@ -82771,7 +82779,7 @@ callTrusttunnel: function(e, t, n) {
                     for: "example-text-input-alt"
                 }, "پرداخت سالانه"), m.a.createElement(C["a"], {
                     value: null !== this.state.record.year_price ? this.state.record.year_price : void 0,
-                    onChange: e=>this.priceOnChange("year_price", e.target.value)
+                    onBlur: e=>this.priceOnChange("year_price", y["a"].formatPrice(e.target.value)), onChange: e=>this.priceOnChange("year_price", e.target.value)
                 }))), m.a.createElement(S["a"], {
                     md: 4
                 }, m.a.createElement("div", {
@@ -82780,7 +82788,7 @@ callTrusttunnel: function(e, t, n) {
                     for: "example-text-input-alt"
                 }, "پرداخت دوساله"), m.a.createElement(C["a"], {
                     value: null !== this.state.record.two_year_price ? this.state.record.two_year_price : void 0,
-                    onChange: e=>this.priceOnChange("two_year_price", e.target.value)
+                    onBlur: e=>this.priceOnChange("two_year_price", y["a"].formatPrice(e.target.value)), onChange: e=>this.priceOnChange("two_year_price", e.target.value)
                 }))), m.a.createElement(S["a"], {
                     md: 4
                 }, m.a.createElement("div", {
@@ -82789,7 +82797,7 @@ callTrusttunnel: function(e, t, n) {
                     for: "example-text-input-alt"
                 }, "پرداخت سه‌ساله"), m.a.createElement(C["a"], {
                     value: null !== this.state.record.three_year_price ? this.state.record.three_year_price : void 0,
-                    onChange: e=>this.priceOnChange("three_year_price", e.target.value)
+                    onBlur: e=>this.priceOnChange("three_year_price", y["a"].formatPrice(e.target.value)), onChange: e=>this.priceOnChange("three_year_price", e.target.value)
                 })))), m.a.createElement(E["a"], {
                     gutter: 10
                 }, m.a.createElement(S["a"], {
@@ -82801,7 +82809,7 @@ callTrusttunnel: function(e, t, n) {
                 }, "یک‌بارمصرف"), m.a.createElement(C["a"], {
                     addonAfter: e.currency_symbol,
                     value: null !== this.state.record.onetime_price ? this.state.record.onetime_price : void 0,
-                    onChange: e=>this.priceOnChange("onetime_price", e.target.value)
+                    onBlur: e=>this.priceOnChange("onetime_price", y["a"].formatPrice(e.target.value)), onChange: e=>this.priceOnChange("onetime_price", e.target.value)
                 }))), m.a.createElement(S["a"], {
                     md: 12
                 }, m.a.createElement("div", {
@@ -82811,8 +82819,8 @@ callTrusttunnel: function(e, t, n) {
                 }, "بسته‌ی بازنشانی"), m.a.createElement(C["a"], {
                     addonAfter: e.currency_symbol,
                     value: null !== this.state.record.reset_price ? this.state.record.reset_price : void 0,
-                    onChange: e=>this.priceOnChange("reset_price", e.target.value)
-                })))), m.a.createElement(k["a"], {orientation: "center"}, "USD Prices"), m.a.createElement(E["a"], {gutter: 10}, m.a.createElement(S["a"], {md: 4}, m.a.createElement("div", {className: "form-group"}, m.a.createElement("label", null, "Month $"), m.a.createElement(C["a"], {addonAfter: "$", value: null !== this.state.record.month_price_usd ? this.state.record.month_price_usd : void 0, onChange: e=>this.priceOnChange("month_price_usd", e.target.value)}))), m.a.createElement(S["a"], {md: 4}, m.a.createElement("div", {className: "form-group"}, m.a.createElement("label", null, "Quarter $"), m.a.createElement(C["a"], {addonAfter: "$", value: null !== this.state.record.quarter_price_usd ? this.state.record.quarter_price_usd : void 0, onChange: e=>this.priceOnChange("quarter_price_usd", e.target.value)}))), m.a.createElement(S["a"], {md: 4}, m.a.createElement("div", {className: "form-group"}, m.a.createElement("label", null, "Half Year $"), m.a.createElement(C["a"], {addonAfter: "$", value: null !== this.state.record.half_year_price_usd ? this.state.record.half_year_price_usd : void 0, onChange: e=>this.priceOnChange("half_year_price_usd", e.target.value)}))), m.a.createElement(S["a"], {md: 4}, m.a.createElement("div", {className: "form-group"}, m.a.createElement("label", null, "Year $"), m.a.createElement(C["a"], {addonAfter: "$", value: null !== this.state.record.year_price_usd ? this.state.record.year_price_usd : void 0, onChange: e=>this.priceOnChange("year_price_usd", e.target.value)}))), m.a.createElement(S["a"], {md: 4}, m.a.createElement("div", {className: "form-group"}, m.a.createElement("label", null, "2 Year $"), m.a.createElement(C["a"], {addonAfter: "$", value: null !== this.state.record.two_year_price_usd ? this.state.record.two_year_price_usd : void 0, onChange: e=>this.priceOnChange("two_year_price_usd", e.target.value)}))), m.a.createElement(S["a"], {md: 4}, m.a.createElement("div", {className: "form-group"}, m.a.createElement("label", null, "3 Year $"), m.a.createElement(C["a"], {addonAfter: "$", value: null !== this.state.record.three_year_price_usd ? this.state.record.three_year_price_usd : void 0, onChange: e=>this.priceOnChange("three_year_price_usd", e.target.value)})))), m.a.createElement(E["a"], {gutter: 10}, m.a.createElement(S["a"], {md: 12}, m.a.createElement("div", {className: "form-group"}, m.a.createElement("label", null, "Onetime $"), m.a.createElement(C["a"], {addonAfter: "$", value: null !== this.state.record.onetime_price_usd ? this.state.record.onetime_price_usd : void 0, onChange: e=>this.priceOnChange("onetime_price_usd", e.target.value)}))), m.a.createElement(S["a"], {md: 12}, m.a.createElement("div", {className: "form-group"}, m.a.createElement("label", null, "Reset $"), m.a.createElement(C["a"], {addonAfter: "$", value: null !== this.state.record.reset_price_usd ? this.state.record.reset_price_usd : void 0, onChange: e=>this.priceOnChange("reset_price_usd", e.target.value)})))), m.a.createElement(k["a"], null), m.a.createElement("div", {
+                    onBlur: e=>this.priceOnChange("reset_price", y["a"].formatPrice(e.target.value)), onChange: e=>this.priceOnChange("reset_price", e.target.value)
+                })))), m.a.createElement(k["a"], {orientation: "center"}, "USD Prices"), m.a.createElement(E["a"], {gutter: 10}, m.a.createElement(S["a"], {md: 4}, m.a.createElement("div", {className: "form-group"}, m.a.createElement("label", null, "Month $"), m.a.createElement(C["a"], {addonAfter: "$", value: null !== this.state.record.month_price_usd ? this.state.record.month_price_usd : void 0, onBlur: e=>this.priceOnChange("month_price_usd", y["a"].formatPrice(e.target.value)), onChange: e=>this.priceOnChange("month_price_usd", e.target.value)}))), m.a.createElement(S["a"], {md: 4}, m.a.createElement("div", {className: "form-group"}, m.a.createElement("label", null, "Quarter $"), m.a.createElement(C["a"], {addonAfter: "$", value: null !== this.state.record.quarter_price_usd ? this.state.record.quarter_price_usd : void 0, onBlur: e=>this.priceOnChange("quarter_price_usd", y["a"].formatPrice(e.target.value)), onChange: e=>this.priceOnChange("quarter_price_usd", e.target.value)}))), m.a.createElement(S["a"], {md: 4}, m.a.createElement("div", {className: "form-group"}, m.a.createElement("label", null, "Half Year $"), m.a.createElement(C["a"], {addonAfter: "$", value: null !== this.state.record.half_year_price_usd ? this.state.record.half_year_price_usd : void 0, onBlur: e=>this.priceOnChange("half_year_price_usd", y["a"].formatPrice(e.target.value)), onChange: e=>this.priceOnChange("half_year_price_usd", e.target.value)}))), m.a.createElement(S["a"], {md: 4}, m.a.createElement("div", {className: "form-group"}, m.a.createElement("label", null, "Year $"), m.a.createElement(C["a"], {addonAfter: "$", value: null !== this.state.record.year_price_usd ? this.state.record.year_price_usd : void 0, onBlur: e=>this.priceOnChange("year_price_usd", y["a"].formatPrice(e.target.value)), onChange: e=>this.priceOnChange("year_price_usd", e.target.value)}))), m.a.createElement(S["a"], {md: 4}, m.a.createElement("div", {className: "form-group"}, m.a.createElement("label", null, "2 Year $"), m.a.createElement(C["a"], {addonAfter: "$", value: null !== this.state.record.two_year_price_usd ? this.state.record.two_year_price_usd : void 0, onBlur: e=>this.priceOnChange("two_year_price_usd", y["a"].formatPrice(e.target.value)), onChange: e=>this.priceOnChange("two_year_price_usd", e.target.value)}))), m.a.createElement(S["a"], {md: 4}, m.a.createElement("div", {className: "form-group"}, m.a.createElement("label", null, "3 Year $"), m.a.createElement(C["a"], {addonAfter: "$", value: null !== this.state.record.three_year_price_usd ? this.state.record.three_year_price_usd : void 0, onBlur: e=>this.priceOnChange("three_year_price_usd", y["a"].formatPrice(e.target.value)), onChange: e=>this.priceOnChange("three_year_price_usd", e.target.value)})))), m.a.createElement(E["a"], {gutter: 10}, m.a.createElement(S["a"], {md: 12}, m.a.createElement("div", {className: "form-group"}, m.a.createElement("label", null, "Onetime $"), m.a.createElement(C["a"], {addonAfter: "$", value: null !== this.state.record.onetime_price_usd ? this.state.record.onetime_price_usd : void 0, onBlur: e=>this.priceOnChange("onetime_price_usd", y["a"].formatPrice(e.target.value)), onChange: e=>this.priceOnChange("onetime_price_usd", e.target.value)}))), m.a.createElement(S["a"], {md: 12}, m.a.createElement("div", {className: "form-group"}, m.a.createElement("label", null, "Reset $"), m.a.createElement(C["a"], {addonAfter: "$", value: null !== this.state.record.reset_price_usd ? this.state.record.reset_price_usd : void 0, onBlur: e=>this.priceOnChange("reset_price_usd", y["a"].formatPrice(e.target.value)), onChange: e=>this.priceOnChange("reset_price_usd", e.target.value)})))), m.a.createElement(k["a"], null), m.a.createElement("div", {
                     className: "form-group"
                 }, m.a.createElement("label", {
                     for: "example-text-input-alt"
@@ -83109,56 +83117,56 @@ callTrusttunnel: function(e, t, n) {
                     dataIndex: "month_price",
                     key: "month_price",
                     render: e=>{
-                        return null !== e ? e.toFixed(2) : "-"
+                        return null !== e ? y["a"].formatPrice(e.toFixed(2)) : "-"
                     }
                 }, {
                     title: "پرداخت فصلی",
                     dataIndex: "quarter_price",
                     key: "quarter_price",
                     render: e=>{
-                        return null !== e ? e.toFixed(2) : "-"
+                        return null !== e ? y["a"].formatPrice(e.toFixed(2)) : "-"
                     }
                 }, {
                     title: "پرداخت شش‌ماهه",
                     dataIndex: "half_year_price",
                     key: "half_year_price",
                     render: e=>{
-                        return null !== e ? e.toFixed(2) : "-"
+                        return null !== e ? y["a"].formatPrice(e.toFixed(2)) : "-"
                     }
                 }, {
                     title: "پرداخت سالانه",
                     dataIndex: "year_price",
                     key: "year_price",
                     render: e=>{
-                        return null !== e ? e.toFixed(2) : "-"
+                        return null !== e ? y["a"].formatPrice(e.toFixed(2)) : "-"
                     }
                 }, {
                     title: "پرداخت دوساله",
                     dataIndex: "two_year_price",
                     key: "two_year_price",
                     render: e=>{
-                        return null !== e ? e.toFixed(2) : "-"
+                        return null !== e ? y["a"].formatPrice(e.toFixed(2)) : "-"
                     }
                 }, {
                     title: "پرداخت سه‌ساله",
                     dataIndex: "three_year_price",
                     key: "three_year_price",
                     render: e=>{
-                        return null !== e ? e.toFixed(2) : "-"
+                        return null !== e ? y["a"].formatPrice(e.toFixed(2)) : "-"
                     }
                 }, {
                     title: "یک‌بارمصرف",
                     dataIndex: "onetime_price",
                     key: "onetime_price",
                     render: e=>{
-                        return null !== e ? e.toFixed(2) : "-"
+                        return null !== e ? y["a"].formatPrice(e.toFixed(2)) : "-"
                     }
                 }, {
                     title: "بسته‌ی بازنشانی",
                     dataIndex: "reset_price",
                     key: "reset_price",
                     render: e=>{
-                        return null !== e ? e.toFixed(2) : "-"
+                        return null !== e ? y["a"].formatPrice(e.toFixed(2)) : "-"
                     }
                 }, {
                     title: "گروه دسترسی",
@@ -100861,6 +100869,25 @@ callTrusttunnel: function(e, t, n) {
     tI4l: function(e, t, n) {
         "use strict";
         t["a"] = {
+            // Price text uses comma thousands, never decimal commas. Keep
+            // the visible string; normalize only valid groups for the API.
+            normalizePrice(e) {
+                if (typeof e !== "string") return e;
+                var t = e.trim().replace(/[۰-۹٠-٩]/g, e=>{
+                    var t = e.charCodeAt(0);
+                    return String(t >= 0x06F0 ? t - 0x06F0 : t - 0x0660)
+                }).replace(/\u066B/g, ".");
+                if (!/^(?:\d{1,3}(?:[,\u066C\u060C \u00A0\u202F]\d{3})+|\d+)(?:\.\d+)?$/.test(t)) return e;
+                return t.replace(/[,\u066C\u060C \u00A0\u202F]/g, "")
+            },
+            formatPrice(e) {
+                if (e === null || typeof e === "undefined" || e === "") return "";
+                var t = String(this.normalizePrice(e));
+                if (!/^\d+(?:\.\d*)?$/.test(t)) return e;
+                var n = t.split(".");
+                n[0] = n[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                return n.join(".")
+            },
             i18nText: {
                 "zh-CN": "چینی ساده‌شده",
                 "zh-TW": "چینی سنتی",

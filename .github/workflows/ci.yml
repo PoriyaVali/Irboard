@@ -41,6 +41,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Admin prices retain thousands separators
+        run: node --test tests/AdminPriceInputTest.cjs
+
       - name: Setup PHP ${{ matrix.php }}
         uses: shivammathur/setup-php@v2
         with:
