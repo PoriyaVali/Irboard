@@ -29,6 +29,7 @@ class UserRoute
             $router->post('/removeActiveSession', 'V1\\User\\UserController@removeActiveSession');
             // Order
             $router->post('/order/save', 'V1\\User\\OrderController@save');
+            $router->post('/order/saveGift', 'V1\\User\\OrderController@saveGift');
             $router->post('/order/checkout', 'V1\\User\\OrderController@checkout');
             $router->get ('/order/check', 'V1\\User\\OrderController@check');
             $router->get ('/order/detail', 'V1\\User\\OrderController@detail');

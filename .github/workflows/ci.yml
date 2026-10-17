@@ -632,6 +632,9 @@ jobs:
           fi
           echo "All audits pass."
 
+      - name: Purchased gifts and money-path regressions
+        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'PurchasedGiftOrderTest|OrderMoneyFlowTest|TelegramBotFixesTest|ExchangeRateTest'
+
       - name: Run tests (informational)
         continue-on-error: true
         run: |

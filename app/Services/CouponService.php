@@ -22,6 +22,7 @@ class CouponService
 
     public function use(Order $order):bool
     {
+        if ($order->is_gift) abort(422, __('Discount codes cannot be used to buy gifts'));
         $this->setPlanId($order->plan_id);
         $this->setUserId($order->user_id);
         $this->setPeriod($order->period);
@@ -57,6 +58,11 @@ class CouponService
         return $this->coupon;
     }
 
+    public function isPurchasedGift(): bool
+    {
+        return $this->coupon && GiftOrderService::sourceForCoupon($this->coupon->id) !== null;
+    }
+
     public function setPlanId($planId)
     {
         $this->planId = $planId;
@@ -84,6 +90,12 @@ class CouponService
 
     public function check()
     {
+        if ($this->isPurchasedGift()) {
+            $source = GiftOrderService::sourceForCoupon($this->coupon->id);
+            if ((int)$source->status !== 3 || (int)$this->planId !== (int)$source->plan_id || $this->period !== $source->period) {
+                abort(500, __('The gift code requires its purchased subscription and period'));
+            }
+        }
         if (!$this->coupon || !$this->coupon->show) {
             abort(500, __('Invalid coupon'));
         }

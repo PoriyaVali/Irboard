@@ -292,6 +292,9 @@ CREATE TABLE `v2_notice` (
 DROP TABLE IF EXISTS `v2_order`;
 CREATE TABLE `v2_order` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
+  `is_gift` tinyint(1) NOT NULL DEFAULT '0',
+  `gift_coupon_id` int(11) DEFAULT NULL,
+  `gift_code_snapshot` varchar(64) DEFAULT NULL,
   `invite_user_id` int(11) DEFAULT NULL,
   `user_id` int(11) NOT NULL,
   `plan_id` int(11) NOT NULL,
@@ -319,6 +322,7 @@ CREATE TABLE `v2_order` (
   `updated_at` int(11) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `trade_no` (`trade_no`),
+  UNIQUE KEY `gift_coupon_id` (`gift_coupon_id`),
   KEY `idx_user` (`user_id`),
   KEY `idx_user_status` (`user_id`,`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;

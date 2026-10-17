@@ -261,6 +261,10 @@ class UserController extends Controller
 
     public function redeemgiftcard(UserRedeemGiftCard $request)
     {
+        $giftOrder = \App\Services\GiftOrderService::redeem((int)$request->user['id'], (string)$request->giftcard);
+        if ($giftOrder) {
+            return response(['data' => true, 'type' => 5, 'value' => 0, 'trade_no' => $giftOrder->trade_no]);
+        }
         DB::beginTransaction();
 
         try {

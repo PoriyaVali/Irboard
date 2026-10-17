@@ -949,6 +949,17 @@ class TelegramBotService
      */
     protected function processGiftCard(int $chatId, string $code): void
     {
+        try {
+            $purchasedGift = \App\Services\GiftOrderService::redeem((int)$this->user->id, $code);
+            if ($purchasedGift) {
+                $this->user->update(['bot_step' => null]);
+                $this->sendMessage($chatId, '✅ هدیه شما اعمال شد. وضعیت بسته را در اشتراک و سفارش‌ها مشاهده کنید.');
+                return;
+            }
+        } catch (\Throwable $e) {
+            $this->sendMessage($chatId, '❌ ' . $e->getMessage());
+            return;
+        }
         // One transaction, user then card read under a lock (the same order as
         // the web redemption). It had neither: the same code sent twice at once
         // passed the "already used" and usage-limit checks together and was
@@ -1479,6 +1490,9 @@ class TelegramBotService
                 if (!$order->plan_id) {
                     return ['error' => "❌ کد تخفیف برای شارژ کیف پول قابل استفاده نیست.", 'reset' => true];
                 }
+                if ($order->is_gift) {
+                    return ['error' => __('Discount codes cannot be used to buy gifts'), 'reset' => true];
+                }
                 if ($order->coupon_id) {
                     return ['error' => "❌ برای این سفارش قبلاً کد تخفیف ثبت شده است.", 'reset' => true];
                 }
@@ -1488,6 +1502,8 @@ class TelegramBotService
                     return ['error' => "❌ این دوره از پلن دیگر قابل خرید نیست.", 'reset' => true];
                 }
 
+                $user = \App\Models\User::lockForUpdate()->find($order->user_id);
+                if (!$user) throw new \RuntimeException('user not found');
                 $couponService = new \App\Services\CouponService($code);
                 $probe = new \App\Models\Order();
                 $probe->user_id = $order->user_id;
@@ -1500,6 +1516,7 @@ class TelegramBotService
                     return ['error' => "❌ این کد تخفیف دیگر قابل استفاده نیست."];
                 }
                 $coupon = $couponService->getCoupon();
+                $isPurchasedGift = $couponService->isPurchasedGift();
 
                 $payable = (int)$order->total_amount;
                 $walletPart = (int)$order->balance_amount;
@@ -1507,22 +1524,34 @@ class TelegramBotService
                 $discount = min($discount, $payable + $walletPart);
 
                 $refund = 0;
-                if ($discount <= $payable) {
+                if ($isPurchasedGift) {
+                    // This pending order may have been priced as an ordinary
+                    // plan change. A gift cannot turn its old surplus/refund
+                    // metadata into cash when this order is later opened.
+                    $refund = $walletPart;
+                    $discount = (int)$price;
+                    $order->total_amount = 0;
+                    $order->balance_amount = 0;
+                    $order->surplus_amount = null;
+                    $order->refund_amount = null;
+                    $order->surplus_order_ids = null;
+                    $order->discount_amount = $discount;
+                    \App\Services\GiftOrderService::setRedemptionType($order, $user);
+                } elseif ($discount <= $payable) {
                     $order->total_amount = $payable - $discount;
                 } else {
                     $refund = $discount - $payable;
                     $order->total_amount = 0;
                     $order->balance_amount = $walletPart - $refund;
                 }
-                $order->discount_amount = (int)$order->discount_amount + $discount;
+                if (!$isPurchasedGift) $order->discount_amount = (int)$order->discount_amount + $discount;
                 $order->coupon_id = $coupon->id;
 
                 // Commission follows what is actually paid, as on the website
                 // where the coupon is applied before it is worked out.
-                $user = \App\Models\User::find($order->user_id);
                 $order->commission_balance = 0;
                 $order->invite_user_id = null;
-                if ($user) {
+                if (!$isPurchasedGift) {
                     (new \App\Services\OrderService($order))->setInvite($user);
                 }
 
@@ -1536,7 +1565,7 @@ class TelegramBotService
                 return [
                     'order' => $order,
                     'coupon' => $coupon,
-                    'original' => $payable,
+                    'original' => $isPurchasedGift ? (int)$price : $payable,
                     'discount' => $discount,
                     'refund' => $refund,
                 ];

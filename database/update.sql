@@ -1055,6 +1055,12 @@ CREATE TABLE IF NOT EXISTS `v2_mirror_export` (
 ALTER TABLE `v2_user` ADD COLUMN `device_ids` text COMMENT 'Devices this account was used from: JSON list of hashed signals, see DeviceIdentityService';
 ALTER TABLE `v2_user` ADD COLUMN `device_count` int(11) NOT NULL DEFAULT '0' COMMENT 'Distinct devices in device_ids';
 
+-- Purchased subscription gifts. Existing rows remain ordinary orders.
+ALTER TABLE `v2_order` ADD COLUMN `is_gift` tinyint(1) NOT NULL DEFAULT '0';
+ALTER TABLE `v2_order` ADD COLUMN `gift_coupon_id` int(11) DEFAULT NULL;
+ALTER TABLE `v2_order` ADD COLUMN `gift_code_snapshot` varchar(64) DEFAULT NULL;
+ALTER TABLE `v2_order` ADD UNIQUE KEY `gift_coupon_id` (`gift_coupon_id`);
+
 -- Every account a device-ban touched, and what it was before.
 --
 -- 🔴 NOT v2_user_banned_backup. That table holds 1031 rows from a bulk ban

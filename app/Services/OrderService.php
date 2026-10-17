@@ -73,6 +73,10 @@ class OrderService
     private function openOnce()
     {
         $order = $this->order;
+        if ($order->is_gift) {
+            GiftOrderService::fulfil($order);
+            return;
+        }
         $this->user = User::find($order->user_id);
         if ($order->type == 9) {
             DB::beginTransaction();
@@ -178,7 +182,9 @@ class OrderService
     public function setOrderType(User $user)
     {
         $order = $this->order;
-        if ($order->period === 'deposit'){
+        if ($order->is_gift) {
+            $order->type = 8;
+        } else if ($order->period === 'deposit'){
             $order->type = 9;
         } else if ($order->period === 'reset_price') {
             $order->type = 4;
@@ -260,6 +266,7 @@ class OrderService
     private function getSurplusValueByOneTime(User $user, Order $order)
     {
         $lastOneTimeOrder = Order::where('user_id', $user->id)
+            ->where('type', '!=', 8)
             ->where('period', 'onetime_price')
             ->where('status', 3)
             ->orderBy('id', 'DESC')
@@ -273,13 +280,14 @@ class OrderService
         $remainingTrafficRatio = $notUsedTraffic / $nowUserTraffic;
         $result = $remainingTrafficRatio * $paidTotalAmount;
         $order->surplus_amount = max($result, 0);
-        $orderModel = Order::where('user_id', $user->id)->where('period', '!=', 'reset_price')->where('status', 3);
+        $orderModel = Order::where('user_id', $user->id)->where('type', '!=', 8)->where('period', '!=', 'reset_price')->where('status', 3);
         $order->surplus_order_ids = array_column($orderModel->get()->toArray(), 'id');
     }
 
     private function getSurplusValueByPeriod(User $user, Order $order)
     {
         $orders = Order::where('user_id', $user->id)
+            ->where('type', '!=', 8)
             ->where('period', '!=', 'reset_price')
             ->where('period', '!=', 'onetime_price')
             ->where('period', '!=', 'deposit')
@@ -362,7 +370,7 @@ class OrderService
                 DB::rollBack();
                 return true;
             }
-            if ($status === 2 && (int)$fresh->balance_amount > 0) {
+            if ($status === 2 && ((int)$fresh->balance_amount > 0 || GiftOrderService::sourceForCoupon($fresh->coupon_id))) {
                 $user = User::lockForUpdate()->find($fresh->user_id);
                 if (!$user) {
                     DB::rollBack();
@@ -429,6 +437,7 @@ class OrderService
                 DB::rollBack();
                 return false;
             }
+            GiftOrderService::restoreCancelledCoupon($fresh);
             if ($fresh->balance_amount) {
                 $userService = new UserService();
                 if (!$userService->addBalance($fresh->user_id, (int)$fresh->balance_amount)) {
@@ -614,6 +623,7 @@ class OrderService
      */
     public static function isReserved(Order $order): bool
     {
+        if ($order->is_gift) return false;
         if (!$order->plan_id || $order->period === 'reset_price') return false;
         // Read the user before the order: fulfilment writes both in one
         // transaction, so an order still not done means the user row read
