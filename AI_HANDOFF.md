@@ -1,6 +1,50 @@
 # AI work log and handoff
 
-## Active handoff - 2026-10-17 - Codex - reviewed backend locally committed; NOT pushed or deployed
+## Active handoff - 2026-10-18 - Codex - mandatory financial CI PASS; full suite retains5baseline errors, HOLD
+
+Review PR15 remains OPEN/DRAFT at pushed ea184ca (implementation4f572b0), not
+merged/deployed. Independent CI39137931184 audit verified all4jobs succeed;
+checked-out merge23cee56484a31b8ec14d64ede1a4c89ebb84cfbb tree exactly matches
+PR head. Mandatory54financialtests/318assertions PASS on PHP8.1 and8.2,
+including23gift cases. Informational full suite has103tests/605assertions and
+5GoogleAuth SQLite missing-v2_plan errors on BOTH versions. Baseline38027975879
+has80tests/390assertions and the identical5errors. Existing continue-on-error
+does not make that full suite passing; no claim of fullPHP PASS.
+
+MariaDB fresh schema52tables, update/reapply53; upstream schema comparison
+passes, bothSQL files include all3gift columns and unique coupon link. Actual
+installer50tables matches baseline50, but does not explicitly assert gift
+columns; difference vs direct SQL52 remains unexplained/investigated only.
+Route/model/runtime audits pass with existing exclusions. Dependency scan now
+reports25advisories vsbaseline23 with UNCHANGED composer.lock (new scan IDs
+CVE-2026-108082/CVE-2026-109413); no dependency changes/remediation claimed.
+Evidence is in ../audit/panel-posttest-ci/ and its separate audit handoff.
+
+Exact new local change is this UNCOMMITTED documentation entry only. No
+production code after tested4f572b0, live database/DDL/payment/deployment,
+merge, release, public upload or updater activation. User publication HOLD
+continues; app test148 is being finalized in sibling checkout. Gift capability
+requires later authorized rollout of backend plus3additive columns. Real
+MySQL concurrency and live gateway behavior remain unrun. Separate pricePR14
+is preserved unchanged.
+
+## Previous handoff - 2026-10-18 - Codex - review PR15 pushed; NOT merged or deployed
+
+Parent pushed implementation4f572b0656859ce2ac47b24a6f370bf1655d21c8 plus
+documentationea184ca18eba85358d6e9bc04030f1330b557872 to
+fix/posttest-gift-orders and created OPEN/DRAFT
+https://github.com/PoriyaVali/Irboard/pull/15. Exact source/test/SQL/CI files
+remain as validated below (54 strict tests / 318 assertions; 13 PHP syntax
+checks). This status entry alone is a new UNCOMMITTED local documentation
+change; no production source changed after that tested implementation.
+
+CI is pending, not claimed passing. No merge, production migration/DDL,
+deployment, gateway/card payment or app publication occurred. The owner's
+publication hold persists. Separate grouped-price PR14 is unchanged. Parent
+is completing app test148 and final connection validation; backend deployment
+requires later authorized rollout of the additive schema and application code.
+
+## Previous handoff - 2026-10-17 - Codex - reviewed backend locally committed; NOT pushed or deployed
 
 Parent reviewed the final contract and financial diffs, then created scoped
 implementation commit 4f572b0656859ce2ac47b24a6f370bf1655d21c8 on
