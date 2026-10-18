@@ -1,6 +1,23 @@
 # AI work log and handoff
 
-## Active handoff - 2026-10-17 - Codex independent backend review - UNCOMMITTED; publication/deployment HOLD
+## Active handoff - 2026-10-17 - Codex - reviewed backend locally committed; NOT pushed or deployed
+
+Parent reviewed the final contract and financial diffs, then created scoped
+implementation commit 4f572b0656859ce2ac47b24a6f370bf1655d21c8 on
+fix/posttest-gift-orders. All 17 feature/test/SQL/CI/handoff files are committed;
+this status entry is a later UNCOMMITTED documentation update. The exact tested
+source is unchanged: 54 strict financial tests / 318 assertions pass, PHP syntax
+passes for all 13 changed/new PHP files, and whitespace checks pass. Earlier
+environment-dependent expanded test errors remain recorded below.
+
+No branch push, PR, merge, live payment, production database update, deployment,
+or release has occurred. User's publication hold remains active. Main and the
+separate grouped-price PR14 are unchanged. The app uses dedicated saveGift and
+requires explicit schema capability, so older servers cannot silently charge
+the purchaser for an ordinary subscription. Parent is finishing the final app
+background-start regression before preparing a new unpublished test build.
+
+## Previous handoff - 2026-10-17 - Codex independent backend review - UNCOMMITTED; publication/deployment HOLD
 
 Objective: review and finish the prior Codex agent's purchased-gift source, preserving
 all source in this isolated fix/posttest-gift-orders checkout at fb1c64d. The prior
