@@ -18,8 +18,6 @@ class CustomPlanService
 {
     public const PERIOD = 'custom_price';
     public const QUOTE_SECONDS = 900;
-    private const PERIOD_DAYS = ['month_price' => 30, 'quarter_price' => 90, 'half_year_price' => 180, 'year_price' => 365];
-    private const MODEL = ['offset_gb' => 150, 'reference_gb' => 185, 'reference_days' => 30, 'alpha' => 1.13, 'beta' => 0.20];
 
     private static function fail(int $status, string $code, string $message): void
     {
@@ -51,68 +49,15 @@ class CustomPlanService
         return $order->period === self::PERIOD && is_array($order->custom_snapshot);
     }
 
-    private static function cohort(Plan $plan): array
-    {
-        return [
-            'group_id' => (int)$plan->group_id,
-            'device_limit' => $plan->device_limit === null ? null : (int)$plan->device_limit,
-            'speed_limit' => $plan->speed_limit === null ? null : (int)$plan->speed_limit,
-            'reset_traffic_method' => $plan->reset_traffic_method === null ? (int)config('v2board.reset_traffic_method', 0) : (int)$plan->reset_traffic_method,
-        ];
-    }
-
     public static function factor(int $volume, int $days): float
     {
         return pow(($volume + 150) / 185, 1.13) * pow($days / 30, 0.20);
     }
 
-    /** Reading the catalogue must never create a plan or an order. */
+    /** Only explicitly approved finite-total plan/period references contribute. */
     public static function catalogue(): array
     {
-        if (!self::enabled()) return ['enabled' => false];
-        $rate = ExchangeService::getCurrentRate();
-        if ($rate <= 0) return ['enabled' => false];
-        // Finite-capacity tariffs cannot be cloned into a separately counted
-        // hidden plan: that would evade their capacity. Fail closed for them.
-        $plans = Plan::where('show', 1)->whereNull('custom_key')->whereNull('capacity_limit')
-            ->whereBetween('transfer_enable', [1, 1024])->orderBy('sort')->orderBy('id')->get();
-        $usdRows = Schema::hasTable('v2_plan_prices') ? DB::table('v2_plan_prices')->whereIn('plan_id', $plans->pluck('id'))->get()->keyBy('plan_id') : collect();
-        $points = [];
-        $cohort = null;
-        $source = null;
-        foreach ($plans as $plan) {
-            $candidate = self::cohort($plan);
-            if ($cohort !== null && $candidate !== $cohort) continue;
-            $candidatePoints = [];
-            foreach (self::PERIOD_DAYS as $period => $days) {
-                if ($plan->$period === null || $plan->$period <= 0) continue;
-                $usdField = $period . '_usd';
-                // Match PlanController's overlay precedence. When no USD price
-                // exists, the actual sellable Toman tariff still supplies a basis.
-                $row = $usdRows->get($plan->id);
-                $usd = $row ? $row->$usdField : $plan->$usdField;
-                $priceSource = $usd === null ? 'toman' : 'usd';
-                if ($usd === null) $usd = $plan->$period / $rate;
-                if (!is_numeric($usd) || !is_finite((float)$usd) || $usd <= 0) continue;
-                $candidatePoints[] = ['plan_id' => (int)$plan->id, 'plan_name' => $plan->name,
-                    'volume_gb' => (int)$plan->transfer_enable, 'duration_days' => $days,
-                    'period' => $period, 'price_usd' => (float)$usd, 'price_source' => $priceSource];
-            }
-            if (!$candidatePoints) continue;
-            if ($cohort === null) { $cohort = $candidate; $source = (int)$plan->id; }
-            $points = array_merge($points, $candidatePoints);
-        }
-        if (!$points) return ['enabled' => false];
-        $bases = array_map(fn ($point) => $point['price_usd'] / self::factor($point['volume_gb'], $point['duration_days']), $points);
-        sort($bases, SORT_NUMERIC);
-        $middle = intdiv(count($bases), 2);
-        $base = count($bases) % 2 ? $bases[$middle] : ($bases[$middle - 1] + $bases[$middle]) / 2;
-        $model = ['base_usd' => $base] + self::MODEL;
-        $revision = hash('sha256', json_encode([$model, $points, $cohort, $source, $rate], JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR));
-        return ['enabled' => true, 'model' => $model,
-            'bounds' => ['volume_gb' => ['min' => 1, 'max' => 1024], 'duration_days' => ['min' => 1, 'max' => 365]],
-            'currency' => 'Toman', 'exchange_rate' => $rate, 'pricing_revision' => $revision,
-            'source_plan_id' => $source, 'cohort' => $cohort, 'source_points' => $points];
+        return CustomPlanSettingsService::catalogue();
     }
 
     private static function accessPlan(array $access): Plan
@@ -209,9 +154,11 @@ class CustomPlanService
             }
             if (($code ?: '') !== $quote['coupon_code']) self::fail(409, 'custom_quote_changed', 'Discount code changed; request a new quote');
             if ((int)$quote['expires_at'] <= time()) self::fail(409, 'custom_quote_expired', 'The quote expired; request a new quote');
-            $source = Plan::find($quote['snapshot']['source_plan_id']);
-            if (!$source || !$source->show || $source->capacity_limit !== null || self::cohort($source) !== $quote['snapshot']['access']) {
-                self::fail(409, 'custom_price_changed', 'The source tariff changed; request a new quote');
+            // Withdrawal/price changes gate only NEW orders. Paid/replayed
+            // trades above retain their immutable entitlement and idempotence.
+            $current = CustomPlanSettingsService::catalogue(true);
+            if (!$current['enabled'] || !hash_equals($current['pricing_revision'], $quote['snapshot']['pricing_revision'])) {
+                self::fail(409, 'custom_price_changed', 'The approved tariffs changed; request a new quote');
             }
             if ((new UserService())->isNotCompleteOrderByUserId($userId)) self::fail(409, 'pending_order', 'You have an unpaid or pending order');
             if (OrderService::reservationLimitReached($user, self::PERIOD)) abort(409, __('The reserved plan limit has been reached'));

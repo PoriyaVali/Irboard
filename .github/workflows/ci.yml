@@ -632,8 +632,23 @@ jobs:
           fi
           echo "All audits pass."
 
+      - name: Set up Node for tailored admin browser checks
+        if: matrix.php == '8.2'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Test tailored editor inside subscription management
+        if: matrix.php == '8.2'
+        run: |
+          set -e
+          export CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          test -x "$CHROME_BIN"
+          node --check public/assets/admin/tailored-pricing.js
+          node --test tests/AdminTailoredPricingBrowserTest.cjs
+
       - name: Purchased gifts and money-path regressions
-        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'CustomPlanOrderTest|PurchasedGiftOrderTest|OrderMoneyFlowTest|TelegramBotFixesTest|ExchangeRateTest'
+        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'CustomPlanAdminTest|CustomPlanOrderTest|PurchasedGiftOrderTest|OrderMoneyFlowTest|TelegramBotFixesTest|ExchangeRateTest'
 
       - name: Run tests (informational)
         continue-on-error: true

@@ -1,6 +1,111 @@
 # AI work log and handoff
 
-## Active handoff - 2026-10-19 - Codex - tailored/gift backend exact CI audited; not deployed, HOLD
+## Active handoff - 2026-10-19 - Codex - admin editor implemented/validated, independent review CLEAR; preparing draft commit, HOLD
+
+All new admin source remains UNCOMMITTED atopb73a69a pending scopedcommit.
+Implemented INSIDE existing Laravel "مدیریت اشتراک‌ها" route, without editing
+prebuilt umi bundles. Both FA/EN supported, existing tariff editor/table kept.
+Owner's explicit PLAN+PERIOD approvals, finite-total/no-reset ONLY, defaultoff/
+none, no automaticfallback, compatibleaccess, fixedshape/medianA all enforced.
+Editable classifications/references/enabled flag; readonly model/constants;
+draftpreview/curves/residuals and explicit optimistic save. Actual price edits
+remain in existing tariff editor. BotSetting boundedJSON configuration, no new
+settings migration; original custom/gift schema still needs future rollout.
+
+Exact files: .github/workflows/ci.yml; AI_HANDOFF.md;
+app/Http/Routes/V1/AdminRoute.php; app/Services/CustomPlanService.php;
+app/Services/CustomPlanSettingsService.php;
+app/Http/Controllers/V1/Admin/CustomPlanController.php;
+resources/views/admin.blade.php;
+public/assets/admin/tailored-pricing.{js,css};
+tests/Feature/{CustomPlanOrderTest.php,CustomPlanAdminTest.php};
+tests/AdminTailoredPricingBrowserTest.cjs; tests/fixtures/tailored-admin.cjs;
+docs/tailored-pricing-admin.fa.md. CI adds strictCustomPlanAdminTest and Node22
+actualChrome15browser checks onPHP8.2; actualremote CI of new source PENDING.
+
+Final local strict mandatory105tests/796assertionsPASS (old87/634 +new18/162),
+actual ../audit/custom-admin-financial-second.log. SixPHPsyntaxPASS, all3JS/CJS
+syntaxPASS, gitdiffcheckPASS. ActualChrome15/15PASS,0skip/0fail
+../audit/admin-tailored-browser-final.log. Parent viewed actualclean FA/EN
+screenshots ../audit/admin-tailored-preview/, demo data ONLY, readable axes.
+Independent boundedbackend+UI review CLEAR, ../audit/tailored-admin-review.md.
+No Flutter source change; existing app44568deb2.2.4+149 API contract retained.
+
+Four real review findings fixed with controls: unrelated classified deleted
+plan blocking pricing; capability response misreported; zero-rounded Toman
+curve NaN; deleted selected ref unremovable in tab. InitialPHPtests had16wrong
+route-prefix404s, fixed fixture; first105suite45errors/1failure because helper
+dropsnonIDSQLprimarykeys. Bothcustomfixtures now restore actualsettingskey
+uniqueindex; productiongate NOTweakened. Failedlogs preserved. No new fullPHP
+localpass claimed; previous baselineGoogleAuth errors remain historical until
+newCI result. True simultaneousMySQLsave race and livegateway/device UNRUN.
+
+Existing app149 all5files strictlyverified232/232PASS from39242819273 exact
+44568deb, releaseSKIPPED. This does not deploy backend. Next draftcommit/push,
+audit newCI exactsource+105financial+15browser and fullsuite limits. No merge,
+productionDDL/payments/deployment, releaseassets/publish/updater; HOLD persists.
+
+## Previous handoff - 2026-10-19 - Codex - implementing admin editor/curves inside subscription tab, UNVALIDATED, HOLD
+
+Owner explicitly requires admin changes EDITABLE INSIDE "مدیریت اشتراک‌ها"
+with patterns/model/charts/curves visible. Implementing agreed PLAN+PERIOD
+approval, ONLY structured finite-total/no-reset2 sources. Fixedformula/medianA
+and moneythousands conventions retained. No source commit/push/deployment yet;
+new financial/UI tests and independent review REQUIRED, priorCI notnewscope.
+Root changed exactfile .github/workflows/ci.yml to include CustomPlanAdminTest
+in strict mandatory financial suite; shared handoff updates root-owned.
+Backend agent owns settingsservice/controller/adminroutes/CustomPlanService
+and meaningfultests (CustomPlanAdminTest +updatedexplicitapprovalfixtures in
+CustomPlanOrderTest). UIagent owns new maintained public/assets/admin/tailored-
+pricing.js/CSS, resources/views/admin.blade.php integration and browsertests.
+Exact newfiles/results will be recorded when produced. Reviewer read-only.
+
+Agreed protectedadmin API /plan/custom/{fetch,preview,save}; boundedBotSetting
+JSON enabled/classifications[{plan_id,quota_type}]/references[{plan_id,period}],
+settings_revision+source_revision for CAS/source drift, defaultnone/disabled.
+Unknown/unlimited/FUP/resetting/invalid/incompatibleaccess refs rejected with
+reasons. Draft preview readonly/nohiddenplans/noorders/nodebits. Ordinary
+prices continue in existing tariffeditor; no duplicateprice store. Newsave
+quote withdrawal validation must follow existingtrade idempotence lookup.
+UI addon lives inside existingplanroute, bothFA/EN, keeps originaltable,
+showsdraftvsaved state/derivedA/fixedformula/sourcepoints/model residuals and
+interactivevolume/timeUSD/Toman curves, explicitpreview/save. No bundlehack or
+externalCDNdependency required. Root publication HOLD: no merge, production
+DDL/payment/deploy, publicassets/release/updater. App2.2.4+149contract unchanged.
+
+## Previous handoff - 2026-10-19 - Codex - new admin-approved reference requirement; scenario discussion first, NOT IMPLEMENTED
+
+Owner asks to review price derivation BEFORE continuing and requires admin to
+approve reference tariffs, excluding unlimited. READ-ONLY audit performed;
+NO source changes or new tests for this requirement. Source0a40a87/docsHEAD
+b73a69a still automatically selects candidates and is NOT final for new scope.
+This handoff entry alone is UNCOMMITTED. Previous CI validates previouscode.
+
+Actual CustomPlanService.php:77-104 filters show1/custom_keyNULL/capacityNULL/
+GB1..1024, first sort/id effective access/reset cohort; every valid positive
+30/90/180/365day price contributes. :106-109 takes median USD/fixedshape to
+infer A. There is no admin allowlist, structured unlimited/FUP type, or live
+tariff inspection. Numeric filtering alone cannot exclude an unlimited/FUP
+product carrying finite in-range quota. Database install.sql:350-386 lacks
+semantic quota type. Telegram Search.php:129-138 labels0unlimited while
+UserService.php:148,156 requires positive remaining quota; do not infer one
+universal zero convention. Source reset0/1/3/4 can participate today whereas
+custom delivery is total/no-reset2; matching cohort does not solve that semantic
+comparison. Do not silently multiply monthly quota by nominal period.
+
+Admin extension points: Admin/PlanController fetch/save/update and requests
+Admin/{PlanSave,PlanUpdate}; AdminRoute admin/log middleware. Form source is
+prebuilt public/assets/admin/{umi.js,umi-fa.js}, around82622planfields,
+82889reset labels,83070list. No corresponding React build source found.
+ConfigController/ConfigSave and BotSetting offer central settings storage but
+currently no tailored settings. Need maintained UI covering both languagepaths.
+Owner ANSWERED: PLAN+PERIOD individual approval; ONLY finite-total NO-RESET
+sources. No resetting-source conversion. Do not ask again. OnlyAinferred;
+fixedshape/thousands conventions retained. New control NOTIMPLEMENTED. Proposed default
+none selected, compatible access, no automaticfallback; admin preview included
+points/A/curve before enabling. No productionDDL/payment/deploy/merge/release.
+
+## Previous handoff - 2026-10-19 - Codex - tailored/gift backend exact CI audited; not deployed, HOLD
 
 Source COMMITTED/PUSHED0a40a87a85a67ba42b64033ac4c555593064687e atop0fbfa28
 in existing OPEN/DRAFT PR15; priorgift4f572b0 retained. Actual CI39242808396

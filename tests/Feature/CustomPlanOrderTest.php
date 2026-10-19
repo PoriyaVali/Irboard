@@ -6,8 +6,10 @@ use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Plan;
 use App\Models\ReservedPlan;
+use App\Models\BotSetting;
 use App\Jobs\OrderHandleJob;
 use App\Services\CustomPlanService;
+use App\Services\CustomPlanSettingsService;
 use App\Services\GiftOrderService;
 use App\Services\OrderService;
 use Illuminate\Support\Facades\Cache;
@@ -29,6 +31,7 @@ class CustomPlanOrderTest extends TestCase
         $this->createInstallTables(['v2_plan_prices']);
         DB::statement('CREATE UNIQUE INDEX custom_key ON v2_plan (custom_key)');
         DB::statement('CREATE UNIQUE INDEX custom_trade_no ON v2_order (trade_no)');
+        DB::statement('CREATE UNIQUE INDEX settings_key ON v2_bot_settings ("key")');
         config(['app.key' => 'base64:' . base64_encode(str_repeat('t', 32))]);
         Http::fake(['*' => Http::response(['ok' => true, 'result' => ['message_id' => 1]], 200)]);
     }
@@ -45,6 +48,23 @@ class CustomPlanOrderTest extends TestCase
         $plan = $this->makePlan(array_merge(['transfer_enable' => 35, 'reset_traffic_method' => 2,
             'month_price' => 89000], $attrs));
         if ($usd) DB::table('v2_plan_prices')->insert(array_merge(['plan_id' => $plan->id], $usd));
+        // Financial fixtures explicitly approve compatible finite-total sources.
+        // Production defaults never auto-select a tariff. Dedicated admin tests
+        // create unapproved tariffs and cover all rejection/withdrawal cases.
+        $saved = json_decode(BotSetting::get(CustomPlanSettingsService::KEY, '{}'), true);
+        $configuration = $saved['configuration'] ?? ['enabled' => false, 'classifications' => [], 'references' => []];
+        $configuration['classifications'][] = ['plan_id' => (int)$plan->id, 'quota_type' => 'finite_total'];
+        $cohort = CustomPlanSettingsService::cohort($plan);
+        $first = $configuration['references'] ? Plan::find($configuration['references'][0]['plan_id']) : null;
+        if ($plan->show && $plan->capacity_limit === null && $plan->transfer_enable >= 1 && $plan->transfer_enable <= 1024
+            && $cohort['reset_traffic_method'] === 2 && (!$first || CustomPlanSettingsService::cohort($first) === $cohort)) {
+            foreach (CustomPlanSettingsService::PERIOD_DAYS as $period => $days) {
+                if ($plan->$period !== null && $plan->$period > 0) $configuration['references'][] = ['plan_id' => (int)$plan->id, 'period' => $period];
+            }
+        }
+        $configuration['enabled'] = (bool)$configuration['references'];
+        BotSetting::set(CustomPlanSettingsService::KEY, json_encode(['version' => 1, 'generation' => 'explicit-test-approval-' . $plan->id,
+            'configuration' => CustomPlanSettingsService::normalize($configuration)]));
         return $plan;
     }
 
@@ -89,7 +109,7 @@ class CustomPlanOrderTest extends TestCase
         $this->assertSame(0, Order::count());
     }
 
-    public function testOnlyFirstEligibleAccessCohortAndCanonicalUsdOverlaySupplyBasis()
+    public function testOnlyExplicitlyApprovedCompatiblePointsAndCanonicalUsdOverlaySupplyBasis()
     {
         $this->tariff(['sort' => -1, 'capacity_limit' => 100], ['month_price_usd' => 99]);
         $source = $this->tariff(['sort' => 0, 'month_price_usd' => 99], ['month_price_usd' => 1.49]);
@@ -471,7 +491,7 @@ class CustomPlanOrderTest extends TestCase
 
     public function testTailoredAllowanceHasNoPeriodicResetOrAutomaticRenewalCharge()
     {
-        $this->tariff(['reset_traffic_method' => 0]);
+        $this->tariff(['reset_traffic_method' => 2]);
         $user = $this->makeUser(['balance' => 500000, 'auto_renewal' => 1]);
         $order = $this->saveQuote($user, $this->quote($user, ['duration_days' => 365]));
         (new OrderService($order))->paid('test');
