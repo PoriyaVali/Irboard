@@ -272,6 +272,7 @@ class CheckRenewal extends Command
      */
     protected static function renewalPeriod(Plan $plan): ?string
     {
+        if ($plan->custom_key) return null;
         foreach (array_keys(self::PERIOD_DAYS) as $field) {
             if ($plan->$field !== null && $plan->$field > 0) {
                 return $field;

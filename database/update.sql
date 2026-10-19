@@ -1056,6 +1056,12 @@ ALTER TABLE `v2_user` ADD COLUMN `device_ids` text COMMENT 'Devices this account
 ALTER TABLE `v2_user` ADD COLUMN `device_count` int(11) NOT NULL DEFAULT '0' COMMENT 'Distinct devices in device_ids';
 
 -- Purchased subscription gifts. Existing rows remain ordinary orders.
+-- Tailored purchases keep their immutable quota/duration/price on the order.
+-- A hidden access template is shared by all tailored quotas and durations.
+ALTER TABLE `v2_order` ADD COLUMN `custom_snapshot` text DEFAULT NULL;
+ALTER TABLE `v2_plan` ADD COLUMN `custom_key` varchar(64) DEFAULT NULL;
+ALTER TABLE `v2_plan` ADD UNIQUE KEY `custom_key` (`custom_key`);
+
 ALTER TABLE `v2_order` ADD COLUMN `is_gift` tinyint(1) NOT NULL DEFAULT '0';
 ALTER TABLE `v2_order` ADD COLUMN `gift_coupon_id` int(11) DEFAULT NULL;
 ALTER TABLE `v2_order` ADD COLUMN `gift_code_snapshot` varchar(64) DEFAULT NULL;

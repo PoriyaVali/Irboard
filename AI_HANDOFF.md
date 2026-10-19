@@ -1,6 +1,101 @@
 # AI work log and handoff
 
-## Active handoff - 2026-10-18 - Codex - mandatory financial CI PASS; full suite retains5baseline errors, HOLD
+## Active handoff - 2026-10-19 - Codex - tailored backend financial review CLEAR; preparing draft commit, HOLD
+
+New source UNCOMMITTED atop0fbfa28; priorgift4f572b0 retained. Final mandatory
+87tests/634assertionsPASS:33custom/316 +54existing/318. Actual final log
+../audit/custom-plan-financial-final-delivery.log. All10changed/newPHPfiles
+syntax PASS, gitdiffcheckPASS. Independent financial reviewer cleared final
+source. Earlier UNSAFE/pending notes are preserved history, superseded now.
+Full localPHPsuite NOTPASS: earlier128tests/827assertions/10errors,5known
+GoogleAuth missingSQLitev2_plan and5localAPP_KEY/authfixtures; no whole-suite
+rerun after final6controls, no broadPHPpass claimed.
+
+Exact files: .github/workflows/ci.yml; AI_HANDOFF.md;
+app/Console/Commands/{ActivateReservedPlans.php,CheckRenewal.php};
+app/Http/Controllers/V1/User/{OrderController.php,UserController.php,CustomPlanController.php};
+app/Http/Routes/V1/UserRoute.php; app/Models/Order.php;
+app/Services/{OrderService.php,CustomPlanService.php};
+database/{install.sql,update.sql}; tests/Feature/CustomPlanOrderTest.php.
+
+Server reads eligible same-access-cohort canonical USD tariffs, infers median
+normalizedA, preserves fixed shape, existing Toman flooring/thousands, creates
+authenticated15minquotes and dedicated idempotent saves. TotalGB/exactdays,
+reusedhiddenplan, snapshot delivery/reservation, capability bothcolumns+unique
+index, no customgift. Actual3 financial prefails corrected and controlled:
+currentcustom old ordinary surplus; custom->ordinary->ordinary oldhistory
+revival; legitimate paid ordinary job delivered AFTER custom activation.
+Boundary uses actual delivery time plus consumed same-secondIDs/frontier and
+pending paid IDs; immutable commercial fields preserved. Reserved pending
+orders remain globally excluded from credit. Cancelled late-paid refund and
+existing gift/wallet paths remain covered. Full MySQL concurrency, real gateway
+and live production schema unrun. App report records contract and evidence.
+
+Next scopedcommit/push existing OPEN/DRAFT PR15 and verify its CI, no merge or
+deployment. TWO additivecustomschema columns + prior3giftcolumns await future
+authorized rollout. No productionDDL/payment/publish/updater; user HOLD persists.
+
+## Previous handoff - 2026-10-19 - Codex - tailored-package backend IN PROGRESS for app2.2.4, HOLD
+
+Latest user adds data-driven tailored tariff and changes app target2.2.4+149.
+User confirms onlybasisAinferred; offset150/reference185GB/30days/alpha1.13/
+beta.20 fixed. Source priorgift implementation4f572b0/docs0fbfa28 preserved in
+draftPR15. Backend agent owns new service/controller/API/schema/order/reserved/
+renewal/receipt/tests/CIchanges after reading durablehandoff/status/log. Parent
+owns shared handoff. No new feature or validation PASS claimed yet.
+
+Agreed dedicated GET/plan/custom, POST/plan/custom/quote, POST/order/saveCustom.
+Read current canonical USD tariffs by same effective access/reset cohort,
+infer mediannormalizedbase, quote price/currency server-side. New totalGB is
+for exact tdays without monthlyreset. Hiddenreusedcustom accessplan +order
+snapshot support exact paidfulfilment/reservation, immutable consent price,
+user-bound15minquote/idempotenttrade and existing wallet/payment/cancel flows.
+No publictariffrowperrequest. Generalpromocoupons obey actualcustomplanperiod
+constraints; purchasedordinarygiftcards cannot become arbitrarycustomGB.
+No customgift purchase thisscope; normalgiftfeature retained. Preserve existing
+cancelled-order paymentreconciliation, exclude customPLAN-surpluscash minting.
+
+No livepayment/productionDDL/deployment/merge/release/publicupload/updater.
+Owner publication HOLD persists. PriorCI54/318mandatoryPASS plus5baselinefull
+suiteerrors remain historical only for priorgift source; newcustomfinancial
+tests/source/SQL/CIchecks are required before committing ascomplete.
+
+UNSAFE NEW FINANCIAL PATH UNDER REPAIR (allnewsourceUNCOMMITTED): independent
+review reproduced two phantom credit cases from exhausted ordinary history
+while currentcustom and after custom->ordinary->ordinary. Author added real
+prefail tests (expected1000actual0; expected200000actual150327) and is correcting
+currentcustom surplus suppression plus an actual-delivery boundary, retaining
+legitimate later ordinary/queued/late-paid rights and exact same-second order
+chronology. Do not commit/deploy ascomplete while those regressions fail.
+Earlier79mandatorytests/555assertions passed before these extra controls.
+Full local suite128tests/827assertions/10errors consists of5knownGoogleAuth
+and5knownlocalAPP_KEY/auth environment failures, not a fullsuitePASS.
+
+Exactnewbackendfiles: .github/workflows/ci.yml;
+app/Console/Commands/{ActivateReservedPlans.php,CheckRenewal.php};
+app/Http/Controllers/V1/User/{OrderController.php,UserController.php,CustomPlanController.php};
+app/Http/Routes/V1/UserRoute.php; app/Models/Order.php;
+app/Services/{OrderService.php,CustomPlanService.php};
+database/{install.sql,update.sql}; tests/Feature/CustomPlanOrderTest.php.
+No production action, merge, commit or push of this custom feature yet.
+
+## Previous handoff - 2026-10-18 - Codex - current PR15 CI39138995692 verified, NOT deployed
+
+Documentation follow-up0fbfa28f9bc41139d7d1e6ce47e2cb7bfd669499 is COMMITTED/
+PUSHED and remains the OPEN/DRAFT PR15 head. Only AI_HANDOFF.md changed after
+implementation4f572b0. LatestCI39138995692 all4jobs SUCCESS on currentPRhead;
+both PHP8.1/8.2 logs again verify mandatory54tests/318assertions PASS and actual
+full suite103tests/605assertions/5samebaselineGoogleAuth missing-v2_plan errors.
+Evidence ../audit/panel-posttest-ci/latest-ci-39138995692.md. This new status
+entry alone is UNCOMMITTED documentation, not new application source.
+
+No merge, live database update, payment, deployment, public release/upload or
+updater activation. Owner publication HOLD persists. App paired draftPR15 at
+5d357d42 is running unpublished test148 CI39139130147; do not infer that build
+has passed yet. Gift rollout and real concurrency/gateway testing remain pending.
+Separate pricePR14 is preserved. Previous validation/risks remain below.
+
+## Previous handoff - 2026-10-18 - Codex - mandatory financial CI PASS; full suite retains5baseline errors, HOLD
 
 Review PR15 remains OPEN/DRAFT at pushed ea184ca (implementation4f572b0), not
 merged/deployed. Independent CI39137931184 audit verified all4jobs succeed;

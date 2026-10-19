@@ -10,6 +10,7 @@ use App\Models\Plan;
 use App\Models\User;
 use App\Services\CouponService;
 use App\Services\GiftOrderService;
+use App\Services\CustomPlanService;
 use App\Services\OrderService;
 use App\Services\PaymentService;
 use App\Services\PlanService;
@@ -31,6 +32,8 @@ class OrderController extends Controller
         $order->each(function ($item) { GiftOrderService::present($item); });
         $plan = Plan::get();
         for ($i = 0; $i < count($order); $i++) {
+            CustomPlanService::present($order[$i]);
+            if ($order[$i]->is_custom) continue;
             // بررسی اینکه آیا این سفارش شارژ کیف پول است
             if ($order[$i]['plan_id'] == 0) {
                 $order[$i]['plan'] = [
@@ -63,6 +66,8 @@ class OrderController extends Controller
             abort(500, __('Order does not exist or has been paid'));
         }
         GiftOrderService::present($order);
+        CustomPlanService::present($order);
+        if ($order->is_custom) return response(['data' => $order]);
         if ($order->plan_id == 0) {
             $order['plan'] = [
                 'id' => 0,
@@ -153,6 +158,7 @@ class OrderController extends Controller
         if (!$plan) {
             abort(500, __('Subscription plan does not exist'));
         }
+        if ($plan->custom_key) abort(422, __('Use the tailored quote endpoint for this package'));
 
         if (($isGift || $user->plan_id !== $plan->id) && !$planService->haveCapacity() && $request->input('period') !== 'reset_price') {
             abort(500, __('Current product is sold out'));
