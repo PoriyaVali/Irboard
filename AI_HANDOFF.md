@@ -1,8 +1,16 @@
 # AI work log and handoff
 
-## Active handoff - 2026-10-19 - Codex - admin editor implemented/validated, independent review CLEAR; preparing draft commit, HOLD
+## Active handoff - 2026-10-19 - Codex - admin editor committed; exact CI105/796 +15browser verified, NOT deployed
 
-All new admin source remains UNCOMMITTED atopb73a69a pending scopedcommit.
+Implementation COMMITTED/PUSHED687f771aa6d26cef3fa544b8a74cb341cb63f483
+atopb73a69a in existing OPEN/DRAFT PR15. ExactCI39250910665 all4jobsSUCCESS;
+bothPHP8.1/8.2 strict105tests/796assertionsPASS, PHP8.2 actualChromium15PASS/
+0FAIL/0SKIP+Node22+JSsyntaxPASS. InformationalFULL154tests/1083assertions/
+5samebaselineGoogleAuth missingSQLitev2_plan errors on each; NOTwholePASS.
+All4syntheticcheckoutmergeb65a2f88 trees5fc758c5 equal actual687f771 source
+tree, APIparentsverified. ../audit/panel-admin-tailored-ci/{SUMMARY.md,
+audit-result.json,4rawlogs} retains actual evidence. This follow-up changes
+ONLYAI_HANDOFF.md aftervalidatedimplementation, preparingdocumentationcommit.
 Implemented INSIDE existing Laravel "مدیریت اشتراک‌ها" route, without editing
 prebuilt umi bundles. Both FA/EN supported, existing tariff editor/table kept.
 Owner's explicit PLAN+PERIOD approvals, finite-total/no-reset ONLY, defaultoff/
@@ -21,7 +29,7 @@ public/assets/admin/tailored-pricing.{js,css};
 tests/Feature/{CustomPlanOrderTest.php,CustomPlanAdminTest.php};
 tests/AdminTailoredPricingBrowserTest.cjs; tests/fixtures/tailored-admin.cjs;
 docs/tailored-pricing-admin.fa.md. CI adds strictCustomPlanAdminTest and Node22
-actualChrome15browser checks onPHP8.2; actualremote CI of new source PENDING.
+actualChrome15browser checks onPHP8.2; actualremote results now verified above.
 
 Final local strict mandatory105tests/796assertionsPASS (old87/634 +new18/162),
 actual ../audit/custom-admin-financial-second.log. SixPHPsyntaxPASS, all3JS/CJS
@@ -37,12 +45,16 @@ curve NaN; deleted selected ref unremovable in tab. InitialPHPtests had16wrong
 route-prefix404s, fixed fixture; first105suite45errors/1failure because helper
 dropsnonIDSQLprimarykeys. Bothcustomfixtures now restore actualsettingskey
 uniqueindex; productiongate NOTweakened. Failedlogs preserved. No new fullPHP
-localpass claimed; previous baselineGoogleAuth errors remain historical until
-newCI result. True simultaneousMySQLsave race and livegateway/device UNRUN.
+localpass claimed; actualnewCIfull154/1083/5baselineerrors remains NOTPASS.
+Actualschema52fresh/53update, installer50/admin200/API403/aaPanelPASS; SQL/
+lock/installer blobs unchanged. Bothdependency scans retain25sameadvisories,
+no remediation. UpgradedUNIQUEindex not separatelyasserted; true simultaneous
+MySQLsave race, livegateway/device and browserwithliveLaravel UNRUN. Browser
+suite uses fixtureAPI; actual LaravelAPI/middleware/DB tested separately.
 
 Existing app149 all5files strictlyverified232/232PASS from39242819273 exact
-44568deb, releaseSKIPPED. This does not deploy backend. Next draftcommit/push,
-audit newCI exactsource+105financial+15browser and fullsuite limits. No merge,
+44568deb, releaseSKIPPED. This does not deploy backend. Sourcecommit/push and
+exactCI audit completed; documentationfollowup only remains. No merge,
 productionDDL/payments/deployment, releaseassets/publish/updater; HOLD persists.
 
 ## Previous handoff - 2026-10-19 - Codex - implementing admin editor/curves inside subscription tab, UNVALIDATED, HOLD
