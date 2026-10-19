@@ -8,7 +8,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const http = require('node:http');
-const { spawn } = require('node:child_process');
+const { spawn, execFileSync } = require('node:child_process');
 const { createFixture, hash } = require('./fixtures/tailored-admin.cjs');
 
 const root = path.resolve(__dirname, '..');
@@ -46,7 +46,7 @@ class CDP {
     }
 }
 
-async function openPage(language = 'en', route = '/plan', token = 'test-admin') {
+async function openPage(language = 'en', route = '/tailored-pricing', token = 'test-admin', options = {}) {
     const { targetId } = await cdp.call('Target.createTarget', { url: 'about:blank' });
     const { sessionId } = await cdp.call('Target.attachToTarget', { targetId, flatten: true });
     await cdp.call('Runtime.enable', {}, sessionId);
@@ -61,7 +61,7 @@ async function openPage(language = 'en', route = '/plan', token = 'test-admin') 
         },
         async wait(expression, description = expression) {
             const deadline = Date.now() + 7000;
-            while (Date.now() < deadline) { if (await this.evaluate(expression)) return; await delay(30); }
+            while (Date.now() < deadline) { if (await this.evaluate(`Boolean(${expression})`)) return; await delay(30); }
             throw new Error('Browser condition timed out: ' + description);
         },
         async click(selector) { await this.evaluate(`document.querySelector(${JSON.stringify(selector)}).click()`); },
@@ -70,10 +70,10 @@ async function openPage(language = 'en', route = '/plan', token = 'test-admin') 
         async preview() { const count = state.requests.length; await this.click('[data-action="preview"]'); await this.wait(`!document.querySelector('[data-action="preview"]').disabled`); assert.ok(state.requests.length > count, 'preview reached server'); },
         async close() { await cdp.call('Target.closeTarget', { targetId }); pages.delete(page); }
     };
-    await cdp.call('Page.navigate', { url: `${origin}/secure-fixture?lang=${language}&token=${encodeURIComponent(token)}&id=${++targetCounter}#${route}` }, sessionId);
+    await cdp.call('Page.navigate', { url: `${origin}/secure-fixture?lang=${language}&token=${encodeURIComponent(token)}&id=${++targetCounter}&full=${options.fullBundle ? '1' : '0'}&bundle=${options.bundle || 'umi-fa.js'}#${route}` }, sessionId);
     pages.add(page);
     await page.wait('window.fixtureReady === true');
-    if (route === '/plan' && token) await page.wait('document.querySelector("#doctor-tailored-pricing") && !document.querySelector("#doctor-tailored-pricing").textContent.includes("Loading pricing settings") && !document.querySelector("#doctor-tailored-pricing").textContent.includes("در حال دریافت تنظیمات قیمت")');
+    if (route === '/tailored-pricing' && token) await page.wait('document.querySelector("#doctor-tailored-pricing") && !document.querySelector("#doctor-tailored-pricing").textContent.includes("Loading pricing settings") && !document.querySelector("#doctor-tailored-pricing").textContent.includes("در حال دریافت تنظیمات قیمت")');
     return page;
 }
 
@@ -81,9 +81,12 @@ before(async () => {
     state = createFixture();
     server = http.createServer(async (req, res) => {
         const url = new URL(req.url, 'http://localhost');
-        if (url.pathname === '/assets/admin/tailored-pricing.js' || url.pathname === '/assets/admin/tailored-pricing.css') {
-            res.setHeader('Content-Type', url.pathname.endsWith('.js') ? 'text/javascript; charset=utf-8' : 'text/css; charset=utf-8');
-            res.end(fs.readFileSync(path.join(root, 'public', url.pathname))); return;
+        if (url.pathname.startsWith('/assets/admin/')) {
+            const override = process.env.TAILORED_BUNDLE_DIR && ['/assets/admin/umi.js', '/assets/admin/umi-fa.js'].includes(url.pathname);
+            const file = override ? path.resolve(process.env.TAILORED_BUNDLE_DIR, path.basename(url.pathname)) : path.resolve(root, 'public', '.' + url.pathname);
+            if ((!override && !file.startsWith(path.resolve(root, 'public', 'assets', 'admin') + path.sep)) || !fs.existsSync(file) || !fs.statSync(file).isFile()) { res.statusCode = 404; res.end(); return; }
+            res.setHeader('Content-Type', url.pathname.endsWith('.js') ? 'text/javascript; charset=utf-8' : url.pathname.endsWith('.css') ? 'text/css; charset=utf-8' : 'application/octet-stream');
+            res.end(fs.readFileSync(file)); return;
         }
         if (url.pathname.startsWith('/api/v1/fixture-admin/plan/custom/')) {
             let body = ''; for await (const part of req) body += part;
@@ -92,6 +95,7 @@ before(async () => {
             state.requests.push({ action, body: payload, authorization: req.headers.authorization });
             res.setHeader('Content-Type', 'application/json');
             if (state.mode === 'forbidden') { res.statusCode = 403; res.end(JSON.stringify({ message: 'forbidden' })); return; }
+            if (state.mode === 'malformed') { res.end(JSON.stringify({ data: { capable: true, configuration: 'unsupported' } })); return; }
             if (state.mode === 'incapable') { res.end(JSON.stringify({ data: { capable: false, configuration: { enabled: false, classifications: [], references: [] }, candidates: [], validation: { valid: false, errors: [{ code: 'schema_unavailable' }] }, preview: { enabled: false } } })); return; }
             if (state.mode === 'hold-fetch' && action === 'fetch') { state.hold = () => res.end(JSON.stringify(state.envelope())); return; }
             if (state.mode === 'hold-preview' && action === 'preview') { state.hold = () => res.end(JSON.stringify(state.envelope(payload.configuration))); return; }
@@ -105,10 +109,18 @@ before(async () => {
             }
             res.end(JSON.stringify(action === 'save' ? state.envelope() : response)); return;
         }
+        if (url.pathname.startsWith('/api/')) {
+            res.setHeader('Content-Type', 'application/json');
+            const user = { email: 'fixture-admin@example.invalid', is_admin: 1, avatar_url: '', balance: 0, commission_balance: 0 };
+            res.end(JSON.stringify({ data: /\/user\/(info|checkLogin)$/.test(url.pathname) ? user : [] })); return;
+        }
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
         const language = url.searchParams.get('lang') || 'en';
         const token = url.searchParams.get('token') || '';
-        res.end(`<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="/assets/admin/tailored-pricing.css"></head><body style="margin:0;background:#f0f3f7"><div id="root"><main class="ant-layout-content"><div id="existing-plans" style="padding:24px;background:white">${language === 'fa' ? 'مدیریت اشتراک‌ها — جدول و ویرایشگر فعلی' : 'Subscription management — existing tariff table and editor'}</div></main></div><script>localStorage.setItem('authorization',${JSON.stringify(token)});localStorage.setItem('umi_locale',${JSON.stringify(language === 'fa' ? 'fa-IR' : 'en-US')});window.settings={secure_path:'fixture-admin'};window.confirm=()=>true;window.fixtureReady=true;</script><script src="/assets/admin/tailored-pricing.js"></script></body></html>`);
+        const full = url.searchParams.get('full') === '1';
+        const bundle = url.searchParams.get('bundle') === 'umi.js' ? 'umi.js' : 'umi-fa.js';
+        const shell = `<main class="ant-layout-content"><div id="existing-plans" style="padding:24px;background:white">${language === 'fa' ? 'مدیریت اشتراک‌ها — جدول و ویرایشگر فعلی' : 'Subscription management — existing tariff table and editor'}</div><div id="doctor-tailored-host"></div></main>`;
+        res.end(`<!doctype html><html><head><meta charset="utf-8">${full ? '<link rel="stylesheet" href="/assets/admin/components.chunk.css"><link rel="stylesheet" href="/assets/admin/umi.css">' : ''}<link rel="stylesheet" href="/assets/admin/tailored-pricing.css"></head><body style="margin:0;background:#f0f3f7"><div id="root">${full ? '' : shell}</div><script>localStorage.setItem('authorization',${JSON.stringify(token)});localStorage.setItem('umi_locale',${JSON.stringify(language === 'fa' ? 'fa-IR' : 'en-US')});window.routerBase='/';window.settings={secure_path:'fixture-admin',title:'Doctor Mobile',theme:{sidebar:'light',header:'light',color:'blue'},version:'test',background_url:'',logo:''};window.confirm=()=>true;window.fixtureReady=true;</script>${full ? '<script src="/assets/admin/vendors.async.js"></script><script src="/assets/admin/components.async.js"></script><script src="/assets/admin/' + bundle + '"></script>' : ''}<script src="/assets/admin/tailored-pricing.js"></script></body></html>`);
     });
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     origin = `http://127.0.0.1:${server.address().port}`;
@@ -138,16 +150,77 @@ after(async () => {
     }
 });
 
-test('mounts inside subscription management without replacing its existing table; unsafe names remain text', async () => {
+test('bundle patch is idempotent, ordered after subscriptions, and preserves custom bytes', () => {
+    const python = process.env.PYTHON_BIN || (process.platform === 'win32' ? 'python' : 'python3');
+    const script = path.join(root, 'scripts', 'patch_admin_tailored_pricing.py');
+    const code = [
+        'import runpy,sys,pathlib',
+        'm=runpy.run_path(sys.argv[1])',
+        'patch=m["patch_bytes"]; remove=m["remove_owned"]; span=m["object_span"]',
+        'for name in ("umi.js","umi-fa.js"):',
+        ' raw=pathlib.Path(sys.argv[2],"public","assets","admin",name).read_bytes()',
+        ' assert patch(raw)==raw, "tracked bundle must match maintained patcher"',
+        ' original=remove(raw.decode("utf-8")).encode("utf-8")',
+        ' custom=b"/* operator-specific prefix */\\r\\n"+original+b"\\n;window.operatorCustomPreserved=true;\\r\\n"',
+        ' patched=patch(custom)',
+        ' assert patch(patched)==patched, "patch must be idempotent"',
+        ' assert remove(patched.decode("utf-8")).encode("utf-8")==custom, "all unowned bytes must be preserved"',
+        ' source=patched.decode("utf-8")',
+        ' assert source[span(source,"href")[1]:].startswith(", /*__DTP_MENU_START__*/"), "menu must follow subscription entry immediately"',
+        ' try: patch(original+b"\\nvar duplicate={href: \\\"/plan\\\"};")',
+        ' except m["PatchError"]: pass',
+        ' else: raise AssertionError("ambiguous anchors must fail closed")',
+        'print("both bundles: idempotence, exact preservation, menu order, ambiguous-anchor rejection PASS")'
+    ].join('\n');
+    const output = execFileSync(python, ['-c', code, script, root], { encoding: 'utf8', windowsHide: true });
+    assert.match(output, /PASS/);
+});
+
+test('ordinary subscription route is unchanged and makes no tailored API request', async () => {
+    const page = await openPage('en', '/plan'); await delay(600);
+    assert.equal(await page.evaluate('!!document.querySelector("#existing-plans")'), true);
+    assert.equal(await page.evaluate('!!document.querySelector("#doctor-tailored-pricing")'), false);
+    assert.equal(state.requests.length, 0);
+});
+
+for (const [bundle, language, label] of [['umi-fa.js', 'fa', 'دست‌دوز'], ['umi.js', 'en', 'Tailored']]) {
+    test(`${bundle}: actual SPA sidebar opens the new tab on the first click and preserves subscriptions`, async () => {
+        const page = await openPage(language, '/plan', 'test-admin', { fullBundle: true, bundle });
+        await page.wait('document.querySelector("#sidebar .nav-main-link-name") && document.querySelector("#main-container .ant-table")', 'actual admin sidebar and plan table');
+        const labels = await page.evaluate('Array.from(document.querySelectorAll("#sidebar .nav-main-link-name")).map(n=>n.textContent)');
+        const planIndex = labels.findIndex(value => value.includes('مدیریت اشتراک'));
+        assert.ok(planIndex >= 0, 'existing subscription entry is present'); assert.equal(labels[planIndex + 1], label);
+        assert.equal(state.requests.length, 0, 'new editor never prefetches from subscription tab');
+        await page.evaluate(`Array.from(document.querySelectorAll('#sidebar .nav-main-link-name')).find(n=>n.textContent===${JSON.stringify(label)}).closest('a').click()`);
+        await page.wait('document.querySelector("[data-classification]")', 'new editor appears on first click');
+        assert.equal(await page.evaluate('location.hash'), '#/tailored-pricing');
+        assert.equal(await page.evaluate('!!document.querySelector("#main-container .ant-table")'), false, 'ordinary table is not reused as the tailored route');
+        assert.equal(state.requests.length, 1);
+        await delay(550); assert.equal(state.requests.length, 1, 'React render does not trigger repeated fetches');
+        if (process.env.TAILORED_SCREENSHOT_DIR) {
+            await page.select(1, 'finite_total'); await page.ref(1, 'month_price'); await page.ref(1, 'quarter_price');
+            await page.select(2, 'finite_total'); await page.ref(2, 'month_price'); await page.select(3, 'unlimited_fup'); await page.preview();
+            fs.mkdirSync(process.env.TAILORED_SCREENSHOT_DIR, { recursive: true });
+            const metrics = await cdp.call('Page.getLayoutMetrics', {}, page.sessionId);
+            const screenshot = await cdp.call('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { x: 0, y: 0, width: 1440, height: metrics.cssContentSize.height, scale: 1 } }, page.sessionId);
+            fs.writeFileSync(path.join(process.env.TAILORED_SCREENSHOT_DIR, `admin-tailored-tab-${language}.png`), Buffer.from(screenshot.data, 'base64'));
+        }
+        const finalRequests = state.requests.length;
+        await page.evaluate(`Array.from(document.querySelectorAll('#sidebar .nav-main-link-name')).find(n=>n.textContent.includes('مدیریت اشتراک')).closest('a').click()`);
+        await page.wait('document.querySelector("#main-container .ant-table") && !document.querySelector("#doctor-tailored-pricing")');
+        assert.equal(await page.evaluate('location.hash'), '#/plan');
+        assert.equal(state.requests.length, finalRequests, 'returning to subscription management does not load tailored settings');
+    });
+}
+
+test('mounts only inside its dedicated route host; unsafe names remain text', async () => {
     const page = await openPage();
     assert.equal(await page.evaluate('document.querySelectorAll("#doctor-tailored-pricing").length'), 1);
     assert.equal(await page.evaluate('!!document.querySelector("#existing-plans")'), true);
-    assert.equal(await page.evaluate('document.querySelector("#doctor-tailored-pricing").parentElement.className'), 'ant-layout-content');
+    assert.equal(await page.evaluate('document.querySelector("#doctor-tailored-pricing").parentElement.id'), 'doctor-tailored-host');
     assert.equal(await page.evaluate('!!document.querySelector("#doctor-tailored-pricing img") || !!window.pwned'), false);
     assert.equal(state.requests.length, 1); assert.equal(state.requests[0].authorization, 'test-admin');
     assert.equal(await page.evaluate('document.querySelector("[data-action=save]").disabled'), true);
-    await page.click('[data-tailored-jump]');
-    assert.equal(await page.evaluate('document.activeElement.id'), 'doctor-tailored-pricing');
     await page.close();
 });
 
@@ -226,10 +299,10 @@ test('conflicts retain the draft and block preview/save until explicit reload', 
     await page.close();
 });
 
-test('React replacement remounts the existing editor and draft without extra fetches', async () => {
+test('React replacement of the owned route host remounts the editor and draft without extra fetches', async () => {
     const page = await openPage(); await page.select(1, 'finite_total'); await page.ref(1, 'month_price');
-    await page.evaluate('(()=>{const main=document.querySelector("main");main.replaceChildren(Object.assign(document.createElement("div"),{id:"replacement-plans",textContent:"React replacement"}));})()');
-    await page.wait('document.querySelector("#doctor-tailored-pricing") && document.querySelector("#replacement-plans")');
+    await page.evaluate('(()=>{const host=document.querySelector("#doctor-tailored-host");const replacement=document.createElement("div");replacement.id="doctor-tailored-host";host.replaceWith(replacement);})()');
+    await page.wait('document.querySelector("#doctor-tailored-pricing") && document.querySelector("#doctor-tailored-host")');
     assert.equal(await page.evaluate('document.querySelector("[data-reference=\\"1:month_price\\"]").checked'), true);
     assert.equal(state.requests.length, 1);
     await page.close();
@@ -240,10 +313,10 @@ test('route transitions discard stale in-flight previews and remount only on the
     state.mode = 'hold-preview'; await page.click('[data-action="preview"]');
     await page.wait('document.querySelector("[data-action=preview]").disabled');
     await until(() => typeof state.hold === 'function');
-    await page.evaluate('location.hash="/plan-other"'); await page.wait('!document.querySelector("#doctor-tailored-pricing")');
+    await page.evaluate('location.hash="/tailored-pricing-other"'); await page.wait('!document.querySelector("#doctor-tailored-pricing")');
     state.hold(); state.mode = ''; await delay(100);
     assert.equal(await page.evaluate('!!document.querySelector("#doctor-tailored-pricing")'), false);
-    await page.evaluate('location.hash="/plan"'); await page.wait('document.querySelector("[data-classification]")');
+    await page.evaluate('location.hash="/tailored-pricing"'); await page.wait('document.querySelector("[data-classification]")');
     assert.equal(await page.evaluate('document.querySelector("[data-reference=\\"1:month_price\\"]").checked'), false);
     assert.equal(state.requests.filter(r => r.action === 'save').length, 0);
     await page.close();
@@ -270,6 +343,19 @@ test('403 loads no configuration and causes no automatic retry', async () => {
     assert.equal(await page.evaluate('document.querySelectorAll("[data-classification],.dtp-chart").length'), 0);
     await delay(650); assert.equal(state.requests.length, 1);
     await page.close();
+});
+
+test('malformed pricing response fails closed without retry or mutation controls', async () => {
+    state.mode = 'malformed'; const page = await openPage();
+    assert.match(await page.evaluate('document.querySelector(".dtp-error").textContent'), /unsupported pricing response/);
+    assert.equal(await page.evaluate('document.querySelectorAll("[data-action=save],.dtp-chart").length'), 0);
+    await delay(600); assert.equal(state.requests.length, 1);
+});
+
+test('missing admin authorization causes no pricing request even on the dedicated route', async () => {
+    const page = await openPage('en', '/tailored-pricing', ''); await delay(600);
+    assert.equal(await page.evaluate('!!document.querySelector("#doctor-tailored-pricing")'), false);
+    assert.equal(state.requests.length, 0);
 });
 
 test('schema-not-ready response shows the concrete capability warning and cannot preview or save', async () => {

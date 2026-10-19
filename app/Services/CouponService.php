@@ -23,6 +23,11 @@ class CouponService
     public function use(Order $order):bool
     {
         if ($order->is_gift) abort(422, __('Discount codes cannot be used to buy gifts'));
+        $source = $this->coupon ? GiftOrderService::sourceForCoupon($this->coupon->id) : null;
+        if ($source && CustomPlanService::isCustom($source)
+            && (!CustomPlanService::isCustom($order) || CustomPlanService::commercialSnapshot($source) !== CustomPlanService::commercialSnapshot($order))) {
+            abort(422, __('Redeem the purchased tailored gift without changing its allowance'));
+        }
         $this->setPlanId($order->plan_id);
         $this->setUserId($order->user_id);
         $this->setPeriod($order->period);

@@ -46,7 +46,6 @@
 .dtp-chart .dtp-reference { fill: #d57b20; stroke: #fff; stroke-width: 1.5; }
 .dtp-chart .dtp-selected { fill: #0d8a73; stroke: #fff; stroke-width: 2; }
 .dtp-errors { color: #9b2323; padding-inline-start: 24px; }
-.dtp-entry { margin: 16px; font-family: Tahoma, Arial, sans-serif; }
 .dtp-selected-list { padding-inline-start: 24px; }
 .dtp-selected-list li { padding: 5px 0; }
 .dtp-selected-list .dtp-button { margin-inline-start: 12px; padding: 3px 9px; font-size: 12px; }

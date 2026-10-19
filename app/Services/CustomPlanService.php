@@ -57,7 +57,9 @@ class CustomPlanService
     /** Only explicitly approved finite-total plan/period references contribute. */
     public static function catalogue(): array
     {
-        return CustomPlanSettingsService::catalogue();
+        $catalogue = CustomPlanSettingsService::catalogue();
+        if ($catalogue['enabled']) $catalogue['supports_custom_gift'] = GiftOrderService::enabled();
+        return $catalogue;
     }
 
     private static function accessPlan(array $access): Plan
@@ -90,8 +92,17 @@ class CustomPlanService
         return [(int)$row->id, $discount, ['id' => (int)$row->id, 'type' => (int)$row->type, 'value' => (float)$row->value]];
     }
 
-    private static function economics(User $user, Plan $plan, int $tariff, ?string $code, bool $consume): array
+    private static function economics(User $user, Plan $plan, int $tariff, ?string $code, bool $consume, bool $isGift = false): array
     {
+        if ($isGift) {
+            // A transferable entitlement uses its advertised tariff. Personal
+            // VIP/coupon discounts cannot be converted into transferable codes.
+            if ($code !== null && $code !== '') abort(422, __('Discount codes cannot be used to buy gifts'));
+            $balance = $user->is_staff ? 0 : min(max(0, (int)$user->balance), $tariff);
+            return ['coupon_id' => null, 'coupon_meta' => null, 'vip_discount' => 0.0,
+                'discount_amount' => 0, 'total_amount' => $tariff,
+                'balance_amount' => $balance, 'payable_amount' => $tariff - $balance];
+        }
         $preview = new Order(['user_id' => $user->id, 'plan_id' => $plan->id, 'period' => self::PERIOD, 'total_amount' => $tariff]);
         [$couponId, $couponDiscount, $couponMeta] = self::coupon($code, $preview, $consume);
         // The panel's existing contract adds VIP and coupon discounts against
@@ -104,18 +115,20 @@ class CustomPlanService
             'discount_amount' => $discount, 'total_amount' => $total, 'balance_amount' => $balance, 'payable_amount' => $total - $balance];
     }
 
-    public static function quote(int $userId, int $volume, int $days, string $revision, ?string $code): array
+    public static function quote(int $userId, int $volume, int $days, string $revision, ?string $code, bool $isGift = false): array
     {
+        if ($isGift && !GiftOrderService::enabled()) self::fail(503, 'custom_gift_unavailable', 'Gift purchases are not available');
+        if ($isGift && $code !== null && $code !== '') abort(422, __('Discount codes cannot be used to buy gifts'));
         $catalogue = self::catalogue();
         if (!$catalogue['enabled']) self::fail(503, 'custom_unavailable', 'Tailored purchases are not available');
         if (!hash_equals($catalogue['pricing_revision'], $revision)) self::fail(409, 'custom_price_changed', 'Tariffs changed; refresh the pricing chart');
-        return DB::transaction(function () use ($userId, $volume, $days, $code, $catalogue) {
+        return DB::transaction(function () use ($userId, $volume, $days, $code, $catalogue, $isGift) {
             $user = User::findOrFail($userId);
             $plan = self::accessPlan($catalogue['cohort']);
             $usd = $catalogue['model']['base_usd'] * self::factor($volume, $days);
             $tariff = (int)floor($usd * $catalogue['exchange_rate'] / 1000) * 1000;
             if ($tariff <= 0 || $tariff > 2147483647) abort(503, __('The tailored tariff is unavailable'));
-            $money = self::economics($user, $plan, $tariff, $code, false);
+            $money = self::economics($user, $plan, $tariff, $code, false, $isGift);
             $snapshot = ['version' => 1, 'volume_gb' => $volume, 'duration_days' => $days,
                 'price_usd' => $usd, 'tariff_amount' => $tariff, 'exchange_rate' => $catalogue['exchange_rate'],
                 'source_plan_id' => $catalogue['source_plan_id'], 'access' => $catalogue['cohort'],
@@ -123,7 +136,7 @@ class CustomPlanService
             $expires = time() + self::QUOTE_SECONDS;
             $payload = ['kind' => 'custom-quote-v1', 'user_id' => $userId, 'trade_no' => (string)Str::uuid(),
                 'expires_at' => $expires, 'template_plan_id' => (int)$plan->id, 'coupon_code' => $code ?: '',
-                'snapshot' => $snapshot, 'economics' => $money];
+                'is_gift' => $isGift, 'snapshot' => $snapshot, 'economics' => $money];
             return ['quote_token' => Crypt::encryptString(json_encode($payload, JSON_PRESERVE_ZERO_FRACTION | JSON_THROW_ON_ERROR)),
                 'expires_at' => $expires, 'volume_gb' => $volume, 'duration_days' => $days,
                 'price_usd' => round($usd, 8), 'tariff_amount' => $tariff,
@@ -131,11 +144,12 @@ class CustomPlanService
                 'balance_amount' => $money['balance_amount'], 'payable_amount' => $money['payable_amount'],
                 'wallet_balance' => max(0, (int)$user->balance), 'wallet_eligible' => !$user->is_staff,
                 'template_plan_id' => (int)$plan->id, 'pricing_revision' => $catalogue['pricing_revision'],
-                'will_reserve' => OrderService::hasCurrentPlanToWaitFor($user)];
+                'is_gift' => $isGift, 'purpose' => $isGift ? 'gift' : 'self',
+                'will_reserve' => !$isGift && OrderService::hasCurrentPlanToWaitFor($user)];
         });
     }
 
-    public static function save(int $userId, string $token, bool $useWallet, ?string $code): Order
+    public static function save(int $userId, string $token, bool $useWallet, ?string $code, bool $isGift = false): Order
     {
         if (!self::enabled()) self::fail(503, 'custom_unavailable', 'Tailored purchases are not available');
         try { $quote = json_decode(Crypt::decryptString($token), true, 512, JSON_THROW_ON_ERROR); }
@@ -143,13 +157,17 @@ class CustomPlanService
         if (!is_array($quote) || ($quote['kind'] ?? null) !== 'custom-quote-v1' || ($quote['user_id'] ?? null) !== $userId || !isset($quote['trade_no'], $quote['snapshot'], $quote['economics'])) {
             self::fail(422, 'custom_invalid_quote', 'Invalid tailored quote');
         }
-        return DB::transaction(function () use ($userId, $quote, $useWallet, $code) {
+        // Old personal v1 quotes omit this field. Missing means personal only;
+        // a dedicated route can never flip an authenticated quote's purpose.
+        if (($quote['is_gift'] ?? false) !== $isGift) self::fail(422, 'custom_invalid_quote', 'The quote is for a different purchase purpose');
+        if ($isGift && !GiftOrderService::enabled()) self::fail(503, 'custom_gift_unavailable', 'Gift purchases are not available');
+        return DB::transaction(function () use ($userId, $quote, $useWallet, $code, $isGift) {
             $user = User::lockForUpdate()->findOrFail($userId);
             // User serialization plus unique trade_no makes repeated/double-tap
             // save requests return the same order without another wallet debit.
             $existing = Order::where('trade_no', $quote['trade_no'])->first();
             if ($existing) {
-                if ((int)$existing->user_id !== $userId || !self::isCustom($existing)) abort(409, __('Invalid tailored order'));
+                if ((int)$existing->user_id !== $userId || !self::isCustom($existing) || (bool)$existing->is_gift !== $isGift) abort(409, __('Invalid tailored order'));
                 return $existing;
             }
             if (($code ?: '') !== $quote['coupon_code']) self::fail(409, 'custom_quote_changed', 'Discount code changed; request a new quote');
@@ -161,11 +179,11 @@ class CustomPlanService
                 self::fail(409, 'custom_price_changed', 'The approved tariffs changed; request a new quote');
             }
             if ((new UserService())->isNotCompleteOrderByUserId($userId)) self::fail(409, 'pending_order', 'You have an unpaid or pending order');
-            if (OrderService::reservationLimitReached($user, self::PERIOD)) abort(409, __('The reserved plan limit has been reached'));
+            if (!$isGift && OrderService::reservationLimitReached($user, self::PERIOD)) abort(409, __('The reserved plan limit has been reached'));
             $plan = self::accessPlan($quote['snapshot']['access']);
             if ((int)$plan->id !== (int)$quote['template_plan_id']) self::fail(409, 'custom_price_changed', 'The access template changed; request a new quote');
             try {
-                $money = self::economics($user, $plan, (int)$quote['snapshot']['tariff_amount'], $quote['coupon_code'], true);
+                $money = self::economics($user, $plan, (int)$quote['snapshot']['tariff_amount'], $quote['coupon_code'], true, $isGift);
             } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
                 self::fail(409, 'custom_quote_changed', 'Coupon availability changed; request a new quote');
             }
@@ -178,7 +196,8 @@ class CustomPlanService
                 'trade_no' => $quote['trade_no'], 'total_amount' => $money['total_amount'] - $wallet,
                 'balance_amount' => $wallet, 'discount_amount' => $money['discount_amount'], 'coupon_id' => $money['coupon_id'],
                 'exchange_rate' => $quote['snapshot']['exchange_rate'], 'custom_snapshot' => $quote['snapshot'],
-                'type' => $user->plan_id ? 3 : 1]);
+                'type' => $isGift ? 8 : ($user->plan_id ? 3 : 1)]);
+            if ($isGift) $order->is_gift = true;
             // A tailored allowance never turns an earlier allowance into cash.
             $service = new OrderService($order);
             $service->setInvite($user);
@@ -191,7 +210,7 @@ class CustomPlanService
     /** Must run under the caller's transaction/user lock. */
     public static function activate(Order $order, User $user): void
     {
-        if (!self::isCustom($order) || (int)$order->user_id !== (int)$user->id) abort(500, __('Invalid tailored entitlement'));
+        if (!self::isCustom($order) || $order->is_gift || (int)$order->user_id !== (int)$user->id) abort(500, __('Invalid tailored entitlement'));
         $snapshot = $order->custom_snapshot;
         $volume = (int)($snapshot['volume_gb'] ?? 0);
         $days = (int)($snapshot['duration_days'] ?? 0);
@@ -233,7 +252,7 @@ class CustomPlanService
     {
         DB::transaction(function () use ($order) {
             $fresh = Order::lockForUpdate()->find($order->id);
-            if (!$fresh || !self::isCustom($fresh) || (int)$fresh->status !== 1) return;
+            if (!$fresh || !self::isCustom($fresh) || $fresh->is_gift || (int)$fresh->status !== 1) return;
             $user = User::lockForUpdate()->findOrFail($fresh->user_id);
             if (OrderService::hasCurrentPlanToWaitFor($user)) {
                 ReservedPlan::create(['user_id' => $user->id, 'order_id' => $fresh->id, 'plan_id' => $fresh->plan_id,
@@ -257,6 +276,17 @@ class CustomPlanService
         $order->plan = ['id' => (int)$order->plan_id, 'name' => 'تعرفه دست‌دوز',
             'transfer_enable' => $order->custom_volume_gb, 'is_wallet_recharge' => false];
         return $order;
+    }
+
+    /** Commercial entitlement only; never copy the purchaser's delivery history. */
+    public static function commercialSnapshot(Order $order): array
+    {
+        if (!self::isCustom($order)) abort(500, __('Invalid tailored entitlement'));
+        $keys = ['version', 'volume_gb', 'duration_days', 'price_usd', 'tariff_amount', 'exchange_rate',
+            'source_plan_id', 'access', 'pricing_revision', 'model'];
+        $snapshot = $order->custom_snapshot;
+        foreach ($keys as $key) if (!array_key_exists($key, $snapshot)) abort(500, __('Invalid tailored entitlement'));
+        return array_intersect_key($snapshot, array_flip($keys));
     }
 
     /** Never value pre-tailored consumed orders against a later allowance. */

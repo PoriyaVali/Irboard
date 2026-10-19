@@ -42,7 +42,12 @@ class GiftOrderService
             if (!$fresh || !$fresh->is_gift || (int)$fresh->status !== 1) return;
             if (!$fresh->gift_coupon_id) {
                 do {
-                    $code = 'GIFT-' . strtoupper(bin2hex(random_bytes(16)));
+                    // The receipt column is VARCHAR(64): 256 bits of hex fit
+                    // exactly, without a prefix. Existing normal codes retain
+                    // their established format and all existing codes work.
+                    $code = CustomPlanService::isCustom($fresh)
+                        ? strtoupper(bin2hex(random_bytes(32)))
+                        : 'GIFT-' . strtoupper(bin2hex(random_bytes(16)));
                 } while (Coupon::where('code', $code)->exists());
                 $coupon = Coupon::create([
                     'code' => $code,
@@ -120,7 +125,12 @@ class GiftOrderService
                 'discount_amount' => 0,
                 'coupon_id' => $couponService->getId(),
             ]);
-            $couponService->use($order);
+            if (CustomPlanService::isCustom($source)) {
+                if (!CustomPlanService::enabled()) abort(503, __('Tailored purchases are not available'));
+                $order->custom_snapshot = CustomPlanService::commercialSnapshot($source);
+                $order->exchange_rate = $source->exchange_rate;
+            }
+            if (!$couponService->use($order)) abort(500, __('Coupon failed'));
             // No price/availability re-check after payment: this is delivery of
             // an already purchased entitlement. Never credit buyer surplus.
             self::setRedemptionType($order, $user);

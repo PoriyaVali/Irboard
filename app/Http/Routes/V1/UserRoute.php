@@ -31,6 +31,7 @@ class UserRoute
             $router->post('/order/save', 'V1\\User\\OrderController@save');
             $router->post('/order/saveGift', 'V1\\User\\OrderController@saveGift');
             $router->post('/order/saveCustom', 'V1\\User\\CustomPlanController@save');
+            $router->post('/order/saveCustomGift', 'V1\\User\\CustomPlanController@saveGift');
             $router->post('/order/checkout', 'V1\\User\\OrderController@checkout');
             $router->get ('/order/check', 'V1\\User\\OrderController@check');
             $router->get ('/order/detail', 'V1\\User\\OrderController@detail');

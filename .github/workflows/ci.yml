@@ -638,17 +638,20 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Test tailored editor inside subscription management
+      - name: Test tailored sidebar tab and pricing editor
         if: matrix.php == '8.2'
         run: |
           set -e
           export CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           test -x "$CHROME_BIN"
+            python3 scripts/patch_admin_tailored_pricing.py --check
+            node --check public/assets/admin/umi.js
+            node --check public/assets/admin/umi-fa.js
           node --check public/assets/admin/tailored-pricing.js
           node --test tests/AdminTailoredPricingBrowserTest.cjs
 
       - name: Purchased gifts and money-path regressions
-        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'CustomPlanAdminTest|CustomPlanOrderTest|PurchasedGiftOrderTest|OrderMoneyFlowTest|TelegramBotFixesTest|ExchangeRateTest'
+        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'CustomPlanGiftOrderTest|CustomPlanAdminTest|CustomPlanOrderTest|PurchasedGiftOrderTest|OrderMoneyFlowTest|TelegramBotFixesTest|ExchangeRateTest'
 
       - name: Run tests (informational)
         continue-on-error: true

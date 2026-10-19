@@ -1,6 +1,79 @@
 # AI work log and handoff
 
-## Active handoff - 2026-10-19 - Codex - admin editor committed; exact CI105/796 +15browser verified, NOT deployed
+## Active handoff - 2026-10-19 - Codex - owner steers new admin sidebar + first gold app card + custom gifts; build150 IN PROGRESS
+
+Latest owner scope supersedes the old inside-/plan/separate-app-tab design.
+Implement a real Tailored sidebar tab immediately BELOW subscription management
+in BOTH umi.js/umi-fa.js; preserve existing tariff screen and production bundle
+customizations with a maintained additive/fenced/idempotent patcher. App custom
+card belongs FIRST in base plans, gold, two GB/day sliders, Toman from server
+USD model/rate/rounding; explicit self/others intent for normal AND custom gifts.
+Normal gift toggle was hidden while production capability false (old schema);
+new UI must clearly explain unsupported gift checkout. No silent self purchase.
+
+Implementation is UNCOMMITTED/UNVALIDATED. App new target2.2.4+150; root bumped
+pubspec.yaml and owns shared handoffs/CI integration/commits/deployment. Backend
+agent owns custom gift API/safe paid snapshot redemption + financial tests;
+app agent owns purchase/model/payment/locales/tests and EXCLUSIVE Flutter slot;
+admin UI agent owns both bundles/patcher/addon/browser tests. No public release.
+Old149 test artifacts/105 PHP +15 browser results are HISTORICAL, not tests of
+new source. Need new financial/browser/full app tests, independent review, exact
+source CI + signed150 artifacts. New custom gift code must fit VARCHAR64.
+
+Main backend deployment remains explicitly AUTHORIZED after this new source is
+ready. NO functional deployment/DDL/restart/payment/settings/approval yet.
+Actual prod fb1c64d at91.107.255.204; only dirty two umi bundles4883540bytes each,
+SHA26135ef246076243d19e8fd03a44f5daa393fbe935612269d23ecef6a91019be.
+Private olda377 source/config backup preparation was interrupted locally;
+completion UNKNOWN pending metadata verification, no full DB backup yet.
+Olda377 bundle is obsolete as deployment target; do not ship it as final scope.
+Default custom pricing OFF/no references remains; admin approves finite-total,
+no-reset, PLAN+PERIOD explicitly. Fixed shape/inferonlyA; commas thousands.
+Public APP release/tag/assets/updater HOLD persists, no permission re-ask.
+
+Validation update within active150 scope: backend124tests/1017assertions PASS,
+21actualChrome checks PASS +2realcustomproductionbundle firstclick checks PASS;
+app focused55PASS/0fail + scopedanalyzer0errors/0warnings/32infos. Independent
+financial review and fullapp validation still PENDING. UI/sharedsource UNCOMMITTED.
+Maintainedpatcher addsONLY665bytes peractualproductionbundle; strippingourfences
+returns originalbytes, originalhash26135ef..., patchedhash951c7179d096082c206309f1311607ca643364328f41c69d1cd2a5a144dd52b9.
+Olda377 private source/config backups now verifiedgzipOK, nofunctionalchanges.
+NEWprivatebackup /root/drmobile-deploy-20261019-tailored-v150 source/configOK;
+fullconsistentInnoDB DBbackup exit0,5352149gzipbytes/37577876rawbytes,
+SHA5da6c05c9070d525897f384ba880261367dcfab58472a376fb12644024fc9c11.
+DBMySQL5.7.44,53tablesALLInnoDB; backupgzipverification stillpending.
+Rootignoredtestartifactinspector preservedverified149copy, addedONLYexplicit
+2.2.4+150pair withstrictnormalreleaseinspectorunchanged;37offlinegate testsPASS.
+No150buildoractualartifactchecks yet. NoDDL/code/runtime/settingschangeonprod.
+
+Final new backend source READY FOR SCOPED COMMIT: independentfinancial/API/UI
+review CLEAR (../audit/custom-gift-independent-review.md; finishingreport),
+124tests/1017assertionsPASS,7PHPsyntaxPASS,21actualChromePASS+2customlivebundle
+copychecksPASS, JSsyntax/patcheridempotence/diffchecksPASS. Normalcodesunchanged;
+custom256bit64hex<=VARCHAR64, intentboundtoken/dedicatedsaveCustomGift, rawgift
+price/noVIP/coupons, immutablewhitelistedrecipientcommercialsnapshot, paidreceipt,
+retry/withdrawal/cancel/reserve/no-cash regressions. No newDDLbeyondold5columns.
+Exactnewfiles: app/Http/Controllers/V1/User/CustomPlanController.php;
+app/Http/Routes/V1/UserRoute.php; app/Services/{CustomPlanService,GiftOrderService,
+CouponService}.php; tests/Feature/{CustomPlanGiftOrderTest,CustomPlanOrderTest}.php;
+public/assets/admin/{umi.js,umi-fa.js,tailored-pricing.js,tailored-pricing.css};
+resources/views/admin.blade.php; scripts/patch_admin_tailored_pricing.py;
+tests/AdminTailoredPricingBrowserTest.cjs; .github/workflows/ci.yml;
+docs/{tailored-pricing-admin.fa.md,tailored-gifts.md};AI_HANDOFF.md.
+RootownsnewcustomgiftmandatoryCIfilter/UIagentownssyntaxguardstep. NewexactCI
+stillPENDING; nofullsuitePASSclaim. Mainserverfunctionalstate stilloriginal.
+
+## Previous handoff - 2026-10-19 - Codex - admin editor committed; exact CI105/796 +15browser verified, NOT deployed
+
+FINAL status-onlyfollowup, UNCOMMITTEDdocumentation: latestdocHEADa37721bb7a69e7849e4e133c75f1f39339cd8820
+is COMMITTED/PUSHED, ONLYAI_HANDOFF.md afterimplementation687f771. Its actual
+automaticCI39251532038 all4SUCCESS: bothPHP105/796strictPASS/full154/1083/
+5samebaselineGoogleAutherrors; actualChrome15PASS0skip0fail+Node22+syntax.
+All4checkoutmergeb783ccba treesd4137ccd equal latestHEAD; APIparentsverified.
+Evidence ../audit/panel-admin-tailored-ci/latest-doc-ci/{SUMMARY.md,audit-result.json,4rawlogs}.
+No code changes aftervalidated687, no additional manual workflowtrigger or
+tests by root. No required source/UI/artifact work remains for this scope;
+ownerphysicaltests and laterauthorizedbackend/schema rollout remain unrun.
 
 Implementation COMMITTED/PUSHED687f771aa6d26cef3fa544b8a74cb341cb63f483
 atopb73a69a in existing OPEN/DRAFT PR15. ExactCI39250910665 all4jobsSUCCESS;

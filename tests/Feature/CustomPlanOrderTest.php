@@ -304,7 +304,7 @@ class CustomPlanOrderTest extends TestCase
         $this->assertSame(0, Order::count());
     }
 
-    public function testPurchasedGiftCannotPayForTailoredPackageAndTailoredGiftFlagIsRefused()
+    public function testPurchasedGiftCannotPayForTailoredPackageOrPurchaseAnotherTailoredGift()
     {
         $source = $this->tariff();
         $buyer = $this->makeUser();
@@ -316,7 +316,7 @@ class CustomPlanOrderTest extends TestCase
         $headers = $this->auth($recipient);
         $input = ['volume_gb' => 35, 'duration_days' => 30, 'pricing_revision' => $catalogue['pricing_revision']];
         $this->withHeaders($headers)->postJson('/api/v1/user/plan/custom/quote', $input + ['coupon_code' => $code])->assertStatus(422);
-        $this->withHeaders($headers)->postJson('/api/v1/user/plan/custom/quote', $input + ['is_gift' => true])->assertStatus(422);
+        $this->withHeaders($headers)->postJson('/api/v1/user/plan/custom/quote', $input + ['is_gift' => true, 'coupon_code' => $code])->assertStatus(422);
         $this->assertSame(1, (int)Coupon::first()->limit_use);
     }
 

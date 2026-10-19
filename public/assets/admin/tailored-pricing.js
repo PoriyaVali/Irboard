@@ -23,7 +23,7 @@
             volumeCurve: 'Volume curve at the selected duration', timeCurve: 'Duration curve at the selected volume', usd: 'USD', toman: 'Toman',
             legend: 'Blue: model curve · Teal: selected package · Orange: approved references. Reference markers only appear when their other coordinate matches this slice.',
             draftChart: 'Draft model — not saved', savedChart: 'Saved model', period: 'days', reasonTitle: 'Excluded:', priceSource: 'Price source',
-            pricesHint: 'Edit tariff amounts in the existing subscription editor above, then reload this panel. This editor chooses references; it does not overwrite tariff prices.',
+            pricesHint: 'Edit tariff amounts in Subscription management, then return here and reload. This editor chooses references; it does not overwrite tariff prices.',
             stale: 'Settings or tariff prices changed elsewhere. Your draft is retained. Reload saved settings before previewing or saving again.',
             session: 'Your admin session changed. Reload this page and sign in again.', forbidden: 'Admin access is required. No settings were loaded or changed.',
             network: 'Could not reach the server. Your draft is retained; retry explicitly.', invalid: 'The selected references are not valid. Review the reasons below.',
@@ -52,7 +52,7 @@
             volumeCurve: 'منحنی حجم در مدت انتخاب‌شده', timeCurve: 'منحنی مدت در حجم انتخاب‌شده', usd: 'دلار', toman: 'تومان',
             legend: 'آبی: منحنی مدل · سبز: بسته انتخابی · نارنجی: مراجع تأییدشده. نقطه مرجع فقط وقتی نمایش داده می‌شود که مختصات دیگر آن با این برش برابر باشد.',
             draftChart: 'مدل پیش‌نویس — ذخیره نشده', savedChart: 'مدل ذخیره‌شده', period: 'روز', reasonTitle: 'علت عدم انتخاب:', priceSource: 'مبنای قیمت',
-            pricesHint: 'مبلغ تعرفه‌ها را در ویرایشگر اشتراک‌های همین صفحه تغییر دهید، سپس این بخش را دوباره بارگذاری کنید. این بخش مراجع را انتخاب می‌کند و مبلغ تعرفه‌ها را بازنویسی نمی‌کند.',
+            pricesHint: 'مبلغ تعرفه‌ها را در تب مدیریت اشتراک‌ها تغییر دهید، سپس به این تب برگردید و تنظیمات را دوباره دریافت کنید. این بخش مراجع را انتخاب می‌کند و مبلغ تعرفه‌ها را بازنویسی نمی‌کند.',
             stale: 'تنظیمات یا قیمت تعرفه‌ها در جای دیگری تغییر کرده است. پیش‌نویس شما حفظ شده؛ پیش از ادامه تنظیمات ذخیره‌شده را دوباره دریافت کنید.',
             session: 'نشست مدیریت تغییر کرده است. صفحه را دوباره بارگذاری کنید و وارد شوید.', forbidden: 'دسترسی مدیر لازم است. تنظیماتی دریافت یا تغییر داده نشد.',
             network: 'ارتباط با سرور برقرار نشد. پیش‌نویس حفظ شده؛ دوباره تلاش کنید.', invalid: 'مراجع انتخاب‌شده معتبر نیستند. علت‌ها را در پایین بررسی کنید.',
@@ -94,13 +94,13 @@
     function dirty(s) { return canonical(s.draft) !== canonical(s.saved); }
     function auth() { return localStorage.getItem('authorization') || ''; }
     function secure() { var value = String((window.settings || {}).secure_path || ''); return /^[A-Za-z0-9_-]+$/.test(value) ? value : ''; }
-    function onPlanRoute() {
+    function onTailoredRoute() {
         var hash = location.hash.replace(/^#/, '').split('?')[0].replace(/\/$/, '');
-        if (hash) return hash === '/plan';
+        if (hash) return hash === '/tailored-pricing';
         var path = location.pathname.replace(/\/$/, '');
-        return path === '/plan' || (!!secure() && path === '/' + secure() + '/plan');
+        return path === '/tailored-pricing' || (!!secure() && path === '/' + secure() + '/tailored-pricing');
     }
-    function alive(s) { return mounted === s && !s.disposed && onPlanRoute() && auth() === s.token && locale() === s.lang; }
+    function alive(s) { return mounted === s && !s.disposed && onTailoredRoute() && auth() === s.token && locale() === s.lang; }
     function classification(s, id) {
         var entry = s.draft.classifications.find(function (x) { return Number(x.plan_id) === Number(id); });
         return entry ? entry.quota_type : 'unknown';
@@ -369,27 +369,24 @@
         renderModel(s, root);
     }
     function dispose(s) {
-        s.disposed = true; s.generation++; if (s.controller) s.controller.abort(); s.root.remove(); s.entry.remove();
+        s.disposed = true; s.generation++; if (s.controller) s.controller.abort(); s.root.remove();
         if (mounted === s) mounted = null;
     }
     function scan() {
         queued = false;
-        if (mounted && (!onPlanRoute() || auth() !== mounted.token || locale() !== mounted.lang)) dispose(mounted);
-        if (!onPlanRoute() || !secure() || !auth()) return;
-        var parent = document.querySelector('.ant-layout-content') || document.querySelector('main') || document.getElementById('root');
-        if (!parent || (parent.id === 'root' && !parent.firstElementChild)) return;
+        if (mounted && (!onTailoredRoute() || auth() !== mounted.token || locale() !== mounted.lang)) dispose(mounted);
+        if (!onTailoredRoute() || !secure() || !auth()) return;
+        // The registered SPA route owns this host; never take over the ordinary plan page or a login shell.
+        var parent = document.getElementById('doctor-tailored-host');
+        if (!parent) return;
         if (mounted) {
             if (!mounted.root.isConnected || mounted.root.parentElement !== parent) parent.appendChild(mounted.root);
-            if (!mounted.entry.isConnected || mounted.entry.parentElement !== parent) parent.prepend(mounted.entry);
             return;
         }
         var root = el('section', 'dtp-panel'); root.id = 'doctor-tailored-pricing'; root.tabIndex = -1; root.setAttribute('aria-label', text({ lang: locale() }, 'title'));
-        var entry = el('div', 'dtp-entry'); entry.dir = locale() === 'fa' ? 'rtl' : 'ltr';
-        var jump = button({ lang: locale() }, 'title', function () { root.scrollIntoView({ behavior: 'smooth', block: 'start' }); root.focus({ preventScroll: true }); });
-        jump.dataset.tailoredJump = 'true'; entry.appendChild(jump);
         var s = { root: root, token: auth(), lang: locale(), generation: 0, disposed: false, busy: false, blocked: false, conflicted: false,
-            entry: entry, data: null, saved: null, draft: null, evaluation: null, previewKey: null, error: '', notice: '', volume: 35, days: 30, currency: 'usd' };
-        mounted = s; parent.prepend(entry); parent.appendChild(root); request(s, 'fetch');
+            data: null, saved: null, draft: null, evaluation: null, previewKey: null, error: '', notice: '', volume: 35, days: 30, currency: 'usd' };
+        mounted = s; parent.appendChild(root); request(s, 'fetch');
     }
     function schedule() { if (!queued) { queued = true; queueMicrotask(scan); } }
     new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
