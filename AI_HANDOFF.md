@@ -1,8 +1,15 @@
 # AI work log and handoff
 
-## Active handoff - 2026-10-19 - Codex - tailored backend financial review CLEAR; preparing draft commit, HOLD
+## Active handoff - 2026-10-19 - Codex - tailored/gift backend exact CI audited; not deployed, HOLD
 
-New source UNCOMMITTED atop0fbfa28; priorgift4f572b0 retained. Final mandatory
+Source COMMITTED/PUSHED0a40a87a85a67ba42b64033ac4c555593064687e atop0fbfa28
+in existing OPEN/DRAFT PR15; priorgift4f572b0 retained. Actual CI39242808396
+all4jobsSUCCESS. BothPHP8.1/8.2 mandatory87/634PASS. Informational FULLsuite
+136tests/921assertions/5ERRORS on each; all5GoogleAuth missingSQLitev2_plan
+names/errors match saved baseline. No wholePHPpass. All4checkoutsyntheticmerge
+ac522ffd tree149ef006 exactly equals0a40a87 source tree; APIparentbinding proven.
+Evidence ../audit/panel-tailored-ci/{SUMMARY.md,audit-result.json,4rawlogs}.
+This follow-up is documentation only after validated implementation. Final mandatory
 87tests/634assertionsPASS:33custom/316 +54existing/318. Actual final log
 ../audit/custom-plan-financial-final-delivery.log. All10changed/newPHPfiles
 syntax PASS, gitdiffcheckPASS. Independent financial reviewer cleared final
@@ -31,7 +38,13 @@ orders remain globally excluded from credit. Cancelled late-paid refund and
 existing gift/wallet paths remain covered. Full MySQL concurrency, real gateway
 and live production schema unrun. App report records contract and evidence.
 
-Next scopedcommit/push existing OPEN/DRAFT PR15 and verify its CI, no merge or
+ActualfreshSQL52tables/update53/reapply53/upstreamcolumns checksPASS. Fresh
+strictimport includes custom_keyUNIQUE DDL; upgrade does not explicitlyquery
+thatindex and uses mysql--force. MandatorySQLite tests cover partialcolumns/
+missinguniqueindexfailclosed, not liveMySQLconcurrency. Actualinstaller50tables/
+admin200/protectedAPI403/aaPanelPASS; no individualnewfieldassertions. Both
+dependency scans25advisories exactlypriorgiftset; unchangedcomposer.lock vs
+baseline23scan, no remediation claimed. SourceandCIauditscomplete, no merge or
 deployment. TWO additivecustomschema columns + prior3giftcolumns await future
 authorized rollout. No productionDDL/payment/publish/updater; user HOLD persists.
 
