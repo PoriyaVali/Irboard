@@ -1,6 +1,111 @@
 # AI work log and handoff
 
-## Active handoff - 2026-10-19 - Codex - owner steers new admin sidebar + first gold app card + custom gifts; build150 IN PROGRESS
+## Active handoff - 2026-10-20 - Codex - main backend DEPLOYED; 2.2.4+150 test files VERIFIED; public app HOLD
+
+Production feature source e9c745603cf5ee3f26a4833c1b1e924a87154e1d is LIVE on main
+91.107.255.204 /www/wwwroot/ddr.drmobilejayzan.info, completed07:00:17UTC Oct20.
+Five additive columns + exact unique indexes custom_key/gift_coupon_id verified.
+No settings/reference approvals, tariff changes, real purchase or payment tests
+performed. Custom pricing remains OFF/no row/no references until administrator
+explicitly chooses finite-total/no-reset plan+period references and enables it.
+Protected env/composer/custom app rules preserved. Both live customized Umi
+bundles gained only665fencedbytes; installed4884205bytes SHA951c7179d096082c206309f1311607ca643364328f41c69d1cd2a5a144dd52b9,
+UID/GID1000:1000/mode0644; stripping additions reproduces old26135ef... bytes.
+
+Live HTTPS/SNI checks PASS: guestJSON200, adminHTML200 with bothaddon includes,
+all4assets200 and exactfilehashes; anonymousadmin_custom/user_custom/orders403.
+BothSupervisor groups RUNNING (initialnewPIDs3228409/3228410); unrelatedconfig-
+agent untouched. Horizon stop signal corrected TERM, WebMan QUIT; bothwait600,
+backedupconfig metadata/ownership preserved and reread/update loaded after new
+source installation. Source/DB activation happened only after ALLoldapp processes
+were zero. Newruntime acknowledged maintenance503, then UP200 before exposure.
+
+New private full DBbackup at .../drmobile-deploy-20261019-tailored-v150/resume-20261020:
+7972743gzipbytes/176693724rawbytes, SHA63e0ac5a6faebc826ea45d333e8d3990d76a104567ffd763b63bf2485a7abe0c;
+consistentInnoDB snapshot and gzipintegrityPASS; config/customization backups
+private0700/0600. Rollout journal and logs there; local ignored audit/production-
+resume-20261020b.log/exit0 +HTTP log. Prior attempt20261020 timedout duringruntime
+stop BEFOREDDL/source, automatically restored originalUP200; failedlog preserved.
+Successful nextattempt drainedfinancialwork at06:59:54, stoppedallapp processes
+07:00:00, schema07:00:01/source07:00:05/UP07:00:17. No bounded HTTPforce-cleanup
+branch was used in successful journal. Older attempts may have hit Supervisor's
+old10s forced-stop; do not claim no forced termination across entire history.
+No database restore or old-code rollback after traffic exposure is permitted.
+
+App built source c2dc4f2b5bacb2d382d2699e08a3c0b65adddd9f, version2.2.4+150.
+ExactCI39290407606 attempt1 ALLtest/Android/WindowsSUCCESS; releaseSKIPPED.
+ACTUALall5files passed232/232strictchecks,0fail on2026-10-20T06:48:30UTC,
+audit/test150-verification.json/.log/.exit0 +audit/test150/. Android original
+signer/appID/150/nativepins, Windows150/runtime/imports/375installerpaths and
+exactunchangednativecacheprovenance PASS. Strictnormalverify_release.py SHA
+542f06952d18beada18913260f931ab93b67c757a66dc572f45b90e7b62889ae unchanged.
+Historical147/148/149files preserved. docs/testing/2.2.4-150-artifacts.md newly
+written;150ownerchecklist alreadycommitted withbuilt source. This final follow-up
+commits DOCUMENTATION ONLY, with no implementation code change or rebuild.
+
+Validation: app local1294PASS/3skip/0fail; exactLinux1287PASS/10platformskip;
+analyzer0errors/30identical149warnings/1122infos. BackendexactCI39289450940:
+124tests/1017assertionsbothPHP8.1+8.2 PASS,21ChromePASS+2customlivebundlecopy
+checksPASS; full173/1304/5baselineGoogleAutherrors NOTwholepass. Independent
+financial/API review clear; earlier failedscrolltestfixed+fullrerunretained.
+No physicalAndroid/VPN, installerexecution, livegateway or trueMySQLrace test.
+
+Admin: real Tailored sidebar directlybelowsubscriptions in BOTHUmi bundles.
+App: first goldcustomcard insideBaseplans(no separatecustomtab), GB/day sliders,
+groupedToman fromLaravelmodel/rate; explicit personal/gift. Normal+custom paid
+codes retained/copyable inOrders; recipientProfile>Giftcard. Quotedintentbound,
+noVIP/couponforgift, immutablecommercialdelivery. Commas remain THOUSANDS.
+Main deployment authorized; public APP release/tag/assets/updater stillHOLD.
+Do not publish or autoapprove references. Root inheritedef32475/openwrt preserved.
+
+Final documentation scope in this commit: AI_HANDOFF.md plus app150 artifact
+inventory/historical149 report pointer, or backend deployment guide respectively.
+Implementation comes from the prior coordinated work and recorded commit authors;
+this resumed turn verified actual artifacts, completed production rollout and
+wrote final records. Public HOLD read-only snapshot confirms BOTH PRsOPEN/DRAFT,
+oldv2.2.3tagfc861 unchanged/no2.2.4tag, botholdreleasesDRAFT/unpublished, public
+updatermain845895c/version2.2.1 unchanged. Final snapshot is ignored
+../audit/final150-publication-hold.json. No app release/merge/publicupload.
+
+## Previous handoff - 2026-10-20 - Codex - resuming after usage interruption; owner restored Laravel, production rechecked
+
+Owner requests completion and says Laravel was manually re-enabled after the
+five-hour usage window expired. Do not blindly resume yesterday's scripts.
+Fresh read-only server check: main HEADfb1c64dfff6bdf73fc85433e814ac82b7c607e11,
+ONLY two customized Umi files dirty, original26135ef... hashes unchanged.
+V2b/Horizon PID2883370 and WebMan PID2898796 RUNNING; Supervisor configs still
+original QUIT/defaultwait. All five gift/custom columns and two indexes STILL
+ABSENT. No custom pricing row or approved reference. Feature source NOT deployed.
+
+Prior failed attempt2 (reconstructed from saved logs/current chat, not a pass):
+maintenance entered, queues/background drained, old Horizon gracefully signaled.
+WebMan graceful wait timed out180s on retained PHP connection counter despite
+zero socket descriptors. Targeted idle-child TERM + supervisorstop wait7s also
+timed out; Supervisor's old10s stop may have forcibly ended its master. Oldpinned
+PIDs disappeared, four maintenance-era orphan workers were observed. No schema/
+source/supervisorconfig mutation completed. Owner later restored Laravel. Failed
+logs preserved; do not claim clean graceful shutdown or noforcedkill happened.
+New rollout must recapture current PIDs and backups, drain actual financial work,
+stop old runtime conclusively and retain new fulfilment handlers after exposure.
+
+Implementation already COMMITTED/PUSHED: backend e9c745603cf5ee3f26a4833c1b1e924a87154e1d,
+app c2dc4f2b5bacb2d382d2699e08a3c0b65adddd9f (2.2.4+150). Backend exactCI39289450940:
+124tests/1017assertions bothPHP PASS,21ChromePASS; full173/1304/5baselineGoogleAuth
+errors NOTwholepass. Local app1294PASS/3skip, analyzer0errors/30samewarnings/1122infos.
+New signed appCI39290407606 now confirmed COMPLETE/SUCCESS; test/windows/android
+SUCCESS, releaseSKIPPED. ActualLinux1287PASS/10skip, same30warnings. Strict actual
+five-file150 verification started now; NOT yet a binary pass. Older147/148/149
+files preserved. No new source change/rebuild needed unless a concrete issue.
+
+Main backend deployment remains explicitly authorized. Public APP release/tag/
+assets/updater HOLD persists. New admin tab below subscriptions; first goldcustom
+card inside Base plans, two GB/day sliders/Toman, self or gift checkout. Defaults
+OFF/no references until admin explicitly approves finite-total/no-reset plan+period.
+Only A inferred; fixed formula and comma thousands contract unchanged. Current
+local changes are durable handoff notes; inherited rootopenwrt/branch preserved.
+No new sub-agent work: root owns remaining validation/deployment/documentation.
+
+## Previous handoff - 2026-10-19 - Codex - owner steers new admin sidebar + first gold app card + custom gifts; build150 IN PROGRESS
 
 Latest owner scope supersedes the old inside-/plan/separate-app-tab design.
 Implement a real Tailored sidebar tab immediately BELOW subscription management
@@ -62,6 +167,33 @@ tests/AdminTailoredPricingBrowserTest.cjs; .github/workflows/ci.yml;
 docs/{tailored-pricing-admin.fa.md,tailored-gifts.md};AI_HANDOFF.md.
 RootownsnewcustomgiftmandatoryCIfilter/UIagentownssyntaxguardstep. NewexactCI
 stillPENDING; nofullsuitePASSclaim. Mainserverfunctionalstate stilloriginal.
+
+Source progress: backend18filesCOMMITTED/PUSHED e9c745603cf5ee3f26a4833c1b1e924a87154e1d;
+exactautomaticCI39289450940 running. IndependentreviewCLEAR; all124/1017financial,
+21Chrome+2custombundlechecks verified. Private fullDBgzipintegrity PASS,0600file/
+0700directory. Source-v150.bundle SHA f787e0c86ad5c3ae4d9398c2d741da1a99f6ca7d36e0df60ecb4ff35f0db94e6
+116460bytes uploadedprivate; NOTapplied/imported/sourceactivated. Supervisor
+rolloutreview foundoldHorizonQUITunsupported anddefault10secforcekillrisks;
+preparinggracefuldrain/configTERM+600guard, no liveconfigedit/restartyet.
+AppfirstFULLsuite1293PASS/3skip/1FAIL: newpurchaseListView physicsviolatedexisting
+sharedscrollcontract. RootremovedONLYlocalAlwaysScrollableScrollPhysics override;
+initialfailedlogpreserved. FinalfullsuiteRE-RUNNING onfixedsource+strengthened
+lostgift-save/withdrawaltest. No appcommit/build150/productionactivationyet.
+
+AppsourceCOMMITTED/PUSHED c2dc4f2b5bacb2d382d2699e08a3c0b65adddd9f;
+exactworkflow39290407606 attempt1 started17:00:30Z withandroid/windowsTRUE,
+releaseFALSE/emptytag. Full1294/3skip/0fail+analyzer0/30/1122 recorded; exactsame
+30warningmultiset149. Noactual150artifactverification yet; PR15 staysDRAFT.
+
+Productionattempt1 FAILED atmaintenanceHTTPguard: direct6600guest503 butTLSorigin
+500whilemaintenance; expected503guardaborted BEFOREpause/signals/configedit/DDL/
+sourcechange. RootguardedoriginalHEADfb/noDDL/noPreparedmarker, artisanUP,
+TLS200restoredimmediately. Originalservicesstillrunning. Privatefirstsupervisor
+configsbackedup, code/config/DBarchivesunchanged, stagedsource/overlayproofPASS.
+Failedlogproduction-v150-rollout.log/exit1 preserved; scriptsbeingadjustedto
+verifyactualinternalmaintenance503 andallowexactexistingprivatebackupsonretry.
+NOfunctionalfeaturedeploymentyet. Do notclaimfailedguard asproductbugwithout
+originrouting/errorhandlingevidence. No automaticdatabase/source rollbackused.
 
 ## Previous handoff - 2026-10-19 - Codex - admin editor committed; exact CI105/796 +15browser verified, NOT deployed
 
