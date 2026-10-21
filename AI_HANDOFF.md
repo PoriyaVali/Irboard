@@ -1,5 +1,58 @@
 # AI work log and handoff
 
+## Active handoff - 2026-10-21 - Codex - backend source synchronized; required CI PASS on PHP8.1/8.2
+
+Owner-authorized source sync COMPLETE for runtime commit
+850f9989df3c9f339b835709d7617c7d9ce8d06f, PUSHED to fix/posttest-gift-orders.
+PR15 is ready for review, updated with current scope and validation, NOT MERGED:
+https://github.com/PoriyaVali/Irboard/pull/15
+Existing main remainsfb1c64d. This entry is a documentation-only checkpoint;
+no runtime files or production state changed after the tested feature commit.
+
+Fresh GitHub CI39552754029 SUCCESS at EXACT850f998:
+https://github.com/PoriyaVali/Irboard/actions/runs/39552754029
+All4jobs SUCCESS: PHP8.1, PHP8.2, installer, install.sql schema. Mandatory regression
+127tests/1051assertions PASS on BOTH PHP versions. Real Chromium admin21PASS/0FAIL.
+Local PHP8.1 same127/1051PASS. Fresh INFORMATIONAL whole-suite result on BOTH PHP
+versions:176tests/1338assertions/5ERRORS, same unrelated GoogleAuth SQLite fixtures
+as prior baseline. Required CI is green; this is NOT a whole-backend test pass.
+Log ../audit/github225-panel-ci.log; no real payment or concurrent MySQL test.
+
+Exact runtime/test changes in850f998: app/Http/Controllers/V1/User/UserController.php,
+app/Services/GiftOrderService.php, tests/Feature/CustomPlanGiftOrderTest.php and
+tests/Feature/PurchasedGiftOrderTest.php, plus this handoff. Additive active/reserved/
+processing receipt metadata was ALREADY LIVE since152; no deployment, schema,
+settings/reference approvals, tariff changes or customer writes in this task.
+
+Paired app sourceeb00ef0d PUSHED to drmobile PR15 (ready, not merged), version
+2.2.5+156, local full1361PASS/2SKIP/0FAIL. Owner already published binaries, all5
+hashes matched final local156. No new release/tag/updater writes. Prior author
+identities retained; new commits authored Codex. No force push or delegation.
+
+## Active handoff - 2026-10-21 - Codex - receipt source PUSHED; PR15 ready; fresh CI running
+
+Commit850f9989df3c9f339b835709d7617c7d9ce8d06f (Codex) is PUSHED to
+origin/fix/posttest-gift-orders. Exactly five files: this AI_HANDOFF.md;
+app/Http/Controllers/V1/User/UserController.php; app/Services/GiftOrderService.php;
+tests/Feature/CustomPlanGiftOrderTest.php; tests/Feature/PurchasedGiftOrderTest.php.
+No newly implemented runtime behavior this turn: this records the metadata patch
+already LIVE since152. No redeployment, schema, setting/tariff or customer changes.
+
+https://github.com/PoriyaVali/Irboard/pull/15 is UPDATED with final tailored-admin,
+gift-card and receipt scope and READY FOR REVIEW, not merged. Main unchanged;
+unrelated PR14 remains open. Owner explicitly authorized source synchronization;
+no force push/history rewriting and previous authorship preserved. App source
+commit eb00ef0d is also pushed; app PR15 ready with version2.2.5+156. Owner already
+published2.2.5 binaries; no binary/tag/updater changes byagent here.
+
+Local PHP8.1 mandatory regression127tests/1051assertions PASS (16.893s), deprecated
+PHPUnit XML-schema notice only. Current app full1361PASS/2SKIP/0FAIL. Diff and
+high-signal credential scans PASS. GitHub CI39552754029 at exact850f998 RUNNING;
+PHP8.1, installer and schema already SUCCESS, PHP8.2 completing. Full backend suite
+not rerun locally; historical unrelated GoogleAuth fixture failures documented
+below. Do not claim whole-suite pass. Final CI result and final documentation commit
+pending. No physical device, actual payment or true MySQL race test performed.
+
 ## Active handoff - 2026-10-21 - Codex - GitHub sync authorized; gift receipt source ready
 
 Owner approved the app work and requested source synchronization on GitHub. The
