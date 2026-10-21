@@ -21096,7 +21096,7 @@
                         icon: o.a.createElement("i", {
                             className: "nav-main-link-icon si si-bag"
                         })
-                    }, {
+                    }, /*__DTP_MENU_START__*/{title: (/^fa\b/i.test(localStorage.getItem("umi_locale") || "fa") ? "\u062f\u0633\u062a\u200c\u062f\u0648\u0632" : "Tailored"), type: "item", href: "/tailored-pricing", icon: o.a.createElement("i", {className: "nav-main-link-icon si si-scissors"})}/*__DTP_MENU_END__*/, {
                         title: "مدیریت سفارش‌ها",
                         type: "item",
                         href: "/order",
@@ -82507,7 +82507,7 @@ callTrusttunnel: function(e, t, n) {
             path: "/plan",
             exact: !0,
             component: n("ih8c").default
-        }, {
+        }, /*__DTP_ROUTE_START__*/{path: "/tailored-pricing", exact: !0, component: function(e) {var r=n.n(n("q1tI")).a; return r.createElement(n("Bl7J").a, Object.assign({},e,{title:(/^fa\b/i.test(localStorage.getItem("umi_locale") || "fa") ? "\u062f\u0633\u062a\u200c\u062f\u0648\u0632" : "Tailored")}), r.createElement("div",{id:"doctor-tailored-host"}));}}/*__DTP_ROUTE_END__*/, {
             path: "/queue",
             exact: !0,
             component: n("Jezz").default

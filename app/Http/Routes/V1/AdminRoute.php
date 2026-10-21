@@ -28,6 +28,9 @@ class AdminRoute
             $router->get ('/exchange-rate/current', 'V1\Admin\ExchangeRateAdminController@current');
             $router->post('/exchange-rate/refresh', 'V1\Admin\ExchangeRateAdminController@refresh');
             // Plan
+            $router->get ('/plan/custom/fetch', 'V1\\Admin\\CustomPlanController@fetch');
+            $router->post('/plan/custom/preview', 'V1\\Admin\\CustomPlanController@preview');
+            $router->post('/plan/custom/save', 'V1\\Admin\\CustomPlanController@save');
             $router->get ('/plan/fetch', 'V1\\Admin\\PlanController@fetch');
             $router->post('/plan/save', 'V1\\Admin\\PlanController@save');
             $router->post('/plan/drop', 'V1\\Admin\\PlanController@drop');

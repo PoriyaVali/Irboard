@@ -73,6 +73,14 @@ class OrderService
     private function openOnce()
     {
         $order = $this->order;
+        if ($order->is_gift) {
+            GiftOrderService::fulfil($order);
+            return;
+        }
+        if (CustomPlanService::isCustom($order)) {
+            CustomPlanService::fulfil($order);
+            return;
+        }
         $this->user = User::find($order->user_id);
         if ($order->type == 9) {
             DB::beginTransaction();
@@ -96,7 +104,7 @@ class OrderService
             return;
         }
 
-        $plan = Plan::find($order->plan_id);
+        $plan = GiftOrderService::fixedPlan($order) ?? Plan::find($order->plan_id);
         if (!$plan) {
             abort(500, 'پلن این سفارش یافت نشد');
         }
@@ -178,7 +186,9 @@ class OrderService
     public function setOrderType(User $user)
     {
         $order = $this->order;
-        if ($order->period === 'deposit'){
+        if ($order->is_gift) {
+            $order->type = 8;
+        } else if ($order->period === 'deposit'){
             $order->type = 9;
         } else if ($order->period === 'reset_price') {
             $order->type = 4;
@@ -249,6 +259,8 @@ class OrderService
 
     private function getSurplusValue(User $user, Order $order)
     {
+        $currentPlan = $user->plan_id ? Plan::find($user->plan_id) : null;
+        if ($currentPlan && $currentPlan->custom_key) return;
         if ($user->expired_at === NULL) {
             $this->getSurplusValueByOneTime($user, $order);
         } else {
@@ -259,11 +271,13 @@ class OrderService
 
     private function getSurplusValueByOneTime(User $user, Order $order)
     {
-        $lastOneTimeOrder = Order::where('user_id', $user->id)
+        $oneTimeQuery = Order::where('user_id', $user->id)
+            ->where('type', '!=', 8)
             ->where('period', 'onetime_price')
             ->where('status', 3)
-            ->orderBy('id', 'DESC')
-            ->first();
+            ->orderBy('id', 'DESC');
+        CustomPlanService::constrainSurplus($oneTimeQuery, (int)$user->id);
+        $lastOneTimeOrder = $oneTimeQuery->first();
         if (!$lastOneTimeOrder) return;
         $nowUserTraffic = $user->transfer_enable / 1073741824;
         if ($nowUserTraffic == 0) return;
@@ -273,18 +287,23 @@ class OrderService
         $remainingTrafficRatio = $notUsedTraffic / $nowUserTraffic;
         $result = $remainingTrafficRatio * $paidTotalAmount;
         $order->surplus_amount = max($result, 0);
-        $orderModel = Order::where('user_id', $user->id)->where('period', '!=', 'reset_price')->where('status', 3);
+        $orderModel = Order::where('user_id', $user->id)->where('type', '!=', 8)->where('period', '!=', 'reset_price')->where('status', 3);
+        CustomPlanService::constrainSurplus($orderModel, (int)$user->id);
         $order->surplus_order_ids = array_column($orderModel->get()->toArray(), 'id');
     }
 
     private function getSurplusValueByPeriod(User $user, Order $order)
     {
-        $orders = Order::where('user_id', $user->id)
+        $query = Order::where('user_id', $user->id)
+            ->where('type', '!=', 8)
             ->where('period', '!=', 'reset_price')
             ->where('period', '!=', 'onetime_price')
             ->where('period', '!=', 'deposit')
-            ->where('status', 3)
-            ->get()
+            ->where('status', 3);
+        // Total-quota tailored entitlements are not calendar-month credits.
+        // Keep older panels working before the additive schema is installed.
+        CustomPlanService::constrainSurplus($query, (int)$user->id);
+        $orders = $query->get()
             ->toArray();
         if (!$orders) return;
         $orderAmountSum = 0;
@@ -362,7 +381,7 @@ class OrderService
                 DB::rollBack();
                 return true;
             }
-            if ($status === 2 && (int)$fresh->balance_amount > 0) {
+            if ($status === 2 && ((int)$fresh->balance_amount > 0 || GiftOrderService::sourceForCoupon($fresh->coupon_id))) {
                 $user = User::lockForUpdate()->find($fresh->user_id);
                 if (!$user) {
                     DB::rollBack();
@@ -429,6 +448,7 @@ class OrderService
                 DB::rollBack();
                 return false;
             }
+            GiftOrderService::restoreCancelledCoupon($fresh);
             if ($fresh->balance_amount) {
                 $userService = new UserService();
                 if (!$userService->addBalance($fresh->user_id, (int)$fresh->balance_amount)) {
@@ -605,6 +625,11 @@ class OrderService
         return true;
     }
 
+    public static function hasCurrentPlanToWaitFor(User $user): bool
+    {
+        return self::hasPlanToWaitFor($user);
+    }
+
     /**
      * Whether a paid plan order was, or is about to be, queued as a reserved
      * plan instead of taking effect now. The payment pages and the bot used to
@@ -614,6 +639,7 @@ class OrderService
      */
     public static function isReserved(Order $order): bool
     {
+        if ($order->is_gift) return false;
         if (!$order->plan_id || $order->period === 'reset_price') return false;
         // Read the user before the order: fulfilment writes both in one
         // transaction, so an order still not done means the user row read

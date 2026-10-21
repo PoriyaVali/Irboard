@@ -29,6 +29,9 @@ class UserRoute
             $router->post('/removeActiveSession', 'V1\\User\\UserController@removeActiveSession');
             // Order
             $router->post('/order/save', 'V1\\User\\OrderController@save');
+            $router->post('/order/saveGift', 'V1\\User\\OrderController@saveGift');
+            $router->post('/order/saveCustom', 'V1\\User\\CustomPlanController@save');
+            $router->post('/order/saveCustomGift', 'V1\\User\\CustomPlanController@saveGift');
             $router->post('/order/checkout', 'V1\\User\\OrderController@checkout');
             $router->get ('/order/check', 'V1\\User\\OrderController@check');
             $router->get ('/order/detail', 'V1\\User\\OrderController@detail');
@@ -37,6 +40,8 @@ class UserRoute
             $router->post('/order/cancel', 'V1\\User\\OrderController@cancel');
             // Plan
             $router->get ('/plan/fetch', 'V1\\User\\PlanController@fetch');
+            $router->get ('/plan/custom', 'V1\\User\\CustomPlanController@catalogue');
+            $router->post('/plan/custom/quote', 'V1\\User\\CustomPlanController@quote');
             // Metered add-on tiers the customer switches on for themselves.
             // The user is always taken from the session, never from the request.
             $router->get ('/addon/list', 'V1\\User\\AddonController@list');

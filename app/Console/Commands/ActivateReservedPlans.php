@@ -5,6 +5,8 @@ use App\Models\ReservedPlan;
 use App\Models\Plan;
 use App\Models\User;
 use App\Services\OrderService;
+use App\Services\CustomPlanService;
+use App\Services\GiftOrderService;
 use App\Models\Order;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -31,9 +33,6 @@ class ActivateReservedPlans extends Command
 
             if (!$reserved) continue;
 
-            $plan = Plan::find($reserved->plan_id);
-            if (!$plan) continue;
-
             $order = Order::find($reserved->order_id);
             if (!$order) continue;
 
@@ -50,19 +49,38 @@ class ActivateReservedPlans extends Command
                     DB::rollBack();
                     continue;
                 }
+                $order = Order::lockForUpdate()->find($reserved->order_id);
+                if (!$order || (int)$order->user_id !== (int)$user->id || (int)$reserved->user_id !== (int)$user->id || (int)$order->status !== 3) {
+                    DB::rollBack();
+                    continue;
+                }
+
+                $plan = GiftOrderService::fixedPlan($order) ?? Plan::find($reserved->plan_id);
+                if (!$plan && !CustomPlanService::isCustom($order)) {
+                    DB::rollBack();
+                    continue;
+                }
 
                 $orderService = new OrderService($order);
                 $orderService->user = $user;
 
                 // ریست ترافیک
-                $user->u = 0;
-                $user->d = 0;
-                $user->transfer_enable = $plan->transfer_enable * 1073741824;
-                $user->plan_id = $plan->id;
-                $user->group_id = $plan->group_id;
-                $user->device_limit = $plan->device_limit;
-                $user->speed_limit = $plan->speed_limit;
-                $user->expired_at = $orderService->getTimePublic($order->period, time());
+                if (CustomPlanService::isCustom($order)) {
+                    CustomPlanService::activate($order, $user);
+                    $order->saveOrFail();
+                } else {
+                    $user->u = 0;
+                    $user->d = 0;
+                    $user->transfer_enable = $plan->transfer_enable * 1073741824;
+                    $user->plan_id = $plan->id;
+                    $user->group_id = $plan->group_id;
+                    $user->device_limit = $plan->device_limit;
+                    $user->speed_limit = $plan->speed_limit;
+                    $user->expired_at = $order->period === 'onetime_price'
+                        ? null : $orderService->getTimePublic($order->period, time());
+                    $reserved->plan_id = $plan->id;
+                    $order->saveOrFail();
+                }
 
                 if (!$user->save()) {
                     DB::rollBack();

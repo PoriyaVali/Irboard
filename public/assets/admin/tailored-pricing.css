@@ -1,0 +1,52 @@
+/* Scoped to the maintained tailored editor; existing subscription controls are unchanged. */
+.dtp-panel { margin: 24px 16px; padding: 24px; background: #fff; color: #172c43; border: 1px solid #dbe5ee; border-radius: 12px; font-family: Tahoma, Arial, sans-serif; font-size: 14px; line-height: 1.8; }
+.dtp-panel *, .dtp-panel *::before, .dtp-panel *::after { box-sizing: border-box; }
+.dtp-panel h2 { font-size: 21px; color: #172c43; margin: 0 0 8px; }
+.dtp-panel h3 { font-size: 17px; margin: 22px 0 8px; color: #172c43; }
+.dtp-panel p { margin: 8px 0; }
+.dtp-muted { color: #586c80; font-size: 13px; }
+.dtp-toolbar, .dtp-actions, .dtp-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 16px 0; }
+.dtp-button { appearance: none; border: 1px solid #a9bdcd; border-radius: 6px; padding: 7px 14px; font: inherit; line-height: 1.5; background: #fff; color: #24486b; cursor: pointer; }
+.dtp-button:hover:not(:disabled) { background: #edf5fc; border-color: #386da1; }
+.dtp-button.dtp-primary { background: #1761a4; color: #fff; border-color: #1761a4; }
+.dtp-button:disabled { cursor: default; opacity: .5; }
+.dtp-panel :focus-visible { outline: 3px solid #edac3c; outline-offset: 3px; }
+.dtp-dirty, .dtp-excluded { color: #92541d; font-size: 13px; }
+.dtp-choice { display: inline-flex; gap: 8px; align-items: center; cursor: pointer; }
+.dtp-choice input { accent-color: #1761a4; width: 17px; height: 17px; margin: 0; flex-shrink: 0; }
+.dtp-enable { margin-top: 8px; font-weight: bold; }
+.dtp-select, .dtp-number { border: 1px solid #a9bdcd; border-radius: 5px; padding: 7px 9px; color: #172c43; background: #fff; font: inherit; min-height: 38px; max-width: 100%; }
+.dtp-select { width: 280px; }
+.dtp-alert { padding: 10px 14px; border: 1px solid; border-radius: 6px; }
+.dtp-error { color: #9b2323; background: #fff2f1; border-color: #efc0bd; }
+.dtp-success { color: #176237; background: #edfbf2; border-color: #a6d7b7; }
+.dtp-table-wrap { max-width: 100%; overflow: auto; border: 1px solid #e0e8ef; border-radius: 6px; }
+.dtp-table { width: 100%; border-collapse: collapse; text-align: start; min-width: 760px; }
+.dtp-table th, .dtp-table td { padding: 10px 12px; vertical-align: top; border-bottom: 1px solid #e3eaf1; text-align: start; }
+.dtp-table th { background: #eff5fa; color: #314e69; font-size: 13px; }
+.dtp-plan { background: #f8fafc; }
+.dtp-plan td { padding-top: 15px; }
+.dtp-numeric { direction: ltr; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dtp-model { margin-top: 24px; padding-top: 6px; border-top: 1px solid #dbe5ee; }
+.dtp-model-state { display: inline-block; border-radius: 20px; padding: 3px 12px; color: #24567f; background: #eaf3fb; }
+.dtp-formula { display: block; margin: 8px 0; padding: 14px; background: #f1f6fb; border-radius: 6px; font-family: Consolas, monospace; overflow: auto; font-size: 15px; }
+.dtp-stats { display: grid; grid-template-columns: minmax(180px, 1fr) 1fr; gap: 8px 16px; margin: 16px 0; }
+.dtp-stats dt { font-weight: normal; color: #586c80; }
+.dtp-stats dd { margin: 0; font-weight: bold; }
+.dtp-control { display: flex; flex-direction: column; gap: 6px; min-width: 175px; flex: 1 1 180px; max-width: 360px; }
+.dtp-number { width: 100%; direction: ltr; }
+.dtp-range { width: 100%; accent-color: #1761a4; }
+.dtp-price { background: #eaf7f3; color: #145647; border-radius: 7px; padding: 12px 16px; text-align: center; font-weight: bold; direction: ltr; }
+.dtp-curves { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 450px), 1fr)); gap: 16px; margin: 18px 0; }
+.dtp-curves figure { margin: 0; min-width: 0; padding: 12px; background: #fafcfe; border: 1px solid #e0e8ef; border-radius: 7px; }
+.dtp-curves figcaption { font-size: 13px; font-weight: bold; margin-bottom: 8px; }
+.dtp-chart { display: block; width: 100%; min-height: 200px; overflow: visible; font: 12px Tahoma, Arial, sans-serif; fill: #435d74; }
+.dtp-chart .dtp-grid { stroke: #dbe5ee; stroke-width: 1; }
+.dtp-chart .dtp-line { fill: none; stroke: #2676bd; stroke-width: 3; }
+.dtp-chart .dtp-reference { fill: #d57b20; stroke: #fff; stroke-width: 1.5; }
+.dtp-chart .dtp-selected { fill: #0d8a73; stroke: #fff; stroke-width: 2; }
+.dtp-errors { color: #9b2323; padding-inline-start: 24px; }
+.dtp-selected-list { padding-inline-start: 24px; }
+.dtp-selected-list li { padding: 5px 0; }
+.dtp-selected-list .dtp-button { margin-inline-start: 12px; padding: 3px 9px; font-size: 12px; }
+@media (max-width: 600px) { .dtp-panel { margin: 16px 8px; padding: 16px 12px; } .dtp-stats { grid-template-columns: 1fr; gap: 3px; } .dtp-stats dd { margin-bottom: 8px; } }

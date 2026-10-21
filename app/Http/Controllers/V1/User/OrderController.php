@@ -9,6 +9,8 @@ use App\Models\Payment;
 use App\Models\Plan;
 use App\Models\User;
 use App\Services\CouponService;
+use App\Services\GiftOrderService;
+use App\Services\CustomPlanService;
 use App\Services\OrderService;
 use App\Services\PaymentService;
 use App\Services\PlanService;
@@ -27,8 +29,11 @@ class OrderController extends Controller
             $model->where('status', $request->input('status'));
         }
         $order = $model->get();
+        $order->each(function ($item) { GiftOrderService::present($item); });
         $plan = Plan::get();
         for ($i = 0; $i < count($order); $i++) {
+            CustomPlanService::present($order[$i]);
+            if ($order[$i]->is_custom) continue;
             // بررسی اینکه آیا این سفارش شارژ کیف پول است
             if ($order[$i]['plan_id'] == 0) {
                 $order[$i]['plan'] = [
@@ -60,6 +65,9 @@ class OrderController extends Controller
         if (!$order) {
             abort(500, __('Order does not exist or has been paid'));
         }
+        GiftOrderService::present($order);
+        CustomPlanService::present($order);
+        if ($order->is_custom) return response(['data' => $order]);
         if ($order->plan_id == 0) {
             $order['plan'] = [
                 'id' => 0,
@@ -77,7 +85,7 @@ class OrderController extends Controller
         }
         $order['plan'] = Plan::find($order->plan_id);
         $order['try_out_plan_id'] = (int)config('v2board.try_out_plan_id');
-        if (!$order['plan']) {
+        if (!$order['plan'] && !$order->is_gift) {
             abort(500, __('Subscription plan does not exist'));
         }
         if ($order->surplus_order_ids) {
@@ -88,8 +96,25 @@ class OrderController extends Controller
         ]);
     }
 
+    /** Older panels do not expose this route, so gift creation fails closed. */
+    public function saveGift(OrderSave $request)
+    {
+        $request->merge(['is_gift' => true]);
+        return $this->save($request);
+    }
+
     public function save(OrderSave $request)
     {
+        $isGift = $request->boolean('is_gift');
+        if ($isGift) {
+            if (!GiftOrderService::enabled() || !\App\Services\CustomPlanService::enabled()) {
+                abort(503, __('Gift purchases are not available'));
+            }
+            if ($request->input('plan_id') == 0 || in_array($request->input('period'), ['deposit', 'reset_price'], true)) {
+                abort(422, __('Only subscription plans can be purchased as gifts'));
+            }
+            if ($request->filled('coupon_code')) abort(422, __('Discount codes cannot be used to buy gifts'));
+        }
         $userService = new UserService();
         if ($userService->isNotCompleteOrderByUserId($request->user['id'])) {
             abort(500, __('You have an unpaid or pending order, please try again later or cancel it'));
@@ -135,13 +160,17 @@ class OrderController extends Controller
         if (!$plan) {
             abort(500, __('Subscription plan does not exist'));
         }
+        if ($plan->custom_key) abort(422, __('Use the tailored quote endpoint for this package'));
 
-        if ($user->plan_id !== $plan->id && !$planService->haveCapacity() && $request->input('period') !== 'reset_price') {
+        if (($isGift || $user->plan_id !== $plan->id) && !$planService->haveCapacity() && $request->input('period') !== 'reset_price') {
             abort(500, __('Current product is sold out'));
         }
 
         if ($plan[$request->input('period')] === NULL) {
             abort(500, __('This payment period cannot be purchased, please choose another period'));
+        }
+        if ($isGift && $plan[$request->input('period')] < 0) {
+            abort(422, __('The gift tariff is not available'));
         }
 
         if ($request->input('period') === 'reset_price') {
@@ -150,24 +179,24 @@ class OrderController extends Controller
             }
         }
 
-        if ((!$plan->show && !$plan->renew) || (!$plan->show && $user->plan_id !== $plan->id)) {
+        if (($isGift && !$plan->show) || (!$plan->show && !$plan->renew) || (!$plan->show && $user->plan_id !== $plan->id)) {
             if ($request->input('period') !== 'reset_price') {
                 abort(500, __('This subscription has been sold out, please choose another subscription'));
             }
         }
 
-        if (!$plan->renew && $user->plan_id == $plan->id && $request->input('period') !== 'reset_price') {
+        if (!$isGift && !$plan->renew && $user->plan_id == $plan->id && $request->input('period') !== 'reset_price') {
             abort(500, __('This subscription cannot be renewed, please change to another subscription'));
         }
 
 
-        if (!$plan->show && $plan->renew && !$userService->isAvailable($user)) {
+        if (!$isGift && !$plan->show && $plan->renew && !$userService->isAvailable($user)) {
             abort(500, __('This subscription has expired, please change to another subscription'));
         }
 
         // Refused here, before any money moves - fulfilment can no longer
         // refuse a paid order.
-        if (OrderService::reservationLimitReached($user, $request->input('period'))) {
+        if (!$isGift && OrderService::reservationLimitReached($user, $request->input('period'))) {
             abort(500, 'حداکثر ۱۰ بسته رزرو مجاز است');
         }
 
@@ -179,6 +208,10 @@ class OrderController extends Controller
         $order->period = $request->input('period');
         $order->trade_no = Helper::generateOrderNo();
         $order->total_amount = $plan[$request->input('period')];
+        if ($isGift) {
+            $order->is_gift = true;
+            GiftOrderService::snapshotFixedGift($order, $plan);
+        }
 
         if ($request->input('coupon_code')) {
             $couponService = new CouponService($request->input('coupon_code'));
@@ -197,8 +230,18 @@ class OrderController extends Controller
             $order->coupon_id = $couponService->getId();
         }
 
-        $orderService->setVipDiscount($user);
-        $orderService->setOrderType($user);
+        // Paid gifts are transferable at the advertised plan price. A redeemed
+        // gift already covers the entire tariff and cannot produce VIP cash.
+        if (!$isGift && (!isset($couponService) || !$couponService->isPurchasedGift())) {
+            $orderService->setVipDiscount($user);
+        } elseif (!$isGift) {
+            $order->total_amount = 0;
+        }
+        if (!$isGift && isset($couponService) && $couponService->isPurchasedGift()) {
+            GiftOrderService::setRedemptionType($order, $user);
+        } else {
+            $orderService->setOrderType($user);
+        }
 
         // Wallet balance is applied unless the client opts out. It defaults to
         // ON, so the site and any older app that never sends the flag behave

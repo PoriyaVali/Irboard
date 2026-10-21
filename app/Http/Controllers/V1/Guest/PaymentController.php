@@ -141,7 +141,9 @@ class PaymentController extends Controller
             return true;
         }
 
-        if ($order->status !== 0) {
+        // A cancelled order may still receive a verified gateway payment.
+        // paid() reconciles its refunded wallet share under the order lock.
+        if ($order->status !== 0 && $order->status !== 2) {
             $this->logInfo('Order already processed', ['trade_no' => $tradeNo]);
             return true;
         }
@@ -302,7 +304,11 @@ class PaymentController extends Controller
                 $text = "✅ پرداخت موفق!\n\n";
                 $text .= "💰 مبلغ: " . number_format($adjustedAmount) . " تومان\n";
                 $text .= "🔢 شماره سفارش: {$order->trade_no}\n\n";
-                if ($order->plan_id) {
+                if ((int)$order->status === 4) {
+                    $text .= 'پرداخت سفارش لغوشده به کیف پول شما برگشت.';
+                } elseif ($order->is_gift) {
+                    $text .= 'کد هدیه پس از تأیید پرداخت در سفارش‌های شما قابل مشاهده و کپی است.';
+                } elseif ($order->plan_id) {
                     $text .= OrderService::isReserved($order)
                         ? "📦 بسته شما رزرو شد و بعد از تمام شدن اشتراک فعلی، خودکار فعال می‌شود."
                         : "🎉 اشتراک شما فعال شد!";
@@ -343,13 +349,14 @@ class PaymentController extends Controller
         $adjustedAmount = ($order->total_amount > 0) ? $order->total_amount : $order->balance_amount;
         $status = $success ? 'success' : 'failed';
         $deeplink = 'hiddify://payment-result?status=' . $status . '&trade_no=' . urlencode($order->trade_no);
+        if ($order->is_gift) $deeplink .= '&is_gift=1';
 
         if ($success) {
             $title = 'پرداخت موفق';
             $icon = '✅';
             $color = '#28a745';
-            $desc = !$order->plan_id ? 'کیف پول شما شارژ شد!'
-                : (OrderService::isReserved($order) ? 'بسته شما رزرو شد و بعد از تمام شدن اشتراک فعلی، خودکار فعال می‌شود.' : 'اشتراک شما فعال شد!');
+            $desc = (int)$order->status === 4 ? 'پرداخت سفارش لغوشده به کیف پول شما برگشت.' : ($order->is_gift ? 'کد هدیه پس از تأیید پرداخت در سفارش‌های شما قابل مشاهده و کپی است.' : (!$order->plan_id ? 'کیف پول شما شارژ شد!'
+                : (OrderService::isReserved($order) ? 'بسته شما رزرو شد و بعد از تمام شدن اشتراک فعلی، خودکار فعال می‌شود.' : 'اشتراک شما فعال شد!')));
         } else {
             $title = 'پرداخت ناموفق';
             $icon = '❌';
@@ -358,6 +365,7 @@ class PaymentController extends Controller
         }
 
         $dl = htmlspecialchars($deeplink, ENT_QUOTES);
+        $scriptLink = json_encode($deeplink, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
         $html = '<!DOCTYPE html>
 <html dir="rtl" lang="fa">
 <head>
@@ -382,7 +390,7 @@ h1{color:' . $color . ';margin-bottom:10px}
 <p class="desc">' . $desc . '</p>
 <a href="' . $dl . '" class="btn">بازگشت به برنامه</a>
 </div>
-<script>setTimeout(function(){window.location.href="' . $dl . '";},800);</script>
+<script>setTimeout(function(){window.location.href=' . $scriptLink . ';},800);</script>
 </body>
 </html>';
 
@@ -397,8 +405,8 @@ h1{color:' . $color . ';margin-bottom:10px}
             $title = 'پرداخت موفق';
             $icon = '✅';
             $color = '#28a745';
-            $desc = !$order->plan_id ? 'کیف پول شما شارژ شد!'
-                : (OrderService::isReserved($order) ? 'بسته شما رزرو شد و بعد از تمام شدن اشتراک فعلی، خودکار فعال می‌شود.' : 'اشتراک شما فعال شد!');
+            $desc = (int)$order->status === 4 ? 'پرداخت سفارش لغوشده به کیف پول شما برگشت.' : ($order->is_gift ? 'کد هدیه پس از تأیید پرداخت در سفارش‌های شما قابل مشاهده و کپی است.' : (!$order->plan_id ? 'کیف پول شما شارژ شد!'
+                : (OrderService::isReserved($order) ? 'بسته شما رزرو شد و بعد از تمام شدن اشتراک فعلی، خودکار فعال می‌شود.' : 'اشتراک شما فعال شد!')));
         } else {
             $title = 'پرداخت ناموفق';
             $icon = '❌';

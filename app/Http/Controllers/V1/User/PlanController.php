@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Plan;
 use App\Models\User;
 use App\Services\PlanService;
+use App\Services\GiftOrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -27,7 +28,8 @@ class PlanController extends Controller
             $plan = $this->addUsdPrices($plan);
             
             return response([
-                'data' => $plan
+                'data' => $plan,
+                'gift_purchase_enabled' => GiftOrderService::enabled()
             ]);
         }
 
@@ -45,7 +47,8 @@ class PlanController extends Controller
         $plans = $this->addUsdPricesToCollection($plans);
         
         return response([
-            'data' => $plans
+            'data' => $plans,
+            'gift_purchase_enabled' => GiftOrderService::enabled()
         ]);
     }
     

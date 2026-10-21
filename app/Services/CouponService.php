@@ -22,10 +22,22 @@ class CouponService
 
     public function use(Order $order):bool
     {
+        if ($order->is_gift) abort(422, __('Discount codes cannot be used to buy gifts'));
+        $source = $this->coupon ? GiftOrderService::sourceForCoupon($this->coupon->id) : null;
+        if ($source && CustomPlanService::isCustom($source)
+            && (!CustomPlanService::isCustom($order) || CustomPlanService::commercialSnapshot($source) !== CustomPlanService::commercialSnapshot($order))) {
+            abort(422, __('Redeem the purchased tailored gift without changing its allowance'));
+        }
         $this->setPlanId($order->plan_id);
         $this->setUserId($order->user_id);
         $this->setPeriod($order->period);
         $this->check();
+        if ($source && GiftOrderService::isFixedGift($source)) {
+            // All redemption paths, including checkout and Telegram, deliver
+            // the same purchased terms. Validate the source plan/period first.
+            $order->custom_snapshot = $source->custom_snapshot;
+            $order->exchange_rate = $source->exchange_rate;
+        }
         switch ($this->coupon->type) {
             case 1:
                 $order->discount_amount = $this->coupon->value;
@@ -57,6 +69,11 @@ class CouponService
         return $this->coupon;
     }
 
+    public function isPurchasedGift(): bool
+    {
+        return $this->coupon && GiftOrderService::sourceForCoupon($this->coupon->id) !== null;
+    }
+
     public function setPlanId($planId)
     {
         $this->planId = $planId;
@@ -84,6 +101,12 @@ class CouponService
 
     public function check()
     {
+        if ($this->isPurchasedGift()) {
+            $source = GiftOrderService::sourceForCoupon($this->coupon->id);
+            if ((int)$source->status !== 3 || (int)$this->planId !== (int)$source->plan_id || $this->period !== $source->period) {
+                abort(500, __('The gift code requires its purchased subscription and period'));
+            }
+        }
         if (!$this->coupon || !$this->coupon->show) {
             abort(500, __('Invalid coupon'));
         }

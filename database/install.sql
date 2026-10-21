@@ -292,6 +292,10 @@ CREATE TABLE `v2_notice` (
 DROP TABLE IF EXISTS `v2_order`;
 CREATE TABLE `v2_order` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
+  `is_gift` tinyint(1) NOT NULL DEFAULT '0',
+  `gift_coupon_id` int(11) DEFAULT NULL,
+  `gift_code_snapshot` varchar(64) DEFAULT NULL,
+  `custom_snapshot` text DEFAULT NULL,
   `invite_user_id` int(11) DEFAULT NULL,
   `user_id` int(11) NOT NULL,
   `plan_id` int(11) NOT NULL,
@@ -319,6 +323,7 @@ CREATE TABLE `v2_order` (
   `updated_at` int(11) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `trade_no` (`trade_no`),
+  UNIQUE KEY `gift_coupon_id` (`gift_coupon_id`),
   KEY `idx_user` (`user_id`),
   KEY `idx_user_status` (`user_id`,`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -344,6 +349,7 @@ CREATE TABLE `v2_payment` (
 DROP TABLE IF EXISTS `v2_plan`;
 CREATE TABLE `v2_plan` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
+  `custom_key` varchar(64) DEFAULT NULL,
   `group_id` int(11) NOT NULL,
   `transfer_enable` int(11) NOT NULL,
   `name` varchar(255) NOT NULL,
@@ -376,7 +382,8 @@ CREATE TABLE `v2_plan` (
   `updated_at` int(11) NOT NULL,
   `price_updated_at` timestamp NULL DEFAULT NULL COMMENT 'آخرین زمان بروزرسانی قیمت‌ها',
   `last_exchange_rate` int(11) DEFAULT NULL COMMENT 'آخرین نرخ ارز استفاده شده',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `custom_key` (`custom_key`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 DROP TABLE IF EXISTS `v2_plan_prices`;

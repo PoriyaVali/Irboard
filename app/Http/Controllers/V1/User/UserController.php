@@ -261,6 +261,12 @@ class UserController extends Controller
 
     public function redeemgiftcard(UserRedeemGiftCard $request)
     {
+        $giftOrder = \App\Services\GiftOrderService::redeem((int)$request->user['id'], (string)$request->giftcard);
+        if ($giftOrder) {
+            return response(['data' => true, 'type' => 5, 'value' => 0, 'trade_no' => $giftOrder->trade_no,
+                'redemption' => method_exists(\App\Services\GiftOrderService::class, 'redemptionSummary')
+                    ? \App\Services\GiftOrderService::redemptionSummary($giftOrder) : null]);
+        }
         DB::beginTransaction();
 
         try {
@@ -370,7 +376,15 @@ class UserController extends Controller
             return response([
                 'data' => true,
                 'type' => $giftcard->type,
-                'value' => $giftcard->value
+                'value' => $giftcard->value,
+                'redemption' => (int)$giftcard->type === 5 ? [
+                    'status' => 'active',
+                    'plan_name' => $plan->name,
+                    'period' => null,
+                    'is_custom' => false,
+                    'volume_gb' => (float)$plan->transfer_enable,
+                    'duration_days' => (int)$giftcard->value,
+                ] : null,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
@@ -466,6 +480,12 @@ class UserController extends Controller
             $user['plan'] = Plan::find($user->plan_id);
             if (!$user['plan']) {
                 abort(500, __('Subscription plan does not exist'));
+            }
+            if ($user['plan']->custom_key && !\App\Services\GiftOrderService::isFixedAccessPlan($user['plan'])) {
+                // The shared access template has no quota of its own. Present
+                // this account's purchased allowance without mutating the plan.
+                $user['plan']->transfer_enable = (int)($user->transfer_enable / 1073741824);
+                $user['plan']->is_custom = true;
             }
         }
     
@@ -759,13 +779,18 @@ class UserController extends Controller
         $reserved = \App\Models\ReservedPlan::where('user_id', $user->id)
             ->where('status', 0)
             ->with('plan:id,name,transfer_enable')
+            ->with('order')
             ->orderBy('created_at', 'asc')
             ->get()
             ->map(function($item) {
+                $custom = $item->order && (int)$item->order->user_id === (int)$item->user_id && \App\Services\CustomPlanService::isCustom($item->order) ? $item->order->custom_snapshot : null;
                 return [
                     'id' => $item->id,
-                    'plan_name' => $item->plan ? $item->plan->name : 'نامشخص',
-                    'transfer_enable' => $item->plan ? $item->plan->transfer_enable : 0,
+                    'plan_name' => $custom ? 'تعرفه دست‌دوز' : ($item->plan ? $item->plan->name : 'نامشخص'),
+                    'transfer_enable' => $custom ? (int)$custom['volume_gb'] : ($item->plan ? $item->plan->transfer_enable : 0),
+                    'is_custom' => $custom !== null,
+                    'custom_volume_gb' => $custom ? (int)$custom['volume_gb'] : null,
+                    'custom_duration_days' => $custom ? (int)$custom['duration_days'] : null,
                     'period' => $item->period,
                     'months' => (function($p) { if(preg_match('/^month_(\d+)$/', $p, $m)) return (int)$m[1]; if(preg_match('/^year_(\d+)$/', $p, $m)) return (int)$m[1]*12; return 0; })($item->period),
                     'created_at' => $item->created_at
