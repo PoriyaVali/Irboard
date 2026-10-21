@@ -1,5 +1,203 @@
 # AI work log and handoff
 
+## Active handoff - 2026-10-21 - Codex - GitHub sync authorized; gift receipt source ready
+
+Owner approved the app work and requested source synchronization on GitHub. The
+previous GitHub hold is lifted for completed app and related backend source. No
+server deployment, binary release, tag or updater change is part of this task.
+
+Exact pending backend files: app/Http/Controllers/V1/User/UserController.php,
+app/Services/GiftOrderService.php, tests/Feature/CustomPlanGiftOrderTest.php,
+tests/Feature/PurchasedGiftOrderTest.php, and this AI_HANDOFF.md. The two runtime
+files are the metadata-only patch already LIVE as recorded below; no new product
+code changes in this turn. Additive receipt reports real plan/quota and fulfillment
+state; failed optional reads cannot undo an already committed redemption.
+
+Validation rerun on PHP8.1: mandatory financial/custom/gift set127tests and1051
+assertions PASS; log ../audit/github225-panel-mandatory.log and exit0. Deprecated
+PHPUnit XML-schema notice remains. Full backend suite not rerun; prior unrelated
+GoogleAuth SQLite fixture errors remain a known limitation. App156 frozen source
+matches1,011 build-time hashes. Existing remote PR15 is a draft atd4a9999, matching
+local HEAD. Branch had a main-only fetch refspec; fetched its feature ref explicitly
+without changing the refspec. No AGENTS.md here; root coordination rules apply.
+
+Status: these five files UNCOMMITTED; commit/push and fresh PR CI pending. Existing
+owner and other-agent authorship preserved. No force push/main merge or delegation.
+
+## Active handoff - 2026-10-20 - Codex - FINAL152 verified241/241; stale Android AOT RESOLVED; Laravel metadata LIVE; GitHub/public app HOLD
+
+Supersedes the Android-staleness correction and the earlier premature222-check
+completion entry below. Actual current out/test152 APKs ARE fresh and ready for
+OWNER testing. Prior stale152 APKs and their oldchecksums were moved OUT of the
+release folder into ignored audit/test152-rejected-stale-aot/ (all preserved).
+Version remains unchanged: app is2.2.5+152, original151files remain in out/ unchanged.
+
+Android152 first reused151 AOT despite current source/version152. Detected before
+final delivery by new binary literal inspection, not by signatures/manifest alone.
+Preserved .dart_tool/flutter_build as flutter_build-stale152 and build/app/intermediates/
+flutter as flutter-stale152. Forced exact previously logged Gradle assembleRelease
+arguments with --rerun-tasks --no-build-cache; same local Maven/signing/native inputs.
+Actual fresh build192s,945/945tasks EXECUTED,EXIT0 (test152-android-forced-build.*).
+New libapp.so includes gift-redemption-result in BOTHABIs; prior151does not. Current
+local152 inspector adds19 freshness/feature checks for both AndroidABIs and Windows;
+original release/Actions strict inspectors remain unchanged. Final ACTUAL5files
+PASS241/241,0FAIL (test152-verification.json/.log/.exit0). Source802files unchanged.
+Before-freshness222-pass report retained under test152-verification-before-freshness.*;
+explicit invalid-for-delivery proof test152-stale-aot-rejection.json. Do not use those
+old hashes. Windows152 was already fresh and required no second Windows rebuild.
+
+Completed feature files/tests/server details in earlier152completion handoff remain
+valid: account_actions.dart, new model/gift_redemption.dart,4translations, pubspec152,
+profile tests and NEW docs/testing/2.2.5-152-gift-results.fa.md. Persistent readable
+receipt gives actual plan name/GB/duration and active/reserved/processing state from
+Laravel; old/unknown purchased gifts NEVER mislabel value0 as unlimited. Confirmation
+appears before slow profile sync; account/dispose guards intact. FullFlutter1316PASS/
+2SKIP, finalprofile14+visual2PASS, targeted124PASS; analyzer0errors/30baselinewarnings/
+1126infosEXIT1 (not clean). Laravel mandatory127tests/1051assertionsPASS and gifts45/
+470PASS onPHP8.1; unrelated broad112test run1ERROR missing Redis (initially APP_KEY).
+No real gift redemption/payment/device/installer test was performed.
+
+Laravel metadata2filepatch IS LIVE on91.107.255.204, exact hashes/backups/API runtime
+and HTTP200/403 checks in prior152completion entry and gift152-health-final.log.
+No DB/schema/tariff/fulfilmentchanges. SIGUSR2 API drain needed idle closed-counter
+cleanup via SIGINT ONLY already-unlistening/noHTTPsocket/CPU-idle children; fresh4
+APIworkers confirmed. No Horizon/config-agent restart, no SIGKILL/activeHTTP termination.
+Do not describe this as pure SIGUSR2-only exit. Deployed source remains UNCOMMITTED
+patch atop e9c7456; no new commit/PR/Actions/tag/updater/public app release. RootHEAD
+ ef32475/app9e8ed9c/paneld4a9999 unchanged; inheritedrootopenwrt preserved.
+
+FINAL ONLY delivery artifacts in app/out/test152/:
+- DoctorMobile-2.2.5-android-universal.apk 126399327 bytes SHA256 ce03c0f1041171e2febb04a8b5c7782494db7fcd50ff26194b4e4574fb0fd21e
+- DoctorMobile-2.2.5-android-arm64-v8a.apk 68489189 bytes SHA256 a2457d808511906f01cd48067a9cf23fdd23f0a41f2e78bfc01f001131a79b4e
+- DoctorMobile-2.2.5-android-armeabi-v7a.apk 68257753 bytes SHA256 596ecf5cd48498d48ab499f4600c213206c03dae4cab510ac2e0f5568471f06b
+- DoctorMobile-2.2.5-windows-x64-portable.zip 73360218 bytes SHA256 6b85218d6a6e5f02702fd3479b14d19268423a46823daad0fd5f4a5442abb794
+- DoctorMobile-2.2.5-windows-x64-setup.exe 48338366 bytes SHA256 c6e28a493f4bf64242939b061a95b00400602dae879208920915dd6ea0c7c09c
+DoctorMobile-2.2.5-SHA256SUMS.txt regenerated from these exact5verifiedfiles. All3APKs
+original signer a3e2fd30008124bc2358c084fd8907b5fa9c179266088a995bf830a400d702c4,
+appIDapp.drmobile.com/version2.2.5/code152. Windows runner2.2.5+152/original installer
+identity; Windows has no Authenticode signature, matching baseline. Next step OWNER
+manual test only; GitHub/public app release stays HOLD until user authorizes.
+
+## Active correction - 2026-10-20 - Codex - Android152 STALE AOT detected; artifacts REJECTED pending clean rebuild
+
+Do NOT deliver out/test152 APKs until this correction is superseded by VERIFIED
+fresh Android binaries. The prior222checks passed signatures/versions/native code
+but missed a stale Dart AOT snapshot:152 libapp.so was byte-identical to151 and
+lacked gift-redemption-result, although current Windows app.so correctly contains
+it. Additional literal feature inspection caught this BEFORE final delivery.
+All151 Android features ARE present (tailored-open-editor/payment-as-gift), so151
+itself was not rejected. Android Flutter/Gradle cached AOT did not track source
+changes correctly in this Windows workspace. Preserve old cache and rejected152
+APKs; force clean Flutter AOT and Gradle --rerun-tasks --no-build-cache, then require
+new feature literals in BOTH Android ABI app.so plus all prior222checks. Source802
+snapshot unchanged. Laravel metadata patch IS LIVE and healthy; no server rollback
+needed. Windows152 binaries remain valid. GitHub/app-publication HOLD remains.
+
+## Active handoff - 2026-10-20 - Codex - gift-card result COMPLETE; Laravel metadata LIVE; 2.2.5+152 local files VERIFIED; app/GitHub HOLD
+
+User requested Persian gift-card label, readable registration confirmation, exact
+plan name and real active/reserved state. ALL prior151 work preserved; local version
+still2.2.5, build152 allows Android upgrade. NO commit/push/Actions/PR/tag/app release
+or updater changes. AppHEAD9e8ed9c and panelHEADd4a9999 remain unchanged; new patch
+is UNCOMMITTED. RootHEADef32475/openwrt preserved. Original151 files remain in out/;
+ACTUAL new152 files are in app/out/test152/. Do NOT confuse their same version names.
+
+NEW app files: lib/features/profile/model/gift_redemption.dart (typed strict server
+receipt parser), lib/features/profile/widget/account_actions.dart (gift result dialog,
+plan/volume/duration/status; immediate confirmation before optional profile fetch;
+session/dispose guards retained),4assets/translations/{fa,en,ru,zh-CN}.i18n.json
+(new result text, Persian label and confirmation changed to card-e hediye), ignored
+generated Slang files, pubspec.yaml=2.2.5+152; profile test file
+ test/features/profile/account_actions_dispose_test.dart. No display of placeholder
+purchased-gift type5/value0 as unlimited. Old/invalid/missing metadata confirms code
+acceptance and asks user to inspect subscription/reserved plans, never to redeem again.
+Legacy credit/days/GB/reset/direct-plan cards retain their actual result descriptions.
+Persistent result includes activated/reserved/processing/unknown, no status guessing.
+
+NEW backend files: app/Services/GiftOrderService.php (optional authoritative receipt
+summary, after committed redemption; failures returnnull),
+app/Http/Controllers/V1/User/UserController.php (additive redemption object for purchased
+and legacy plan cards; data/type/value/trade_no retained; method_exists guards mixed
+old/new worker classes). Tests modified PurchasedGiftOrderTest.php,
+CustomPlanGiftOrderTest.php. No schema, fulfilment, billing, coupon or pricing changes.
+
+Validation: targeted app124PASS, full1316PASS/2SKIP/0FAIL (test152-full.log/.exit0).
+Final Polish: profile14 +actual Persian demo screenshots2=16PASS; final active/reserved
+screenshots .dart_tool/gift152-fa-{active,reserved}.png reviewed, no live purchases.
+Final analyzer0errors/30baselinewarnings/1126infos EXIT1 due lint findings, not clean.
+Laravel on official SHA256-verified portable PHP8.1.34: gifts45tests/470assertionsPASS;
+exact mandatoryCI set127tests/1051assertionsPASS INCLUDING final method_exists guard.
+No GitHub CI run represented. Tests pinned SQLite:memory, no productionDB access.
+Additional broad112tests had1environmentERROR in AccessAndPaymentFixesTest::
+testACardPaymentCannotBeClaimedForACancelledOrder: absent localAPP_KEY, then (after
+supplying process-only test key) absent PHPRedis extension. NOT an all-backend pass;
+failed logs retained. Initial legacy fixture lacked mandatory started_at/ended_at,
+fixed fixture and rerun45PASS. First translation patch mismatched RU/ZH source text,
+failed atomically; corrected UTF8 patch/regeneration passed. PHP syntax2filesPASS.
+
+LIVE main-server PATCH (earlier user explicitly authorized Laravel deployment;
+latest hold concerns GitHub/public app release). Exact baseline live2file hashes
+matched HEAD before writing. Only additive response presentation installed on
+91.107.255.204 /www/wwwroot/ddr.drmobilejayzan.info. Root-owned0644 preserved.
+Private payload/script/backups+metadata/journal under
+/root/drmobile-deploy-20261019-tailored-v150/gift152-response-20261020/; source backups
+private0700/0600. No .env/composer/config/routes/Umi/tariff/DB changes or test orders.
+LIVE fileSHA256:
+GiftOrderService.php 291b9d55e4165c575a371ac82a21a60513973d4700df10af3a0f3eb91d1bf5d1
+UserController.php 80efc01214ebc295287e3406223350bbc8f685d9d0a9fc35eea35fdf5df78249
+This is an UNCOMMITTED2file deployed patch atop e9c7456, NOT a new deployed commit.
+
+RUNTIME: public main Nginx uses PHP8.1FPM; source timestamp validation preserved.
+WebMan master3228410 also reloaded to ensure alternate API runtime fresh. Verified
+installed Workerman5.2.2 SIGUSR2 contract before signaling. Pure graceful reload
+stalled because AdapterMan retained closed-connection counters (20-43 per idleworker)
+while actual/proc TCP HTTP sockets were gone. For EACH old HTTP child, verified
+already-unlistening +zero actual HTTP sockets +1sCPU idle before SIGINT to end only
+that drained child; master replaced it before draining next. No SIGKILL, no active
+HTTP connection terminated, no Horizon/config-agent restart; do NOT claim every
+child exit used only SIGUSR2. Old3228635-38 fully gone; newHTTP3393990,3394074,
+3394089,3394117. Master3228410/Horizon3228409/config-agent1624741 retained andRUNNING.
+Final HTTPS/SNI guest200; anonymous redeem403; exact installedhashes/ownersPASS.
+Logs gift152-{deployment,finish-drain,health-final} and journals retained. Read-only
+preflights first missed supervisorctlPATH and Worker.php moved tosrc; corrected.
+Server private deployment script asserts old hashes, exact2paths, PHPsyntax, owners,
+and Worker SIGUSR2 semantics before atomic replacements. Controller method_exists
+protects in-flight mixed classes. No new public endpoint or financial mutation.
+
+BUILD: local Windows86.6s, Android83.0s, Inno46.406s allEXIT0. Original Android signer
+on ALL3APKs verified a3e2fd30008124bc2358c084fd8907b5fa9c179266088a995bf830a400d702c4,
+appIDapp.drmobile.com, version2.2.5/code152. Windows runnerFile/Product2.2.5+152,
+installer2.2.5/originalAppId; Windows historically NOT Authenticode signed. Reused
+EXACT verified151 native inputs and pinned source, no new native compilation claim.
+Process-only ignored local Flutter Maven cache reused from151, no global config edits.
+All ACTUAL5files passed222/222 LOCAL binary/source/native/signature/runtime/import/
+staging checks,0FAIL: audit/test152-verification.json/.log/.exit0. Source snapshot
+802files includes NEWuntrackedmodel +ignored Slang outputs, unchanged after builds.
+Original strict release/Actions inspectors UNCHANGED. New verify_local152.py remains
+explicitly local/unpublished and binds prior native151 serial build evidence.
+SHA256SUMS regenerated in out/test152. No physical device, real redemption/payment
+or Windows installer execution; owner manual test still required. GitHub/public
+app release HOLD continues until user approves after testing.
+
+## Active handoff - 2026-10-20 - Codex - gift-card wording and authoritative redemption result IN PROGRESS
+
+User asks Persian label card-e hediye and clear plan name + active/reserved outcome
+on redemption. Preserve ALL uncommitted151 work and verified151 artifacts. GitHub,
+app release and updater HOLD persists. Build refresh will stay2.2.5, increment152
+so installed151 can update. No new commit/push/publication authorized by this turn.
+Investigated actual Laravel controller: purchased gifts return type5/value0/trade_no,
+which app wrongly labels unlimited; neither detail nor reserved endpoint reliably
+exposes exact redemption state. Need additive redemption metadata from Laravel,
+without changing fulfilment/transaction/coupon economics. App must accept older
+responses and never infer active/unlimited for an unknown purchased gift result.
+Planned files: app account_actions.dart, new gift_redemption model,4translations,
+focused profile tests/pubspec; backend GiftOrderService.php/UserController.php and
+purchased/custom gift response tests. Persistent readable result dialog; session/
+dispose guards retained. Backend/app changes and builds NOT YET validated at entry.
+Previous main-server deployment authorization exists in user history; assess final
+safe metadata-only deployment after preparing actual tested source. No server
+connection or mutation yet in this task. No physical or real purchase tests.
+
 ## Active handoff - 2026-10-20 - Codex - main backend DEPLOYED; 2.2.4+150 test files VERIFIED; public app HOLD
 
 Production feature source e9c745603cf5ee3f26a4833c1b1e924a87154e1d is LIVE on main

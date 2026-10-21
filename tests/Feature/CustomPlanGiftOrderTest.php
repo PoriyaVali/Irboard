@@ -234,7 +234,9 @@ class CustomPlanGiftOrderTest extends TestCase
         $this->assertSame($gift->id, $this->saveGift($buyer, $quote)->id);
         $recipient = $this->makeUser(['discount' => 100, 'balance' => 12345]);
         $before = time();
-        $this->withHeaders($this->auth($recipient))->postJson('/api/v1/user/redeemgiftcard', ['giftcard' => $coupon->code])->assertOk()->assertJsonPath('type', 5);
+        $this->withHeaders($this->auth($recipient))->postJson('/api/v1/user/redeemgiftcard', ['giftcard' => $coupon->code])->assertOk()->assertJsonPath('type', 5)
+            ->assertJsonPath('redemption.status', 'active')->assertJsonPath('redemption.is_custom', true)
+            ->assertJsonPath('redemption.volume_gb', 73)->assertJsonPath('redemption.duration_days', 17);
         $recipient->refresh();
         $this->assertSame(73 * 1073741824, (int)$recipient->transfer_enable);
         $this->assertGreaterThanOrEqual($before + 17 * 86400, (int)$recipient->expired_at);
@@ -463,4 +465,17 @@ class CustomPlanGiftOrderTest extends TestCase
         $this->assertSame(12345, (int)$recipient->fresh()->balance);
         $this->assertSame(0, DB::transactionLevel());
     }
+    public function testCustomGiftEndpointReportsExactReservedEntitlement()
+    {
+        [, , , $gift, $coupon] = $this->paidGift();
+        $recipient = $this->makeActiveUser($this->makePlan());
+        $response = $this->withHeaders($this->auth($recipient))->postJson('/api/v1/user/redeemgiftcard', ['giftcard' => $coupon->code])
+            ->assertOk()->assertJsonPath('redemption.status', 'reserved')->assertJsonPath('redemption.is_custom', true)
+            ->assertJsonPath('redemption.volume_gb', 73)->assertJsonPath('redemption.duration_days', 17);
+        $this->assertSame(1, ReservedPlan::where('user_id', $recipient->id)->count());
+        $this->assertSame(['status', 'plan_name', 'period', 'is_custom', 'volume_gb', 'duration_days'], array_keys($response->json('redemption')));
+        $this->assertArrayNotHasKey('custom_snapshot', $response->json('redemption'));
+        $this->assertArrayNotHasKey('gift_code', $response->json('redemption'));
+    }
+
 }

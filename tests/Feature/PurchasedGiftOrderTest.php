@@ -147,7 +147,10 @@ class PurchasedGiftOrderTest extends TestCase
         }
         $this->assertSame(1, (int)$coupon->fresh()->limit_use);
         $this->withHeaders($headers)->postJson('/api/v1/user/coupon/check', ['code' => $coupon->code, 'plan_id' => $plan->id, 'period' => 'month_price'])->assertOk()->assertJsonPath('is_gift', true);
-        $this->withHeaders($headers)->postJson('/api/v1/user/redeemgiftcard', ['giftcard' => $coupon->code])->assertOk();
+        $this->withHeaders($headers)->postJson('/api/v1/user/redeemgiftcard', ['giftcard' => $coupon->code])->assertOk()
+            ->assertJsonPath('redemption.status', 'active')->assertJsonPath('redemption.plan_name', $plan->name)
+            ->assertJsonPath('redemption.period', 'month_price')->assertJsonPath('redemption.volume_gb', 100)
+            ->assertJsonPath('redemption.duration_days', null);
         $this->assertSame($plan->id, (int)$recipient->fresh()->plan_id);
         $this->assertSame(5000, (int)$recipient->fresh()->balance);
         $this->assertSame(0, (int)$coupon->fresh()->limit_use);
@@ -164,7 +167,9 @@ class PurchasedGiftOrderTest extends TestCase
         [, $plan, , $coupon] = $this->paidGift();
         $old = $this->makePlan();
         $recipient = $this->makeActiveUser($old);
-        $this->withHeaders($this->auth($recipient))->postJson('/api/v1/user/redeemgiftcard', ['giftcard' => $coupon->code])->assertOk();
+        $this->withHeaders($this->auth($recipient))->postJson('/api/v1/user/redeemgiftcard', ['giftcard' => $coupon->code])->assertOk()
+            ->assertJsonPath('redemption.status', 'reserved')->assertJsonPath('redemption.plan_name', $plan->name)
+            ->assertJsonPath('redemption.period', 'month_price');
         $this->assertSame($old->id, (int)$recipient->fresh()->plan_id);
         $reserved = ReservedPlan::firstOrFail();
         $this->assertSame($plan->id, (int)$reserved->plan_id);
@@ -481,4 +486,27 @@ class PurchasedGiftOrderTest extends TestCase
         $this->assertSame($plan->id, (int)$recipient->fresh()->plan_id);
         $this->assertSame(1, (int)$coupon->fresh()->limit_use);
     }
+    public function testLegacyPlanCardReportsItsActualPlanAndDuration()
+    {
+        $plan = $this->makePlan(['name' => 'Legacy plan']);
+        $recipient = $this->makeUser();
+        \App\Models\Giftcard::create(['name' => 'Legacy gift', 'code' => 'legacy-plan-card', 'type' => 5,
+            'value' => 45, 'plan_id' => $plan->id, 'limit_use' => 1, 'started_at' => time() - 60, 'ended_at' => time() + 3600]);
+        $this->withHeaders($this->auth($recipient))->postJson('/api/v1/user/redeemgiftcard', ['giftcard' => 'legacy-plan-card'])
+            ->assertOk()->assertJsonPath('data', true)->assertJsonPath('type', 5)
+            ->assertJsonPath('redemption.status', 'active')->assertJsonPath('redemption.plan_name', 'Legacy plan')
+            ->assertJsonPath('redemption.duration_days', 45)->assertJsonPath('redemption.volume_gb', 100);
+        $this->assertSame($plan->id, (int)$recipient->fresh()->plan_id);
+    }
+
+    public function testReceiptMetadataNeverCallsAnUnfulfilledOrderActive()
+    {
+        $plan = $this->makePlan();
+        $user = $this->makeUser();
+        $order = $this->makeOrder($user, ['plan_id' => $plan->id, 'status' => 1]);
+        $this->assertSame('processing', GiftOrderService::redemptionSummary($order)['status']);
+        $order->delete();
+        $this->assertNull(GiftOrderService::redemptionSummary($order));
+    }
+
 }

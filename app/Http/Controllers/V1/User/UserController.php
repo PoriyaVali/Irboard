@@ -263,7 +263,9 @@ class UserController extends Controller
     {
         $giftOrder = \App\Services\GiftOrderService::redeem((int)$request->user['id'], (string)$request->giftcard);
         if ($giftOrder) {
-            return response(['data' => true, 'type' => 5, 'value' => 0, 'trade_no' => $giftOrder->trade_no]);
+            return response(['data' => true, 'type' => 5, 'value' => 0, 'trade_no' => $giftOrder->trade_no,
+                'redemption' => method_exists(\App\Services\GiftOrderService::class, 'redemptionSummary')
+                    ? \App\Services\GiftOrderService::redemptionSummary($giftOrder) : null]);
         }
         DB::beginTransaction();
 
@@ -374,7 +376,15 @@ class UserController extends Controller
             return response([
                 'data' => true,
                 'type' => $giftcard->type,
-                'value' => $giftcard->value
+                'value' => $giftcard->value,
+                'redemption' => (int)$giftcard->type === 5 ? [
+                    'status' => 'active',
+                    'plan_name' => $plan->name,
+                    'period' => null,
+                    'is_custom' => false,
+                    'volume_gb' => (float)$plan->transfer_enable,
+                    'duration_days' => (int)$giftcard->value,
+                ] : null,
             ]);
         } catch (\Exception $e) {
             DB::rollBack();

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Plan;
+use App\Models\ReservedPlan;
 use App\Models\User;
 use App\Utils\Helper;
 use Illuminate\Support\Facades\DB;
@@ -142,6 +143,37 @@ class GiftOrderService
             $orderService->open();
             return $order;
         });
+    }
+
+    /** Optional receipt metadata; a failed follow-up read never undoes a redeemed code. */
+    public static function redemptionSummary(Order $order): ?array
+    {
+        try {
+            $fresh = $order->fresh();
+            if (!$fresh || $fresh->is_gift) return null;
+            $plan = Plan::find($fresh->plan_id);
+            if (!$plan) return null;
+            $custom = CustomPlanService::isCustom($fresh);
+            $reservation = ReservedPlan::where('user_id', $fresh->user_id)
+                ->where('order_id', $fresh->id)->first(['status']);
+            $status = 'processing';
+            if ((int)$fresh->status === 3) {
+                $status = !$reservation || (int)$reservation->status === 1
+                    ? 'active' : ((int)$reservation->status === 0 ? 'reserved' : 'unknown');
+            }
+            return [
+                'status' => $status,
+                'plan_name' => $custom ? 'تعرفه دست‌دوز' : $plan->name,
+                'period' => $fresh->period,
+                'is_custom' => $custom,
+                'volume_gb' => $custom ? (int)$fresh->custom_snapshot['volume_gb'] : (float)$plan->transfer_enable,
+                'duration_days' => $custom ? (int)$fresh->custom_snapshot['duration_days'] : null,
+            ];
+        } catch (\Throwable $e) {
+            // The redemption transaction already committed. Keep its success
+            // response even if optional presentation data is temporarily unavailable.
+            return null;
+        }
     }
 
     public static function restoreCancelledCoupon(Order $order): void
