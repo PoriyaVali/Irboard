@@ -26,6 +26,7 @@ class PurchasedGiftOrderTest extends TestCase
         Http::fake(['*' => Http::response(['ok' => true, 'result' => ['message_id' => 1]], 200)]);
         $this->createInstallTables(['v2_plan_prices']);
         DB::statement('CREATE UNIQUE INDEX gift_coupon_id ON v2_order (gift_coupon_id)');
+        DB::statement('CREATE UNIQUE INDEX custom_key ON v2_plan (custom_key)');
     }
 
     private function auth($user): array
@@ -52,6 +53,110 @@ class PurchasedGiftOrderTest extends TestCase
         $order = $this->buy($buyer, $plan);
         $this->assertTrue((new OrderService($order))->paid('verified-gateway'));
         return [$buyer, $plan, $order->fresh(), Coupon::find($order->fresh()->gift_coupon_id)];
+    }
+
+    public function testFixedGiftKeepsThePurchaseContractWhenThePlanChangesBeforePayment()
+    {
+        $plan = $this->makePlan(['name' => 'Purchased allowance', 'transfer_enable' => 35,
+            'device_limit' => 3, 'speed_limit' => 20, 'group_id' => 2]);
+        $buyer = $this->makeUser();
+        $source = $this->buy($buyer, $plan);
+        $plan->update(['name' => 'Edited tariff', 'transfer_enable' => 1,
+            'device_limit' => 1, 'speed_limit' => 2, 'group_id' => 9]);
+        $this->assertTrue((new OrderService($source))->paid('verified-gateway'));
+        $coupon = Coupon::findOrFail($source->fresh()->gift_coupon_id);
+        $recipient = $this->makeUser();
+        $this->withHeaders($this->auth($recipient))->postJson('/api/v1/user/redeemgiftcard', ['giftcard' => $coupon->code])
+            ->assertOk()->assertJsonPath('redemption.plan_name', 'Purchased allowance')
+            ->assertJsonPath('redemption.volume_gb', 35);
+        $recipient->refresh();
+        $this->assertSame(35 * 1073741824, (int)$recipient->transfer_enable);
+        $this->assertSame(3, (int)$recipient->device_limit);
+        $this->assertSame(20, (int)$recipient->speed_limit);
+        $this->assertSame(2, (int)$recipient->group_id);
+        $this->assertSame('Purchased allowance', \App\Models\Plan::findOrFail($recipient->plan_id)->name);
+        $this->assertSame(0, (int)$coupon->fresh()->limit_use);
+    }
+
+    public function testFixedGiftCanBeDeliveredAfterItsPublicPlanIsDeleted()
+    {
+        [, $plan, , $coupon] = $this->paidGift();
+        $name = $plan->name;
+        $plan->delete();
+        $recipient = $this->makeUser();
+        $this->withHeaders($this->auth($recipient))->postJson('/api/v1/user/redeemgiftcard', ['giftcard' => $coupon->code])
+            ->assertOk()->assertJsonPath('redemption.plan_name', $name)->assertJsonPath('redemption.status', 'active');
+        $recipient->refresh();
+        $this->assertSame(100 * 1073741824, (int)$recipient->transfer_enable);
+        $restored = \App\Models\Plan::findOrFail($recipient->plan_id);
+        $this->assertSame(0, (int)$restored->show);
+        $this->assertSame(0, (int)$restored->renew);
+        $this->assertSame($name, $restored->name);
+    }
+
+    public function testReservedFixedGiftKeepsItsSnapshotThroughActivationAndPlanDeletion()
+    {
+        [, $plan, , $coupon] = $this->paidGift();
+        $old = $this->makePlan();
+        $recipient = $this->makeActiveUser($old);
+        $this->withHeaders($this->auth($recipient))->postJson('/api/v1/user/redeemgiftcard', ['giftcard' => $coupon->code])
+            ->assertOk()->assertJsonPath('redemption.status', 'reserved');
+        $plan->delete();
+        $recipient->update(['expired_at' => time() - 1]);
+        $this->artisan('reserved:activate')->assertExitCode(0);
+        $this->assertSame(1, (int)ReservedPlan::firstOrFail()->status);
+        $this->assertSame(100 * 1073741824, (int)$recipient->fresh()->transfer_enable);
+        $this->assertGreaterThan(time() + 27 * 86400, $recipient->fresh()->expired_at);
+        $this->assertNotNull(\App\Models\Plan::find($recipient->fresh()->plan_id));
+    }
+
+    public function testReservedLifetimeGiftRemainsNonExpiringAndActivationIsIdempotent()
+    {
+        $plan = $this->makePlan(['onetime_price' => 300000, 'transfer_enable' => 35]);
+        $buyer = $this->makeUser();
+        $source = $this->buy($buyer, $plan, ['period' => 'onetime_price']);
+        $this->assertTrue((new OrderService($source))->paid('verified-gateway'));
+        $coupon = Coupon::findOrFail($source->fresh()->gift_coupon_id);
+        $recipient = $this->makeActiveUser($this->makePlan());
+        $this->withHeaders($this->auth($recipient))->postJson('/api/v1/user/redeemgiftcard', ['giftcard' => $coupon->code])
+            ->assertOk()->assertJsonPath('redemption.status', 'reserved');
+        $recipient->update(['expired_at' => time() - 1]);
+        $this->artisan('reserved:activate')->assertExitCode(0);
+        $this->assertNull($recipient->fresh()->expired_at);
+        $this->assertSame(35 * 1073741824, (int)$recipient->fresh()->transfer_enable);
+        $recipient->update(['u' => 123456]);
+        $this->artisan('reserved:activate')->assertExitCode(0);
+        $this->assertSame(123456, (int)$recipient->fresh()->u);
+        $this->assertSame(1, ReservedPlan::where('status', 1)->count());
+    }
+
+    public function testFixedGiftCouponCheckoutAlsoDeliversTheOriginalTerms()
+    {
+        [, $plan, , $coupon] = $this->paidGift();
+        $plan->update(['transfer_enable' => 1, 'group_id' => 9]);
+        $recipient = $this->makeUser(['balance' => 10000]);
+        $response = $this->withHeaders($this->auth($recipient))->postJson('/api/v1/user/order/save', [
+            'plan_id' => $plan->id, 'period' => 'month_price', 'coupon_code' => $coupon->code,
+        ])->assertOk();
+        $order = Order::where('trade_no', $response->json('data'))->firstOrFail();
+        $this->withHeaders($this->auth($recipient))->postJson('/api/v1/user/order/checkout', ['trade_no' => $order->trade_no])->assertOk();
+        $this->assertSame(100 * 1073741824, (int)$recipient->fresh()->transfer_enable);
+        $this->assertSame(1, (int)$recipient->fresh()->group_id);
+        $this->assertSame(10000, (int)$recipient->fresh()->balance);
+        $this->assertSame(0, (int)$order->fresh()->total_amount);
+    }
+
+    public function testFixedGiftSnapshotRefusesAPartialSchemaBeforeTakingWalletMoney()
+    {
+        $plan = $this->makePlan();
+        $buyer = $this->makeUser(['balance' => 200000]);
+        DB::statement('DROP INDEX custom_key');
+        $this->withHeaders($this->auth($buyer))->postJson('/api/v1/user/order/saveGift', [
+            'plan_id' => $plan->id, 'period' => 'month_price',
+        ])->assertStatus(503);
+        $this->assertSame(200000, (int)$buyer->fresh()->balance);
+        $this->assertSame(0, Order::count());
+        $this->assertSame(0, DB::transactionLevel());
     }
 
     public function testGiftsUseTheServerTariffAndDoNotConsumeTheBuyersSubscriptionOrVipDiscount()

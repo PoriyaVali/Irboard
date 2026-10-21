@@ -14,6 +14,60 @@ use Illuminate\Support\Facades\Schema;
 /** Paid, transferable plan entitlements; no fulfilment on the purchaser. */
 class GiftOrderService
 {
+    /** Typed commercial snapshot, sharing the existing hidden JSON order column. */
+    public static function isFixedGift(Order $order): bool
+    {
+        return is_array($order->custom_snapshot) && ($order->custom_snapshot['kind'] ?? null) === 'fixed_gift';
+    }
+
+    private static function fixedAttributes(Plan $plan): array
+    {
+        $attributes = ['name' => (string)$plan->name, 'transfer_enable' => (float)$plan->transfer_enable];
+        foreach (['group_id', 'device_limit', 'speed_limit', 'reset_traffic_method', 'carry_over_days'] as $field) {
+            $attributes[$field] = $plan->$field === null ? null : (int)$plan->$field;
+        }
+        return $attributes;
+    }
+
+    public static function snapshotFixedGift(Order $order, Plan $plan): void
+    {
+        // Refuse before charging if a partial schema cannot preserve delivery.
+        if (!CustomPlanService::enabled()) abort(503, __('Gift purchases are not available'));
+        $order->custom_snapshot = ['kind' => 'fixed_gift', 'version' => 1,
+            'source_plan_id' => (int)$plan->id, 'period' => $order->period,
+            'plan' => self::fixedAttributes($plan)];
+    }
+
+    public static function isFixedAccessPlan(Plan $plan): bool
+    {
+        return str_starts_with((string)$plan->custom_key, 'gift-');
+    }
+
+    /** Resolve paid terms at fulfilment and again when a reservation activates. */
+    public static function fixedPlan(Order $order): ?Plan
+    {
+        if (!self::isFixedGift($order)) return null;
+        $snapshot = $order->custom_snapshot;
+        $attributes = $snapshot['plan'] ?? null;
+        if (($snapshot['version'] ?? null) !== 1 || ($snapshot['period'] ?? null) !== $order->period
+            || !is_array($attributes) || array_diff(['name', 'transfer_enable', 'group_id', 'device_limit',
+                'speed_limit', 'reset_traffic_method', 'carry_over_days'], array_keys($attributes))) {
+            abort(500, __('Invalid gift entitlement'));
+        }
+        $current = Plan::find($order->plan_id);
+        if ($current && self::fixedAttributes($current) == $attributes) return $current;
+        if (!CustomPlanService::enabled()) abort(503, __('Gift purchases are not available'));
+        // Keep an existing public tariff untouched. A hidden immutable template
+        // also leaves the recipient with a valid plan after public-plan deletion.
+        $key = 'gift-' . substr(hash('sha256', json_encode($attributes, JSON_THROW_ON_ERROR)), 0, 59);
+        DB::table('v2_plan')->insertOrIgnore(array_merge($attributes, [
+            'custom_key' => $key, 'show' => 0, 'renew' => 0, 'created_at' => time(), 'updated_at' => time(),
+        ]));
+        $plan = Plan::where('custom_key', $key)->firstOrFail();
+        $order->plan_id = $plan->id;
+        return $plan;
+    }
+
     public static function enabled(): bool
     {
         return Schema::hasColumns('v2_order', ['is_gift', 'gift_coupon_id', 'gift_code_snapshot']);
@@ -112,8 +166,11 @@ class GiftOrderService
             $couponService = new CouponService($code);
             $source = self::sourceForCoupon($couponService->getId());
             if (!$source || (int)$source->status !== 3) abort(500, __('Invalid coupon'));
-            $plan = Plan::find($source->plan_id);
-            if (!$plan) abort(500, __('Subscription plan does not exist'));
+            // Pre-snapshot legacy gifts keep their established delivery path.
+            // Their historical commercial terms cannot be reconstructed.
+            if (!self::isFixedGift($source) && !Plan::find($source->plan_id)) {
+                abort(500, __('Subscription plan does not exist'));
+            }
             if (OrderService::reservationLimitReached($user, $source->period)) {
                 abort(500, __('The reserved plan limit has been reached'));
             }
@@ -152,7 +209,8 @@ class GiftOrderService
             $fresh = $order->fresh();
             if (!$fresh || $fresh->is_gift) return null;
             $plan = Plan::find($fresh->plan_id);
-            if (!$plan) return null;
+            $fixed = self::isFixedGift($fresh) ? $fresh->custom_snapshot['plan'] : null;
+            if (!$plan && !$fixed) return null;
             $custom = CustomPlanService::isCustom($fresh);
             $reservation = ReservedPlan::where('user_id', $fresh->user_id)
                 ->where('order_id', $fresh->id)->first(['status']);
@@ -163,10 +221,10 @@ class GiftOrderService
             }
             return [
                 'status' => $status,
-                'plan_name' => $custom ? 'تعرفه دست‌دوز' : $plan->name,
+                'plan_name' => $custom ? 'تعرفه دست‌دوز' : ($fixed['name'] ?? $plan->name),
                 'period' => $fresh->period,
                 'is_custom' => $custom,
-                'volume_gb' => $custom ? (int)$fresh->custom_snapshot['volume_gb'] : (float)$plan->transfer_enable,
+                'volume_gb' => $custom ? (int)$fresh->custom_snapshot['volume_gb'] : (float)($fixed['transfer_enable'] ?? $plan->transfer_enable),
                 'duration_days' => $custom ? (int)$fresh->custom_snapshot['duration_days'] : null,
             ];
         } catch (\Throwable $e) {

@@ -6,6 +6,7 @@ use App\Models\Plan;
 use App\Models\User;
 use App\Services\OrderService;
 use App\Services\CustomPlanService;
+use App\Services\GiftOrderService;
 use App\Models\Order;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -32,10 +33,8 @@ class ActivateReservedPlans extends Command
 
             if (!$reserved) continue;
 
-            $plan = Plan::find($reserved->plan_id);
             $order = Order::find($reserved->order_id);
             if (!$order) continue;
-            if (!$plan && !CustomPlanService::isCustom($order)) continue;
 
             try {
                 DB::beginTransaction();
@@ -56,6 +55,12 @@ class ActivateReservedPlans extends Command
                     continue;
                 }
 
+                $plan = GiftOrderService::fixedPlan($order) ?? Plan::find($reserved->plan_id);
+                if (!$plan && !CustomPlanService::isCustom($order)) {
+                    DB::rollBack();
+                    continue;
+                }
+
                 $orderService = new OrderService($order);
                 $orderService->user = $user;
 
@@ -71,7 +76,10 @@ class ActivateReservedPlans extends Command
                     $user->group_id = $plan->group_id;
                     $user->device_limit = $plan->device_limit;
                     $user->speed_limit = $plan->speed_limit;
-                    $user->expired_at = $orderService->getTimePublic($order->period, time());
+                    $user->expired_at = $order->period === 'onetime_price'
+                        ? null : $orderService->getTimePublic($order->period, time());
+                    $reserved->plan_id = $plan->id;
+                    $order->saveOrFail();
                 }
 
                 if (!$user->save()) {

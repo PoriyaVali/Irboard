@@ -32,6 +32,12 @@ class CouponService
         $this->setUserId($order->user_id);
         $this->setPeriod($order->period);
         $this->check();
+        if ($source && GiftOrderService::isFixedGift($source)) {
+            // All redemption paths, including checkout and Telegram, deliver
+            // the same purchased terms. Validate the source plan/period first.
+            $order->custom_snapshot = $source->custom_snapshot;
+            $order->exchange_rate = $source->exchange_rate;
+        }
         switch ($this->coupon->type) {
             case 1:
                 $order->discount_amount = $this->coupon->value;

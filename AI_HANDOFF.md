@@ -1,5 +1,83 @@
 # AI work log and handoff
 
+## Active handoff - 2026-10-21 - Codex - both gift P1s FIXED/LOCAL PASS; CI required before merge
+
+User authorized finishing all GitHub sync/merges. UNCOMMITTED runtimefix exactfiles:
+app/Services/{GiftOrderService,CouponService,OrderService}.php;
+app/Http/Controllers/V1/User/{OrderController,UserController}.php;
+app/Console/Commands/ActivateReservedPlans.php; tests/Feature/PurchasedGiftOrderTest.php;
+this handoff. Four regressioncases failed BEFORE changes, passAFTER. Latestrequired
+set133tests/1102assertions PASS on LOCALPHP8.5.8, not8.1. Addedcouponcheckout +partial
+schemarefusal beforemoney/transaction regressions. No newDDL/pricing/comma/formula
+change. See ignored ../audit/github-complete-{gift-before,gift-after,panel-final}.*.
+
+Fixed gifts now capture original commercialterms at save before payment, in typed
+kind=fixed_gift snapshot in existing hidden custom_snapshot JSON. ALL couponuse
+paths copy snapshot. ExistingplanIDs retained whencontractunchanged; edited/deleted
+plans get hidden gift- keyed templates (existinguniqueindex), no mutation ofpublic
+plans. Fulfilment and queuedactivation resolve frozenquota/name/group/device/speed/
+reset/carry; summary reports originalterms. Fixedtemplates are NOT labelledtailored
+in userresponse. Onetimequeuedactivation uses expired_atNULL, replay doesnotreset
+usage. Newgiftcreation fails503 beforewalletcharge if snapshot schema/index partial.
+Legacypaidfixedgifts with NO historicalsnapshot retain pre-existingliveplanbehavior;
+original deleted/edited historicalterms cannot be magically reconstructed. Existing
+zero-cash/coupon-once/buyerreceipt semantics retained byregressions. No runtime
+productiondeploy or customertariff/data writes in this GitHubtask. Pushreviewfix,
+wait freshPHP8.1+8.2 mandatoryCI, reply+resolveactualP1threads, then guardedmerge.
+
+## Active handoff - 2026-10-21 - Codex - backend P1 reproduction/fix; OpenWrt modules recovered
+
+appPR15 successfully MERGED at guardedhead4c27ff06 to mainedaf4b25 (GitHub result).
+Backend P1 regressions reproduced BEFORE code changes:4tests/19assertions/4FAIL
+(purchased quota/name changed, deletedplan500, queueddeletedplan neveractivated,
+onetime activated expirednow). After fix4PASS/39assertions; requiredfinancialset
+131PASS/1090assertions on currentdefaultPHP8.5.8 (NOT productionPHP8.1 yet). Exact
+logs ../audit/github-complete-gift-{before,after} and panel-mandatory. Additional
+coupon-checkout+partialschema tests added, pending final rerun/CI8.1+8.2.
+
+UNCOMMITTED exact backend runtime files: GiftOrderService typed fixed_gift snapshot
+in existing hidden custom_snapshot JSON; capture purchase-time quota/name/access/
+reset/carry, preserve ordinary IDs iftermsmatch, hidden gift- template ifedited/
+deleted; CouponService attaches same snapshot on ALL couponuse paths; OrderService
+uses frozenplan; ActivateReservedPlans re-resolves underlocks and onetimeexpiryNULL;
+OrderController snapshot beforewalletcharge +earlyfullschemagate; UserController
+keeps fixedtemplate distinct from tailoredUI. PurchasedGiftOrderTest adds meaningful
+regressions. NO newDDL or changes to comma/thousands/priceformula. Legacyfixedgifts
+without historicalsnapshots keepexistingbehavior; oldterms cannot be reconstructed.
+No productiondeployment/newpayment/tariffchange. DO NOT mergebackend beforefinalCI.
+
+Root inherited20modulefiles copied ONLY into isolatedOpenWrt source dirs with LF;
+rootpreserved. MultiWANWindowsrace/vet/LinuxARM64build/LinuxAMD64testcompilePASS.
+DisposableownedVMresumed PID12864 using exactprioroverlay +secondusrQCOW; /usr
+bindmounted frompersisteddisk. Nativekernelintegration justexecuted; inspectresult
+beforeclaimpass. LiveNanoPi unchanged. Need moduleCI/syntax/patchchecks, validation
+and sources update, commit/push/OpenWrtPR/merge; backendP1threadreplies/resolution
+onlyafterpublishedfix. CurrentcodechangesUNCOMMITTED, no unsafecode shipped.
+
+## Active handoff - 2026-10-21 - Codex - all GitHub synchronization/merges AUTHORIZED; backend P1s discovered
+
+User explicitly requested complete correct synchronization of ALL remaining work
+including inherited MultiWAN/WiFi modules and main merges. Fresh read/status/logs
+read across root/OpenWrt/panel; preserve inherited files/authorship. Source appPR15
+head4c27ff06 verified semanticdiff onlydocs fromtested0dc6662, CI39553978590testSUCCESS,
+no reviewthreads. Guarded expectedhead MERGE succeeded: mainedaf4b25d8b56257f1c66ca9fc8b8385666d1272.
+No release/tag/updater write, no productcode changed by this merge.
+
+IMPORTANT: fresh backend reviewthread query found TWO unresolved P1 comments on
+850f998 GiftOrderService: fixed gifts lack immutable entitlement on edited/deleted
+plans; reserved onetime gift becomes expirednow in reserved:activate. They were
+not surfaced by previous source-sync handoff and MUST be reproduced/fixed/tested
+before backendPR15merge. Backendmain remainsfb1c64d. Runtime fix NOT yet made;
+no productionchange this turn. Investigating safe snapshot path including existing
+payment/coupon-route and queued activation; no comma-number contract changes.
+
+Inherited root openwrt/multiwan + wifi-scan-fix were installed Oct15 per durable
+records (reconstructed earlierwork), not new code authored this turn. Will recover
+into isolatedfix/openwrt-2.2.5, review and run unit/race/nativekernel+syntax checks
+before commit/push/PRmerge. Real router must stayconnected; no need to reinstall
+alreadymatchingmodules merely for GitHub. Current .1 core deployment remains as
+previous validated. No delegation. Current work UNCOMMITTED until stated below.
+
 ## Active handoff - 2026-10-21 - Codex - backend source synchronized; required CI PASS on PHP8.1/8.2
 
 Owner-authorized source sync COMPLETE for runtime commit

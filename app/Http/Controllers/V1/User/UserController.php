@@ -481,7 +481,7 @@ class UserController extends Controller
             if (!$user['plan']) {
                 abort(500, __('Subscription plan does not exist'));
             }
-            if ($user['plan']->custom_key) {
+            if ($user['plan']->custom_key && !\App\Services\GiftOrderService::isFixedAccessPlan($user['plan'])) {
                 // The shared access template has no quota of its own. Present
                 // this account's purchased allowance without mutating the plan.
                 $user['plan']->transfer_enable = (int)($user->transfer_enable / 1073741824);

@@ -107,7 +107,9 @@ class OrderController extends Controller
     {
         $isGift = $request->boolean('is_gift');
         if ($isGift) {
-            if (!GiftOrderService::enabled()) abort(503, __('Gift purchases are not available'));
+            if (!GiftOrderService::enabled() || !\App\Services\CustomPlanService::enabled()) {
+                abort(503, __('Gift purchases are not available'));
+            }
             if ($request->input('plan_id') == 0 || in_array($request->input('period'), ['deposit', 'reset_price'], true)) {
                 abort(422, __('Only subscription plans can be purchased as gifts'));
             }
@@ -206,7 +208,10 @@ class OrderController extends Controller
         $order->period = $request->input('period');
         $order->trade_no = Helper::generateOrderNo();
         $order->total_amount = $plan[$request->input('period')];
-        if ($isGift) $order->is_gift = true;
+        if ($isGift) {
+            $order->is_gift = true;
+            GiftOrderService::snapshotFixedGift($order, $plan);
+        }
 
         if ($request->input('coupon_code')) {
             $couponService = new CouponService($request->input('coupon_code'));

@@ -104,7 +104,7 @@ class OrderService
             return;
         }
 
-        $plan = Plan::find($order->plan_id);
+        $plan = GiftOrderService::fixedPlan($order) ?? Plan::find($order->plan_id);
         if (!$plan) {
             abort(500, 'پلن این سفارش یافت نشد');
         }
