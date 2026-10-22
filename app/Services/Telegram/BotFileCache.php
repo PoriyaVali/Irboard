@@ -137,15 +137,22 @@ class BotFileCache
             . "فعلاً کاربران لینک دانلود می‌گیرند.\n\n" . implode("\n", $lines)
             . "\n\nهر کدام را یک بار برای همین ربات بفرستید تا از این به بعد به‌صورت فایل برای کاربران ارسال شود.";
 
+        $delivered = false;
         foreach ($admins as $chatId) {
             try {
-                Http::timeout(5)->post("https://api.telegram.org/bot{$token}/sendMessage", [
+                $resp = Http::timeout(5)->post("https://api.telegram.org/bot{$token}/sendMessage", [
                     'chat_id' => $chatId,
                     'text' => $text,
                 ]);
+                $delivered = $delivered || $resp->json('ok') === true;
             } catch (\Throwable $e) {
                 Log::warning('bot file request to admin failed', ['msg' => $e->getMessage()]);
             }
+        }
+        // Only a request someone received counts as asked; otherwise the next
+        // tap or save tries again.
+        if (!$delivered) {
+            return;
         }
         foreach ($links as $l) {
             BotSetting::set(self::askedKey($l['file']), (string) time());
