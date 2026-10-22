@@ -116783,6 +116783,7 @@ return '<div class="sb-card"><div class="sb-card-title">'+title+'</div>'
 +'<div class="sb-row"><div class="sb-group full"><label>لینک عکس (اختیاری)</label><input id="sb_'+key+'_image" value="'+sbEsc(img)+'" placeholder="https://..." oninput="var p=document.getElementById(\'sb_'+key+'_prev\');p.src=this.value;p.style.display=this.value?\'block\':\'none\'"><img id="sb_'+key+'_prev" class="sb-img-prev" src="'+sbEsc(img)+'"'+(img?' style="display:block"':'')+' onerror="this.style.display=\'none\'"></div></div>'
 +'<div class="sb-group full"><label>لینک‌ها / دکمه‌ها</label><div class="sb-links" id="sb_'+key+'_links">'+rows+'</div>'
 +'<button class="sb-btn-add" onclick="sbAddLink(\''+key+'\')">➕ افزودن لینک</button></div>'
++/*__DSC_SECTION_START__*/'<label style="display:flex;align-items:center;gap:10px;cursor:pointer;margin-top:14px"><input type="checkbox" id="sb_'+key+'_creds"'+(sbData&&sbData["help_"+key+"_send_credentials"]?" checked":"")+'><span>بعد از فایل‌ها و لینک‌ها، ایمیل و رمز عبور کاربر هم برایش ارسال شود</span></label>'/*__DSC_SECTION_END__*/
 +'</div>';
 }
 
@@ -116837,6 +116838,7 @@ var _ba=document.getElementById("sb_backup_all");body.backup_all_admins=(_ba&&_b
 body["help_"+p+"_text"]=sbGv("sb_"+p+"_text");
 body["help_"+p+"_image"]=sbGv("sb_"+p+"_image");
 body["help_"+p+"_links"]=sbCollectLinks(p);
+/*__DSC_SAVE_START__*/var _cr=document.getElementById("sb_"+p+"_creds");if(_cr)body["help_"+p+"_send_credentials"]=_cr.checked?1:0;/*__DSC_SAVE_END__*/
 });
 var msg=document.getElementById("sbMsg");
 if(msg){msg.textContent="در حال ذخیره (دانلود فایل‌ها ممکن است کمی طول بکشد)...";msg.style.color="#999"}

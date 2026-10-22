@@ -29,6 +29,7 @@ class SmartBotController extends Controller
             $data['help_' . $p . '_image'] = BotText::get('help_' . $p . '_image', '');
             $links = json_decode(BotText::get('help_' . $p . '_links', '[]'), true);
             $data['help_' . $p . '_links'] = is_array($links) ? array_values($links) : [];
+            $data['help_' . $p . '_send_credentials'] = BotText::get('help_' . $p . '_send_credentials', '0') === '1';
         }
         $data['notify_all_admins'] = \App\Models\BotSetting::getBool('notify_all_admins', false);
         $data['backup_all_admins'] = \App\Models\BotSetting::getBool('backup_all_admins', false);
@@ -53,6 +54,11 @@ class SmartBotController extends Controller
 
             $processed = $this->processLinks($newLinks, $oldLinks);
             BotText::set('help_' . $p . '_links', json_encode(array_values($processed), JSON_UNESCAPED_UNICODE));
+
+            // Only when the page sent it: a page from before this option leaves it as it was.
+            if (array_key_exists('help_' . $p . '_send_credentials', $input)) {
+                BotText::set('help_' . $p . '_send_credentials', !empty($input['help_' . $p . '_send_credentials']) ? '1' : '0');
+            }
         }
         \App\Models\BotSetting::set('notify_all_admins', !empty($input['notify_all_admins']) ? '1' : '0');
         \App\Models\BotSetting::set('backup_all_admins', !empty($input['backup_all_admins']) ? '1' : '0');
