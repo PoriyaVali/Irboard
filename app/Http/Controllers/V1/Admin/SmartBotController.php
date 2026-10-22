@@ -4,6 +4,7 @@ namespace App\Http\Controllers\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\BotText;
+use App\Services\Telegram\BotFileCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 
@@ -55,6 +56,9 @@ class SmartBotController extends Controller
         }
         \App\Models\BotSetting::set('notify_all_admins', !empty($input['notify_all_admins']) ? '1' : '0');
         \App\Models\BotSetting::set('backup_all_admins', !empty($input['backup_all_admins']) ? '1' : '0');
+        // A new release saved here is a new download: tell the admins now which
+        // files are too big for the bot to upload, rather than at a user's tap.
+        BotFileCache::askAdmins();
         return response(['data' => true]);
     }
 
@@ -120,6 +124,7 @@ class SmartBotController extends Controller
             if ($of !== '' && !in_array($of, $keptFiles, true)) {
                 $path = public_path(ltrim($of, '/'));
                 if (File::exists($path)) @File::delete($path);
+                BotFileCache::forget($of);
             }
         }
 

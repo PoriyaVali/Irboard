@@ -651,7 +651,7 @@ jobs:
           node --test tests/AdminTailoredPricingBrowserTest.cjs
 
       - name: Purchased gifts and money-path regressions
-        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'CustomPlanGiftOrderTest|CustomPlanAdminTest|CustomPlanOrderTest|PurchasedGiftOrderTest|OrderMoneyFlowTest|TelegramBotFixesTest|ExchangeRateTest'
+        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'CustomPlanGiftOrderTest|CustomPlanAdminTest|CustomPlanOrderTest|PurchasedGiftOrderTest|OrderMoneyFlowTest|TelegramBotFixesTest|TelegramBotFilesTest|ExchangeRateTest'
 
       - name: Run tests (informational)
         continue-on-error: true

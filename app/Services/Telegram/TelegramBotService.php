@@ -86,6 +86,11 @@ class TelegramBotService
             return;
         }
 
+        // ادمین یکی از فایل‌های ربات هوشمند را فرستاده: شناسه‌ی تلگرامی‌اش نگه داشته می‌شود
+        if ($this->user->is_admin && isset($message['document']) && $this->rememberAdminFile($chatId, $message['document'])) {
+            return;
+        }
+
         // پاسخ ادمین به تیکت با ریپلای روی پیام اعلان
         if ($this->user->is_admin && $text !== '' && isset($message['reply_to_message'])) {
             $repliedText = $message['reply_to_message']['text'] ?? '';
@@ -148,6 +153,13 @@ class TelegramBotService
                 Log::info("Setting command received", ["is_admin" => $this->user->is_admin]);
                 if ($this->user->is_admin) {
                     $this->showSettings($chatId);
+                } else {
+                    $this->sendMessage($chatId, "❌ این دستور فقط برای ادمین‌ها است.");
+                }
+                break;
+            case '/files':
+                if ($this->user->is_admin) {
+                    $this->sendFilesStatus($chatId);
                 } else {
                     $this->sendMessage($chatId, "❌ این دستور فقط برای ادمین‌ها است.");
                 }
@@ -817,15 +829,122 @@ class TelegramBotService
             $path    = public_path(ltrim($lk['file'], '/'));
             $caption = !empty($lk['label']) ? $lk['label'] : '';
             $size    = file_exists($path) ? filesize($path) : 0;
-            if ($size > 0 && $size <= 50 * 1024 * 1024) {
-                $this->sendDocumentFile($chatId, $path, $caption);
-            } else {
-                $fileUrl = secure_url('/' . ltrim($lk['file'], '/'));
-                $btnText = '⬇️ ' . ($caption !== '' ? $caption : 'دانلود فایل');
-                $note    = ($caption !== '' ? $caption : 'فایل') . ' (حجم: ' . $this->humanSize($size) . ')';
-                $this->sendMessage($chatId, $note, null, [[['text' => $btnText, 'url' => $fileUrl]]]);
+
+            // 1) Telegram already holds this exact file: send it by id, at any size.
+            if ($size > 0 && $this->sendCachedFile($chatId, $lk['file'], $size, $caption)) {
+                continue;
+            }
+            // 2) Small enough to upload: upload once and keep the id for everyone after.
+            if ($size > 0 && $size <= BotFileCache::$uploadLimit) {
+                $fileId = $this->sendDocumentFile($chatId, $path, $caption);
+                if ($fileId !== null) {
+                    if ($fileId !== '') {
+                        BotFileCache::put($lk['file'], $size, $fileId, basename((string) (parse_url((string) ($lk['url'] ?? ''), PHP_URL_PATH) ?: $path)));
+                    }
+                    continue;
+                }
+            }
+            // 3) Too big for a bot to upload, and no admin has sent it yet: a link,
+            //    and the admins are told once which file to send.
+            $fileUrl = secure_url('/' . ltrim($lk['file'], '/'));
+            $btnText = '⬇️ ' . ($caption !== '' ? $caption : 'دانلود فایل');
+            $note    = ($caption !== '' ? $caption : 'فایل') . ' (حجم: ' . $this->humanSize($size) . ')';
+            $this->sendMessage($chatId, $note, null, [[['text' => $btnText, 'url' => $fileUrl]]]);
+            if ($size > BotFileCache::$uploadLimit) {
+                BotFileCache::askAdmins();
             }
         }
+    }
+
+    /** Sends [file] by the id Telegram gave it, if one is stored for this size. */
+    protected function sendCachedFile(int $chatId, string $file, int $size, string $caption): bool
+    {
+        $fileId = BotFileCache::get($file, $size);
+        if ($fileId === null) {
+            return false;
+        }
+        $data = ['chat_id' => $chatId, 'document' => $fileId];
+        if ($caption !== '') $data['caption'] = $caption;
+        try {
+            $resp = Http::timeout(30)->post($this->apiUrl . 'sendDocument', $data);
+            if ($resp->json('ok') === true) {
+                return true;
+            }
+            // 400 = Telegram does not know this id (any more). Anything else -
+            // a user who blocked the bot, a rate limit - says nothing about the id.
+            if ($resp->status() === 400) {
+                BotFileCache::forget($file);
+            }
+            Log::warning('sendDocument(file_id) refused', ['file' => basename($file), 'status' => $resp->status(), 'description' => $resp->json('description')]);
+        } catch (\Throwable $e) {
+            Log::error('sendDocument(file_id) error', ['msg' => $e->getMessage()]);
+        }
+        return false;
+    }
+
+    /**
+     * An admin sent a document: if it is one of the smart bot's files (same
+     * size to the byte as the panel's copy), keep Telegram's id for it.
+     * False lets any other document go on its usual way.
+     */
+    protected function rememberAdminFile(int $chatId, array $document): bool
+    {
+        $size = (int) ($document['file_size'] ?? 0);
+        $fileId = (string) ($document['file_id'] ?? '');
+        if ($size <= 0 || $fileId === '') {
+            return false;
+        }
+
+        $matches = BotFileCache::matching($size);
+        if (!$matches) {
+            // Only speak up for what looks like an app, and not in the middle of a step.
+            $name = strtolower((string) ($document['file_name'] ?? ''));
+            if ($this->user->bot_step || !preg_match('/\.(apk|exe|msi|zip|dmg|ipa)$/', $name)) {
+                return false;
+            }
+            $this->sendMessage($chatId, "❓ این فایل با هیچ‌کدام از فایل‌های «ربات هوشمند» پنل هم‌اندازه نیست، پس ذخیره نشد.\n\n" . $this->filesStatusText());
+            return true;
+        }
+
+        $name = (string) ($document['file_name'] ?? '');
+        $lines = [];
+        foreach ($matches as $m) {
+            BotFileCache::put($m['file'], $size, $fileId, $name);
+            $lines[] = '• ' . BotFileCache::describe($m);
+        }
+        $text = "✅ ذخیره شد. از این به بعد این فایل مستقیم برای کاربران فرستاده می‌شود:\n" . implode("\n", $lines);
+        $left = BotFileCache::missing();
+        if ($left) {
+            $text .= "\n\nهنوز مانده:\n" . implode("\n", array_map(fn ($l) => '• ' . BotFileCache::describe($l) . " — {$l['name']}", $left));
+        }
+        $this->sendMessage($chatId, $text);
+        return true;
+    }
+
+    /** /files: what the help sections will send, file or link. */
+    protected function sendFilesStatus(int $chatId): void
+    {
+        $this->sendMessage($chatId, $this->filesStatusText());
+    }
+
+    protected function filesStatusText(): string
+    {
+        $links = BotFileCache::fileLinks();
+        if (!$links) {
+            return 'در «ربات هوشمند» پنل هیچ فایلی برای ارسال تنظیم نشده است.';
+        }
+        $lines = [];
+        foreach ($links as $l) {
+            $head = BotFileCache::describe($l) . ' — ' . $l['name'] . ' (' . BotFileCache::humanSize($l['size']) . ')';
+            if (BotFileCache::get($l['file'], $l['size']) !== null) {
+                $lines[] = "✅ {$head}\n   به‌صورت فایل فرستاده می‌شود";
+            } elseif ($l['size'] <= BotFileCache::$uploadLimit) {
+                $lines[] = "✅ {$head}\n   بار اول آپلود می‌شود، بعد فوری";
+            } else {
+                $lines[] = "⚠️ {$head}\n   فعلاً لینک؛ همین فایل را یک بار برای ربات بفرستید";
+            }
+        }
+        return "📦 فایل‌های راهنما:\n\n" . implode("\n\n", $lines);
     }
 
     protected function sendPhoto(int $chatId, string $photo, string $caption = '', ?array $inlineKeyboard = null): void
@@ -856,7 +975,11 @@ class TelegramBotService
         }
     }
 
-    protected function sendDocumentFile(int $chatId, string $path, string $caption = ''): void
+    /**
+     * Uploads [path]. Returns the file_id Telegram gave it ('' if it was sent
+     * but no id came back), or null if it was not sent.
+     */
+    protected function sendDocumentFile(int $chatId, string $path, string $caption = ''): ?string
     {
         try {
             $payload = ['chat_id' => $chatId];
@@ -865,9 +988,14 @@ class TelegramBotService
                 ->timeout(180)
                 ->post($this->apiUrl . 'sendDocument', $payload);
             Log::info('sendDocumentFile', ['file' => basename($path), 'size' => @filesize($path), 'status' => $resp->status(), 'ok' => $resp->json('ok')]);
+            if ($resp->json('ok') === true) {
+                $fileId = $resp->json('result.document.file_id');
+                return is_string($fileId) ? $fileId : '';
+            }
         } catch (\Throwable $e) {
             Log::error('sendDocumentFile error', ['msg' => $e->getMessage()]);
         }
+        return null;
     }
 
     protected function humanSize(int $bytes): string
