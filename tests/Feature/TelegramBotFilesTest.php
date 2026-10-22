@@ -29,6 +29,9 @@ class TelegramBotFilesTest extends TestCase
     /** @var list<string> */
     private array $made = [];
 
+    /** A chat Telegram refuses to deliver to (the admin blocked the bot, say). */
+    private ?int $unreachableChat = null;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -47,6 +50,9 @@ class TelegramBotFilesTest extends TestCase
                     return Http::response(['ok' => false, 'description' => 'Bad Request: wrong file identifier'], 400);
                 }
                 return Http::response(['ok' => true, 'result' => ['document' => ['file_id' => $request['document']]]]);
+            }
+            if ($this->unreachableChat !== null && (string) ($request->data()['chat_id'] ?? '') === (string) $this->unreachableChat) {
+                return Http::response(['ok' => false, 'description' => 'Forbidden: bot was blocked by the user'], 403);
             }
             return Http::response(['ok' => true, 'result' => ['message_id' => 1]]);
         });
@@ -156,6 +162,24 @@ class TelegramBotFilesTest extends TestCase
 
         $this->tapAndroidHelp($user);
         $this->assertCount(0, $this->sentTo('sendMessage', 900), 'only once per file');
+    }
+
+    public function testARequestNoAdminReceivedIsTriedAgain()
+    {
+        $this->makeUser(['telegram_id' => 970, 'is_admin' => 1]);
+        $user = $this->makeUser(['telegram_id' => 971]);
+        $this->androidLinks([$this->link($this->copyOnDisk(200))]);
+
+        $this->unreachableChat = 970;
+        $this->tapAndroidHelp($user);
+        $this->assertCount(1, $this->sentTo('sendMessage', 970), 'tried');
+
+        $this->unreachableChat = null;
+        $this->tapAndroidHelp($user);
+        $this->assertCount(1, $this->sentTo('sendMessage', 970), 'and tried again, because nobody got it');
+
+        $this->tapAndroidHelp($user);
+        $this->assertCount(0, $this->sentTo('sendMessage', 970), 'but not once it was delivered');
     }
 
     public function testOnceAnAdminSendsTheFileEveryUserGetsItAsAFile()
