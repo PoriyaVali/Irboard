@@ -465,6 +465,25 @@ class TelegramBotService
         } elseif (Str::startsWith($data, 'card_confirm_reject_')) {
             $this->handleCardConfirmReject($chatId, $data, $callback['id']);
             return;
+        } elseif ($data === 'cred_reset') {
+            $this->answerCallback($callback['id']);
+            $this->sendMessage($chatId, "⚠️ با ساخت رمز جدید، رمز فعلی دیگر کار نمی‌کند و برنامه روی همه‌ی دستگاه‌ها باید دوباره وارد شود.\n\nرمز جدید ساخته شود؟", null, [
+                [['text' => '✅ بله، رمز جدید بساز', 'callback_data' => 'cred_reset_yes']],
+                [['text' => '🏠 بازگشت', 'callback_data' => 'main_menu']],
+            ]);
+            return;
+        } elseif ($data === 'cred_reset_yes') {
+            $this->answerCallback($callback['id']);
+            if ($this->user->banned) {
+                $this->sendMessage($chatId, '⛔ حساب شما مسدود شده است.');
+                return;
+            }
+            if (BotCredentials::reset($this->user) === null) {
+                $this->sendMessage($chatId, 'رمز حساب‌های مدیریتی از طریق ربات ساخته نمی‌شود.');
+                return;
+            }
+            $this->sendCredentials($chatId, true);
+            return;
         } elseif (Str::startsWith($data, 'help_')) {
             $this->answerCallback($callback['id']);
             $this->sendHelpPlatform($chatId, Str::after($data, 'help_'));
@@ -854,6 +873,38 @@ class TelegramBotService
                 BotFileCache::askAdmins();
             }
         }
+
+        // تیک «ارسال ایمیل و رمز» این بخش در ربات هوشمند
+        if (BotText::get('help_' . $platform . '_send_credentials', '0') === '1') {
+            $this->sendCredentials($chatId);
+        }
+    }
+
+    /** The email and password for the app, after a help section that says to log in with them. */
+    protected function sendCredentials(int $chatId, bool $renewed = false): void
+    {
+        $cred = BotCredentials::forUser($this->user);
+        $email = htmlspecialchars($cred['email'], ENT_QUOTES);
+
+        if ($cred['password'] !== null) {
+            $text = ($renewed ? "✅ رمز جدید ساخته شد؛ رمز قبلی دیگر کار نمی‌کند.\n\n" : '')
+                . "🔐 اطلاعات ورود به برنامه\n\n"
+                . "📧 ایمیل: <code>{$email}</code>\n"
+                . '🔑 رمز عبور: <code>' . htmlspecialchars($cred['password'], ENT_QUOTES) . "</code>\n\n"
+                . 'برای کپی، روی هر کدام بزنید.';
+            $this->sendMessage($chatId, $text, null, null, 'HTML');
+            return;
+        }
+        if ($cred['reason'] === 'privileged') {
+            $this->sendMessage($chatId, "🔐 ایمیل ورود: <code>{$email}</code>\nرمز حساب‌های مدیریتی از طریق ربات نمایش داده یا ساخته نمی‌شود.", null, null, 'HTML');
+            return;
+        }
+        $this->sendMessage($chatId,
+            "🔐 اطلاعات ورود به برنامه\n\n"
+            . "📧 ایمیل: <code>{$email}</code>\n"
+            . "🔑 رمز عبور: همان رمزی که خودتان برای حساب گذاشته‌اید.\n\n"
+            . 'اگر رمز را ندارید، با دکمه‌ی زیر یک رمز تازه بسازید.',
+            null, [[['text' => '🔄 ساخت رمز جدید', 'callback_data' => 'cred_reset']]], 'HTML');
     }
 
     /** Sends [file] by the id Telegram gave it, if one is stored for this size. */
