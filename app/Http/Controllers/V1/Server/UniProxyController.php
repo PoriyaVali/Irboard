@@ -458,6 +458,13 @@ class UniProxyController extends Controller
                 ];
                 break;
         }
+        // Expose the node address separately from client SNI / REALITY target.
+        // The wizard may suggest this host for certificates, but must never
+        // infer domain ownership from server_name. Do not synthesize SNI here.
+        // Older nodes ignore this additional host field.
+        if (in_array($this->nodeType, ['vmess', 'vless', 'trojan', 'tuic', 'hysteria', 'anytls'], true)) {
+            $response['host'] = $this->nodeInfo->host;
+        }
         $response['base_config'] = [
             'push_interval' => (int)config('v2board.server_push_interval', 60),
             'pull_interval' => (int)config('v2board.server_pull_interval', 60),
