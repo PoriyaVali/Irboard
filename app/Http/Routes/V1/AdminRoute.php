@@ -45,6 +45,11 @@ class AdminRoute
             $router->post('/server/route/drop', 'V1\\Admin\\Server\\RouteController@drop');
             $router->get ('/server/manage/getNodes', 'V1\\Admin\\Server\\ManageController@getNodes');
             $router->post('/server/manage/sort', 'V1\\Admin\\Server\\ManageController@sort');
+            $router->get('/server/mihomo/fetch', 'V1\\Admin\\Server\\MihomoController@fetch');
+            $router->post('/server/mihomo/save', 'V1\\Admin\\Server\\MihomoController@save');
+            $router->post('/server/mihomo/update', 'V1\\Admin\\Server\\MihomoController@update');
+            $router->post('/server/mihomo/drop', 'V1\\Admin\\Server\\MihomoController@drop');
+            $router->post('/server/mihomo/copy', 'V1\\Admin\\Server\\MihomoController@copy');
             $router->group([
                 'prefix' => 'server/trojan'
             ], function ($router) {

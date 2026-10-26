@@ -40,6 +40,12 @@ class ClashMeta
         $proxies = [];
 
         foreach ($servers as $item) {
+            $mihomo = \App\Protocols\Mihomo\Outbound::fromServer($user, $item);
+            if ($mihomo !== null) {
+                $proxy[] = $mihomo;
+                $proxies[] = $item['name'];
+                continue;
+            }
             // Singbox-style inline adaptation: unwrap v2node
             if (($item['type'] ?? null) === 'v2node' && isset($item['protocol'])) {
                 $item['type'] = $item['protocol'];

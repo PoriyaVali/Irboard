@@ -15,11 +15,14 @@ use App\Models\ServerTuic;
 use App\Models\ServerAnytls;
 use App\Models\ServerMdns;
 use App\Models\ServerTrusttunnel;
+use App\Models\ServerMihomo;
+use App\Protocols\Mihomo\Outbound;
 use App\Models\UserGroup;
 use App\Services\AddonBillingService;
 use App\Utils\CacheKey;
 use App\Utils\Helper;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 
 class ServerService
 {
@@ -403,6 +406,24 @@ class ServerService
         return $servers;
     }
 
+    public function getAvailableMihomo(User $user): array
+    {
+        $groups = $this->getUserGroupIds($user);
+        $servers = [];
+        foreach ($this->getAllMihomo() as $server) {
+            if (!$server['show'] || !$this->groupCanReach($groups, $server['group_id'])) continue;
+            $server['mihomo'] = Outbound::render($server, $user);
+            $server['host'] = $server['mihomo']['server'] ?? '';
+            $server['port'] = $server['mihomo']['port'] ?? 0;
+            // Only the rendered profile leaves the admin boundary. Never return
+            // the stored template alongside the current user's credentials.
+            unset($server['outbound_settings']);
+            $server['last_check_at'] = null;
+            $servers[] = $server;
+        }
+        return $servers;
+    }
+
     public function getAvailableServers(User $user)
     {
         $servers = array_merge(
@@ -415,12 +436,19 @@ class ServerService
             $this->getAvailableAnyTLS($user),
             $this->getAvailableV2node($user),
             $this->getAvailableMdns($user),
-            $this->getAvailableTrustTunnel($user)
+            $this->getAvailableTrustTunnel($user),
+            $this->getAvailableMihomo($user)
         );
         $tmp = array_column($servers, 'sort');
         array_multisort($tmp, SORT_ASC, $servers);
         $servers = $this->dropDuplicateServers($servers);
         return array_map(function ($server) {
+            if ($server['type'] === 'mihomo') {
+                // These endpoints have no managed-node heartbeat or counters.
+                $server['is_online'] = null;
+                $server['cache_key'] = 'mihomo-' . $server['id'] . '-' . $server['updated_at'] . '-' . sha1(json_encode($server['mihomo']));
+                return $server;
+            }
             if (strpos($server['port'], '-')) {
                 $server['mport'] = (string)$server['port'];
             } else {
@@ -452,11 +480,17 @@ class ServerService
         $seen = [];
         $unique = [];
         foreach ($servers as $server) {
-            $key = strtolower(
-                ($server['type'] ?? '') . '|' .
-                ($server['host'] ?? '') . '|' .
-                ($server['port'] ?? '')
-            );
+            if (($server['type'] ?? null) === 'mihomo') {
+                $settings = $server['mihomo'];
+                unset($settings['name']);
+                $key = 'mihomo|' . sha1(json_encode($settings));
+            } else {
+                $key = strtolower(
+                    ($server['type'] ?? '') . '|' .
+                    ($server['host'] ?? '') . '|' .
+                    ($server['port'] ?? '')
+                );
+            }
             if (isset($seen[$key])) continue;
             $seen[$key] = true;
             $unique[] = $server;
@@ -683,9 +717,31 @@ class ServerService
         return $servers;
     }
 
+    public function getAllMihomo(): array
+    {
+        // Code can be updated before update.sql is applied. Existing native
+        // subscriptions must keep working during that interval.
+        if (!Schema::hasTable('v2_server_mihomo')) return [];
+        return ServerMihomo::orderBy('sort')->orderBy('id')->get()->map(function ($server) {
+            $row = $server->toArray();
+            $row['type'] = 'mihomo';
+            $row['managed'] = false;
+            $row['parent_id'] = null;
+            $row['host'] = $row['outbound_settings']['server'] ?? '';
+            $row['port'] = $row['outbound_settings']['port'] ?? 0;
+            $row['rate'] = 1;
+            return $row;
+        })->all();
+    }
+
     private function mergeData(&$servers)
     {
         foreach ($servers as $k => $v) {
+            if ($v['type'] === 'mihomo') {
+                $servers[$k]['available_status'] = null;
+                $servers[$k]['online'] = null;
+                continue;
+            }
             $serverType = strtoupper($v['type']);
             $servers[$k]['online'] = Cache::get(CacheKey::get("SERVER_{$serverType}_ONLINE_USER", $v['parent_id'] ?? $v['id']));
             $servers[$k]['last_check_at'] = Cache::get(CacheKey::get("SERVER_{$serverType}_LAST_CHECK_AT", $v['parent_id'] ?? $v['id']));
@@ -701,7 +757,7 @@ class ServerService
         }
     }
 
-    public function getAllServers()
+    public function getAllServers(bool $includeMihomo = true)
     {
         $servers = array_merge(
             $this->getAllShadowsocks(),
@@ -715,6 +771,7 @@ class ServerService
             $this->getAllMdns(),
             $this->getAllTrustTunnel()
         );
+        if ($includeMihomo) $servers = array_merge($servers, $this->getAllMihomo());
         $this->mergeData($servers);
         $tmp = array_column($servers, 'sort');
         array_multisort($tmp, SORT_ASC, $servers);

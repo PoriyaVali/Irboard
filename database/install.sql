@@ -584,6 +584,21 @@ CREATE TABLE `v2_server_trusttunnel` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+DROP TABLE IF EXISTS `v2_server_mihomo`;
+CREATE TABLE `v2_server_mihomo` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `protocol` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL,
+  `group_id` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `tags` text COLLATE utf8mb4_unicode_ci,
+  `outbound_settings` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
+  `show` tinyint(1) NOT NULL DEFAULT '0',
+  `sort` int(11) NOT NULL DEFAULT '0',
+  `created_at` int(11) NOT NULL,
+  `updated_at` int(11) NOT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 DROP TABLE IF EXISTS `v2_server_route`;
 CREATE TABLE `v2_server_route` (
   `id` int(11) NOT NULL AUTO_INCREMENT,

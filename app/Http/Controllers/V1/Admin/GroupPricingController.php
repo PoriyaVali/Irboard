@@ -136,7 +136,7 @@ class GroupPricingController extends Controller
         $counts = [];
         foreach (['v2_server_anytls', 'v2_server_mdns', 'v2_server_trusttunnel', 'v2_server_vless', 'v2_server_vmess',
                   'v2_server_trojan', 'v2_server_hysteria', 'v2_server_tuic',
-                  'v2_server_shadowsocks', 'v2_server_v2node'] as $table) {
+                  'v2_server_shadowsocks', 'v2_server_v2node', 'v2_server_mihomo'] as $table) {
             try {
                 $rows = DB::table($table)->where('show', 1)->pluck('group_id');
             } catch (\Throwable $e) {

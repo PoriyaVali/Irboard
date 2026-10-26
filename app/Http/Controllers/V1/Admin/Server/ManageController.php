@@ -13,7 +13,9 @@ class ManageController extends Controller
     {
         $serverService = new ServerService();
         return response([
-            'data' => $serverService->getAllServers()
+            // The Mihomo editor on this page owns external client profiles;
+            // the prebuilt native-node table dispatches only managed types.
+            'data' => $serverService->getAllServers(false)
         ]);
     }
 
