@@ -7,13 +7,16 @@ use App\Models\ServerMihomo;
 use App\Protocols\Mihomo\Outbound;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 class MihomoController extends Controller
 {
     private function ready(): void
     {
-        abort_unless(Schema::hasTable('v2_server_mihomo'), 503, 'ابتدا به‌روزرسانی پایگاه دادهٔ پنل را اجرا کنید.');
+        abort_unless(Schema::hasTable('v2_server_mihomo')
+            && Schema::hasColumns('v2_server_mihomo', ['host', 'port', 'server_port', 'rate', 'route_id']),
+            503, 'ابتدا به‌روزرسانی پایگاه دادهٔ پنل را اجرا کنید.');
     }
 
     public function fetch()
@@ -41,15 +44,37 @@ class MihomoController extends Controller
             'id' => 'nullable|integer|min:1', 'name' => 'required|string|max:255',
             'protocol' => ['required', Rule::in(array_keys(Outbound::catalog()))],
             'group_id' => 'required|array|min:1', 'group_id.*' => 'required|integer|distinct|exists:v2_server_group,id',
+            'route_id' => 'nullable|array', 'route_id.*' => 'required|integer|distinct|exists:v2_server_route,id',
+            'host' => 'nullable|string|max:255',
+            'port' => 'nullable|integer|between:1,65535',
+            'server_port' => 'nullable|integer|between:1,65535',
+            'rate' => 'nullable|numeric|between:0,99999999.99',
             'tags' => 'nullable|array|max:20', 'tags.*' => 'required|string|max:100',
             'sort' => 'required|integer|between:0,2147483647', 'show' => 'required|boolean',
             'outbound_settings' => 'present|array',
         ]);
+        $server = isset($params['id']) ? ServerMihomo::findOrFail($params['id']) : new ServerMihomo();
+        // The normal node fields own the endpoint. JSON-only requests from the
+        // initial implementation still work, while editing host/port in the
+        // shared form cannot leave a stale address in the subscription.
+        foreach (['host' => 'server', 'port' => 'port'] as $field => $option) {
+            if (array_key_exists($field, $params)) {
+                if ($params[$field] === null || $params[$field] === '') unset($params['outbound_settings'][$option]);
+                else $params['outbound_settings'][$option] = $params[$field];
+            } else {
+                $params[$field] = $params['outbound_settings'][$option] ?? null;
+            }
+        }
+        $params['server_port'] = $params['server_port'] ?? $server->server_port ?? $params['port'];
+        $params['rate'] = $params['rate'] ?? $server->rate ?? 1;
+        $params['route_id'] = array_map('strval', $params['route_id'] ?? $server->route_id ?? []);
+        Validator::make($params, [
+            'host' => 'nullable|string|max:255', 'port' => 'nullable|integer|between:1,65535',
+        ])->validate();
         abort_if(strlen(json_encode($params['outbound_settings'])) > 131072, 422, 'تنظیمات بیش از حد بزرگ است.');
         $params['outbound_settings'] = Outbound::validate($params['protocol'], $params['outbound_settings']);
         $params['group_id'] = array_map('strval', $params['group_id']);
         $params['tags'] = $params['tags'] ?? [];
-        $server = isset($params['id']) ? ServerMihomo::findOrFail($params['id']) : new ServerMihomo();
         unset($params['id']);
         $server->fill($params)->save();
         return response(['data' => true]);

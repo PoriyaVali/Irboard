@@ -444,7 +444,7 @@ class ServerService
         $servers = $this->dropDuplicateServers($servers);
         return array_map(function ($server) {
             if ($server['type'] === 'mihomo') {
-                // These endpoints have no managed-node heartbeat or counters.
+                // Node-backend integration is implemented separately in V2bX.
                 $server['is_online'] = null;
                 $server['cache_key'] = 'mihomo-' . $server['id'] . '-' . $server['updated_at'] . '-' . sha1(json_encode($server['mihomo']));
                 return $server;
@@ -727,9 +727,11 @@ class ServerService
             $row['type'] = 'mihomo';
             $row['managed'] = false;
             $row['parent_id'] = null;
-            $row['host'] = $row['outbound_settings']['server'] ?? '';
-            $row['port'] = $row['outbound_settings']['port'] ?? 0;
-            $row['rate'] = 1;
+            $row['host'] = $row['host'] ?? $row['outbound_settings']['server'] ?? '';
+            $row['port'] = $row['port'] ?? $row['outbound_settings']['port'] ?? 0;
+            $row['server_port'] = $row['server_port'] ?? ($row['port'] ?: null);
+            $row['rate'] = $row['rate'] ?? 1;
+            $row['route_id'] = $row['route_id'] ?? [];
             return $row;
         })->all();
     }

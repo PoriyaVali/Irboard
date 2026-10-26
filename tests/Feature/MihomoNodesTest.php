@@ -181,6 +181,80 @@ class MihomoNodesTest extends TestCase
         $this->artisan('check:server')->assertExitCode(0);
     }
 
+    public function testNewProtocolsUseTheNativeNodeListAndSharedSort(): void
+    {
+        $this->withHeaders($this->auth());
+        $settings = MihomoProfiles::settings('socks5');
+        $this->postJson($this->path('save'), $this->node('socks5', [
+            'host' => 'new.example.test', 'port' => 1443, 'server_port' => 2443, 'rate' => 1.5, 'route_id' => [], 'sort' => 10,
+            'outbound_settings' => $settings,
+        ]))->assertOk();
+        $saved = ServerMihomo::firstOrFail();
+        $this->assertSame('new.example.test', $saved->host);
+        $this->assertSame(2443, (int)$saved->server_port);
+        $this->assertSame(1.5, (float)$saved->rate);
+        DB::table('v2_server_shadowsocks')->insert([
+            'name' => 'existing SS', 'group_id' => '[1]', 'host' => 'native.example.test', 'port' => '8443',
+            'server_port' => 8443, 'cipher' => 'aes-128-gcm', 'rate' => 1, 'show' => 1, 'sort' => 0, 'created_at' => time(), 'updated_at' => time(),
+        ]);
+        $native = preg_replace('~/mihomo/fetch$~', '/manage/getNodes', $this->path('fetch'));
+        $list = $this->getJson($native)->assertOk()->assertJsonCount(2, 'data')->json('data');
+        $this->assertSame('shadowsocks', $list[0]['type']);
+        $this->assertSame('mihomo', $list[1]['type']);
+        $this->assertSame('socks5', $list[1]['protocol']);
+        $this->assertSame('new.example.test', $list[1]['host']);
+        $sort = preg_replace('~/getNodes$~', '/sort', $native);
+        $this->postJson($sort, ['mihomo' => [$saved->id => 0], 'shadowsocks' => [1 => 1]])->assertOk();
+        $this->getJson($native)->assertJsonPath('data.0.type', 'mihomo');
+        $user = $this->makeActiveUser($this->makePlan());
+        $profiles = (new ServerService())->getAvailableMihomo($user);
+        $this->assertSame('new.example.test', $profiles[0]['mihomo']['server']);
+        $this->assertSame(1443, (int)$profiles[0]['mihomo']['port']);
+        $this->postJson($this->path('copy'), ['id' => $saved->id])->assertOk();
+        $copy = ServerMihomo::orderByDesc('id')->firstOrFail();
+        $this->assertSame(2443, (int)$copy->server_port);
+        $this->assertSame(0, $copy->show);
+    }
+
+    public function testSharedSortRollsBackIfAnotherNodeIsMissing(): void
+    {
+        $this->withHeaders($this->auth());
+        $node = ServerMihomo::create($this->node('socks5', ['sort' => 9]));
+        $path = preg_replace('~/mihomo/fetch$~', '/manage/sort', $this->path('fetch'));
+        $this->postJson($path, ['mihomo' => [$node->id => 0], 'shadowsocks' => [999 => 1]])->assertNotFound();
+        $this->assertSame(9, $node->fresh()->sort);
+        $this->postJson($path, ['mihomo' => [$node->id => -1]])->assertStatus(422);
+        $this->postJson($path, ['mihomo' => ['invalid-id' => 0]])->assertStatus(422);
+        $this->assertSame(9, $node->fresh()->sort);
+    }
+
+    public function testPartialUpgradeReportsUnavailableWithoutChangingDefinitions(): void
+    {
+        DB::statement('ALTER TABLE v2_server_mihomo DROP COLUMN server_port');
+        $this->withHeaders($this->auth());
+        $this->getJson($this->path('fetch'))->assertStatus(503);
+        $this->postJson($this->path('save'), $this->node())->assertStatus(503);
+        $this->assertSame(0, ServerMihomo::count());
+    }
+
+    public function testRangeAndPeerProtocolsCanOmitTheCommonClientPort(): void
+    {
+        $this->withHeaders($this->auth());
+        $mieru = MihomoProfiles::settings('mieru');
+        unset($mieru['port']); $mieru['port-range'] = '2090-2099';
+        $this->postJson($this->path('save'), $this->node('mieru', [
+            'host' => $mieru['server'], 'port' => null, 'server_port' => 2090, 'outbound_settings' => $mieru,
+        ]))->assertOk();
+        $this->assertNull(ServerMihomo::firstOrFail()->port);
+        $wg = MihomoProfiles::settings('wireguard');
+        $wg['peers'] = [['server' => $wg['server'], 'port' => $wg['port'], 'public-key' => $wg['public-key'], 'allowed-ips' => ['0.0.0.0/0']]];
+        unset($wg['server'], $wg['port'], $wg['public-key']);
+        $this->postJson($this->path('save'), $this->node('wireguard', [
+            'host' => null, 'port' => null, 'server_port' => null, 'outbound_settings' => $wg,
+        ]))->assertOk();
+        $this->assertSame($wg, ServerMihomo::where('protocol', 'wireguard')->firstOrFail()->outbound_settings);
+    }
+
     public function testJsonCredentialsKeepEmptyStringsAndSignificantWhitespace(): void
     {
         $this->withHeaders($this->auth());

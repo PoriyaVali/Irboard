@@ -79,4 +79,24 @@ class MihomoSubscriptionTest extends TestCase
         $this->assertSame('owned.example.test', $outbound['sni']);
         $this->assertSame(8443, $outbound['port']);
     }
+
+    /** @runInSeparateProcess
+     * @preserveGlobalState disabled
+     */
+    public function testInformationAliasesUseCurrentNamesWithoutChangingTheStoredProfile(): void
+    {
+        $user = ['id' => 91, 'uuid' => 'fictional-uuid', 'u' => 0, 'd' => 0, 'transfer_enable' => 100000, 'expired_at' => time() + 86400];
+        $original = ['name' => 'original node', 'type' => 'mihomo', 'protocol' => 'socks5', 'outbound_settings' => MihomoProfiles::settings('socks5')];
+        $original['mihomo'] = Outbound::render($original, $user);
+        $names = ['ترافیک: ۱۰۰ گیگ', 'تاریخ: فردا', 'original node'];
+        $servers = array_map(function ($name) use ($original) {
+            return array_replace($original, ['name' => $name]);
+        }, $names);
+        foreach ([ClashMeta::class, Mihomo::class, ClashVerge::class, ClashNyanpasu::class] as $class) {
+            $config = Yaml::parse((new $class($user, $servers))->handle());
+            $this->assertSame($names, array_column($config['proxies'], 'name'), $class);
+            foreach ($names as $name) $this->assertContains($name, $config['proxy-groups'][0]['proxies']);
+        }
+        $this->assertSame('original node', $original['mihomo']['name']);
+    }
 }

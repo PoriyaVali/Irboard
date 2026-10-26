@@ -121,18 +121,27 @@ class Outbound
 
     public static function render(array $server, $user): array
     {
+        $settings = $server['outbound_settings'];
+        if (!empty($server['host'])) $settings['server'] = $server['host'];
+        if (!empty($server['port'])) $settings['port'] = (int)$server['port'];
         $replace = function ($value) use (&$replace, $user) {
             if (is_array($value)) return array_map($replace, $value);
             if (!is_string($value)) return $value;
             return strtr($value, ['{{uuid}}' => (string)$user['uuid'], '{{user_id}}' => (string)$user['id']]);
         };
-        return ['name' => $server['name'], 'type' => $server['protocol']] + $replace($server['outbound_settings']);
+        return ['name' => $server['name'], 'type' => $server['protocol']] + $replace($settings);
     }
 
     /** Shared by all three Mihomo-based Clash subscription exporters. */
     public static function fromServer($user, array $server): ?array
     {
-        if (($server['type'] ?? null) === 'mihomo') return $server['mihomo'];
+        if (($server['type'] ?? null) === 'mihomo') {
+            $outbound = $server['mihomo'];
+            // Subscription-info aliases change the current row's name after
+            // rendering. Keep the proxy name and group references in sync.
+            $outbound['name'] = $server['name'];
+            return $outbound;
+        }
         if (($server['type'] ?? null) !== 'trusttunnel') return null;
         // V2bX/core/trusttunnel/user.go: credentialsFor uses UUID for both.
         $outbound = [

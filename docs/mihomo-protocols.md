@@ -1,82 +1,87 @@
-# Mihomo client profiles
+# پروتکل‌های جدید در مدیریت نود
 
-Irboard can distribute the network protocols parsed by **MetaCubeX/mihomo
-v1.19.33**, commit `3f27ef39f8c96bbfbc8b0b9bb10f5c9ef60149d8`:
-[parser](https://github.com/MetaCubeX/mihomo/blob/v1.19.33/adapter/parser.go),
-[full option examples](https://github.com/MetaCubeX/mihomo/blob/v1.19.33/docs/config.yaml).
+پروتکل‌های زیر به **همان منوی + در صفحهٔ مدیریت نودها** اضافه شده‌اند:
 
-| Already managed by Irboard | Added as external client profiles |
+| پروتکل | حالت‌ها / نام‌های مرتبط |
 | --- | --- |
-| Shadowsocks, VMess, VLESS, Trojan | ShadowsocksR, SOCKS5, HTTP/HTTPS, Snell |
-| Hysteria 1/2, TUIC, AnyTLS | WireGuard/AmneziaWG, ShadowQUIC, GOST Relay |
-| TrustTunnel (Mihomo export now included) | SSH, Mieru, Sudoku, MASQUE, OpenVPN |
-| | Tailscale/Headscale, ZeroTier, EasyTier |
+| ShadowsocksR | SSR |
+| SOCKS5 | TLS و UDP |
+| HTTP | HTTPS با TLS |
+| Snell | نسخه‌های ۱ تا ۵ |
+| WireGuard | AmneziaWG با تنظیمات مربوط |
+| ShadowQUIC | |
+| GOST Relay | |
+| SSH | رمز یا کلید خصوصی |
+| Mieru | TCP / UDP |
+| Sudoku | |
+| MASQUE | |
+| OpenVPN | |
+| Tailscale | Headscale با control-url |
+| ZeroTier | |
+| EasyTier | |
 
-`direct`, `dns`, `reject`, and `rematch` are local routing actions rather than
-server protocols. They can be configured in `resources/rules/custom.clash.yaml`.
-HTTP with `tls: true` is HTTPS; AmneziaWG uses WireGuard's `amnezia-wg-option`.
-The existing custom AnyTLS/REALITY behavior is retained.
+مبنای مقایسه، [parser رسمی Mihomo v1.19.33](https://github.com/MetaCubeX/mihomo/blob/v1.19.33/adapter/parser.go)
+با commit `3f27ef39f8c96bbfbc8b0b9bb10f5c9ef60149d8` است. Shadowsocks، VMess،
+VLESS، Trojan، Hysteria 1/2، TUIC، AnyTLS و TrustTunnel قبلاً در پنل وجود داشتند.
+گزینه‌های `direct`، `dns`، `reject` و `rematch` عمل مسیریابی محلی هستند و می‌توانند
+در قالب سفارشی Clash تنظیم شوند.
 
-## استفاده در پنل
+## استفاده
 
-پس از به‌روزرسانی معمول پنل و اجرای مسیر ارتقای پایگاه داده (`php artisan
-v2board:update`)، در پایین صفحهٔ **مدیریت نودها**، بخش **نودهای Mihomo** دیده
-می‌شود. جدول جدید `v2_server_mihomo` با `CREATE TABLE IF NOT EXISTS` ساخته می‌شود؛
-نودهای قبلی تغییری نمی‌کنند. تا پیش از ارتقای دیتابیس، سابسکریپشن‌های قبلی کار
-می‌کنند و ویرایشگر جدید پیام نیاز به به‌روزرسانی می‌دهد.
+1. ارتقای معمول پنل و دیتابیس را با مسیر موجود (`php artisan v2board:update`) انجام دهید.
+2. در **مدیریت نودها** روی **+** بزنید و پروتکل دلخواه را از همان منوی نودهای قبلی انتخاب کنید.
+3. نام، گروه دسترسی، آدرس اتصال، پورت اتصال، پورت سمت سرور و ضریب را در فرم معمول نود وارد کنید.
+   پروتکل‌های overlay می‌توانند بدون آدرس/پورت مستقیم و با تنظیمات شبکهٔ خودشان تعریف شوند.
+4. فیلدهای اختصاصی همان پروتکل را کامل کنید. تنظیمات پیشرفتهٔ تو در تو در بخش اختیاری JSON قابل تنظیم است.
+5. نود در **همان جدول مدیریت نودها** ظاهر می‌شود و ویرایش، نمایش/پنهان‌کردن، کپی، حذف و ترتیب آن از همان‌جا انجام می‌شود.
+   کپی جدید همیشه مخفی ساخته می‌شود.
 
-1. «افزودن نود Mihomo» را بزنید و پروتکل، نام و گروه‌های دسترسی را انتخاب کنید.
-2. تنظیمات JSON را با اطلاعات سرویس واقعی کامل کنید. فیلدهای خالی در نمونه
-   اطلاعات اتصال محسوب نمی‌شوند. نام و نوع پروتکل از فیلدهای بالای فرم می‌آید.
-3. گزینه‌های اختصاصی و تو در تو، مانند `peers`، `obfs-opts`، `httpmask`،
-   `amnezia-wg-option` و تنظیمات TLS، با همان ساختار حفظ می‌شوند.
-4. ترتیب، برچسب و نمایش را تنظیم و ذخیره کنید. کپی نود همیشه مخفی ساخته می‌شود.
-5. لینک اشتراک را با `flag=mihomo` یا `flag=meta` به کلاینت بدهید. خروجی‌های
-   `verge` و `nyanpasu` نیز این پروفایل‌ها را دارند. اگر لینک از قبل پارامتر
-   دارد از `&flag=mihomo` و در غیر این صورت از `?flag=mihomo` استفاده کنید.
+خروجی اشتراک از `flag=mihomo`، `flag=meta`، `flag=verge` یا `flag=nyanpasu`
+پشتیبانی می‌کند. نام و آدرس و پورت خروجی با اطلاعات ذخیره‌شدهٔ نود هماهنگ است.
+مقادیر متنی `{{uuid}}` و `{{user_id}}` در تنظیمات اختصاصی برای هر مشترک جایگزین
+می‌شوند. قالب اطلاعات حجم و تاریخ انقضا هم نام‌های معتبر و مجزا تولید می‌کند.
 
-مقادیر متنی `{{uuid}}` و `{{user_id}}` برای هر مشترک جایگزین می‌شوند؛ برای مثال
-`"username": "{{user_id}}", "password": "{{uuid}}"`. سرویس مستقل باید از قبل
-همین اطلاعات ورود را بشناسد. این جایگزینی کاربر یا peer جدید روی سرور نمی‌سازد.
+**دامنهٔ این تغییر پنل Irboard و سابسکریپشن است.** پیاده‌سازی این پروتکل‌ها در
+هستهٔ سرور V2bX، دریافت کاربر/تنظیمات نود و گزارش مصرف آن‌ها مرحلهٔ بعد است؛ در
+این تغییر فایلی از V2bX ویرایش نمی‌شود. تا آن مرحله، نود جدید گزارش سلامت/مصرف
+از V2bX ندارد. انتخاب پروتکل در پنل به‌تنهایی سرویس سمت سرور را راه‌اندازی نمی‌کند.
 
-این بخش **پروفایل کلاینت برای سرویس مستقل** است: نصب و راه‌اندازی سرور، گزارش
-ترافیک، محدودیت هم‌زمانی/سرعت و لغو اعتبار سمت سرور به یکپارچه‌سازی جداگانه نیاز
-دارد. پنهان‌کردن نود یا انقضای حساب، دریافت اشتراک جدید را متوقف می‌کند؛ اطلاعات
-اتصالی که قبلاً دریافت شده باید در خود سرویس هم لغو شود. کلید خصوصی WireGuard،
-گواهی OpenVPN و کلید ثبت دستگاه overlay باید متناسب با کاربران دریافت‌کننده
-تهیه شود. تنظیمات ثابت بین اعضای همان گروه به اشتراک گذاشته می‌شوند.
+## Implementation and compatibility
 
-## Export and compatibility
+The shared `v2_server_mihomo` table stores common node fields and each selected
+protocol's nested `outbound_settings`. The native management endpoint returns
+these nodes together with existing protocols. Native mixed sorting, group counts,
+group-deletion guards and subscription group filtering include them. There is
+no separate profile-management section.
 
-The complete outbound object is stored as JSON. The panel checks the selected
-protocol, endpoint/port, required credentials, group membership, and several
-protocol constraints. Advanced options are passed through to Mihomo; its parser
-is the final authority. Use a core build that contains the selected protocol and
-validate the resulting subscription with `mihomo -t -f subscription.yaml`.
-Older clients may reject newer protocol types. Classic Clash, General, Sing-box
-and other unrelated exporters do not receive these Mihomo-only profiles.
+The panel validates common fields and required protocol settings. Advanced
+options retain their original JSON types and credential whitespace. For protocols
+with endpoints, the form's common host and port are authoritative. Full option
+examples are in [Mihomo's reference config](https://github.com/MetaCubeX/mihomo/blob/v1.19.33/docs/config.yaml).
+Use a compatible Mihomo build and verify complete subscriptions with
+`mihomo -t -f subscription.yaml`; older cores may reject new types. Other client
+exporters keep their supported protocol set.
 
-Profiles follow existing hidden-node, group, active-grant and subscription expiry
-rules. Stored templates are admin-only; user-facing node responses contain only
-the current subscriber's rendered configuration. Identical addresses on different
-protocols, or with different credentials/options, are kept. External profiles have
-no heartbeat, so their online state is unknown. The native-node table remains
-separate; group counts and group-deletion guards include both kinds of node.
+Existing TrustTunnel nodes now export to Mihomo using UUID for both username and
+password, matching V2bX. Their certificate hostname/custom SNI, self-signed TLS
+mode and explicit HTTP/3 choice are preserved.
 
-TrustTunnel uses the same UUID for username and password, matching
-`V2bX/core/trusttunnel/user.go`. The certificate hostname is used as SNI unless a
-custom SNI is configured; self-signed mode enables `skip-cert-verify`, and an
-explicit `http3` selection enables QUIC.
+The upgrade creates the new table idempotently. Existing subscriptions continue
+working if the code is updated before the schema; new protocol saves report that
+an upgrade is needed. Server heartbeat monitoring skips these new protocols until
+server-core integration exists.
 
-## Checks
+## Verification
 
 ```sh
+python3 scripts/patch_admin_mihomo_nodes.py --check
 vendor/bin/phpunit --filter 'MihomoNodesTest|MihomoSubscriptionTest'
 node --test tests/AdminMihomoNodesBrowserTest.cjs
 IRBOARD_MIHOMO_CONTRACT_DIR=/tmp/mihomo-contract vendor/bin/phpunit --filter MihomoSubscriptionTest
 python3 tests/ValidateMihomoConfig.py --binary /path/to/mihomo --profiles /tmp/mihomo-contract/ClashMeta.json
 ```
 
-The final check uses v1.19.33 and ephemeral fictional cryptographic material to
-parse all 15 added types plus TrustTunnel. These are configuration and browser
-checks, not live connectivity tests against production VPN endpoints.
+Browser checks exercise the actual Add Node menu and forms in both shipped admin
+bundles. Core checks parse all 15 added types and TrustTunnel with the pinned
+v1.19.33 binary and disposable test keys. They do not assert live VPN connectivity
+or a V2bX implementation for these types.

@@ -638,7 +638,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Test tailored sidebar tab and pricing editor
+      - name: Test native node forms and tailored pricing editor
         if: matrix.php == '8.2'
         run: |
           set -e
@@ -650,10 +650,10 @@ jobs:
             node --check public/assets/admin/umi-fa.js
           node --check public/assets/admin/tailored-pricing.js
           node --test tests/AdminTailoredPricingBrowserTest.cjs
-          node --check public/assets/admin/mihomo-nodes.js
+          python3 scripts/patch_admin_mihomo_nodes.py --check
           node --test tests/AdminMihomoNodesBrowserTest.cjs
 
-      - name: Mihomo profile administration and subscription contract
+      - name: New node protocol administration and subscription contract
         env:
           IRBOARD_MIHOMO_CONTRACT_DIR: ${{ runner.temp }}/mihomo-contract
         run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'MihomoNodesTest|MihomoSubscriptionTest'

@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Services\ServerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\ValidationException;
 
 class ManageController extends Controller
 {
@@ -13,16 +15,14 @@ class ManageController extends Controller
     {
         $serverService = new ServerService();
         return response([
-            // The Mihomo editor on this page owns external client profiles;
-            // the prebuilt native-node table dispatches only managed types.
-            'data' => $serverService->getAllServers(false)
+            'data' => $serverService->getAllServers()
         ]);
     }
 
     public function sort(Request $request)
     {
         ini_set('post_max_size', '5m');
-        $params = $request->only(
+        $types = [
             'shadowsocks',
             'vmess',
             'vless',
@@ -32,33 +32,36 @@ class ManageController extends Controller
             'anytls',
             'v2node',
             'mdns',
-            'trusttunnel'
-        ) ?? [];
+            'trusttunnel',
+            'mihomo',
+        ];
+        $params = $request->only($types);
         if (empty($params)) {
-            $params = [
-                'shadowsocks' => $_POST['shadowsocks'] ?? null,
-                'vmess'       => $_POST['vmess'] ?? null,
-                'vless'       => $_POST['vless'] ?? null,
-                'trojan'      => $_POST['trojan'] ?? null,
-                'tuic'        => $_POST['tuic'] ?? null,
-                'hysteria'    => $_POST['hysteria'] ?? null,
-                'anytls'      => $_POST['anytls'] ?? null,
-                'v2node'      => $_POST['v2node'] ?? null,
-                'mdns'        => $_POST['mdns'] ?? null,
-                'trusttunnel' => $_POST['trusttunnel'] ?? null,
-            ];
+            foreach ($types as $type) {
+                if (isset($_POST[$type])) $params[$type] = $_POST[$type];
+            }
         }
-        DB::beginTransaction();
-        foreach ($params as $k => $v) {
-            $model = 'App\\Models\\Server' . ucfirst($k);
-            foreach($v as $id => $sort) {
-                if (!$model::find($id)->update(['sort' => $sort])) {
-                    DB::rollBack();
-                    abort(500, 'ذخیره ناموفق بود');
+        $rules = [];
+        foreach ($types as $type) {
+            $rules[$type] = 'sometimes|array';
+            $rules[$type . '.*'] = 'integer|between:0,2147483647';
+        }
+        $params = Validator::make($params, $rules)->validate();
+        foreach ($params as $type => $positions) {
+            foreach ($positions as $id => $sort) {
+                if (!ctype_digit((string)$id) || (int)$id < 1) {
+                    throw ValidationException::withMessages([$type => 'شناسهٔ نود معتبر نیست.']);
                 }
             }
         }
-        DB::commit();
+        DB::transaction(function () use ($params) {
+            foreach ($params as $type => $positions) {
+                $model = 'App\\Models\\Server' . ucfirst($type);
+                foreach ($positions as $id => $sort) {
+                    if (!$model::findOrFail($id)->update(['sort' => $sort])) abort(500, 'ذخیره ناموفق بود');
+                }
+            }
+        });
         return response([
             'data' => true
         ]);

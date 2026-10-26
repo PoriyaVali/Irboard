@@ -1092,12 +1092,17 @@ CREATE TABLE IF NOT EXISTS `v2_device_ban` (
   KEY `idx_hash` (`hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='device bans and the state each one replaced';
 
--- External Mihomo client profiles; no changes to existing managed nodes.
+-- Additional protocol definitions in the existing node manager.
 CREATE TABLE IF NOT EXISTS `v2_server_mihomo` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `protocol` varchar(32) COLLATE utf8mb4_unicode_ci NOT NULL,
   `group_id` text COLLATE utf8mb4_unicode_ci NOT NULL,
+  `route_id` text COLLATE utf8mb4_unicode_ci,
+  `host` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+  `port` int(11) DEFAULT NULL,
+  `server_port` int(11) DEFAULT NULL,
+  `rate` decimal(10,2) NOT NULL DEFAULT '1.00',
   `tags` text COLLATE utf8mb4_unicode_ci,
   `outbound_settings` mediumtext COLLATE utf8mb4_unicode_ci NOT NULL,
   `show` tinyint(1) NOT NULL DEFAULT '0',
@@ -1106,3 +1111,11 @@ CREATE TABLE IF NOT EXISTS `v2_server_mihomo` (
   `updated_at` int(11) NOT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Preserve any definitions made with the initial protocol table. The normal
+-- updater tolerates ADD COLUMN when a fresh table already includes the field.
+ALTER TABLE `v2_server_mihomo` ADD COLUMN `route_id` text COLLATE utf8mb4_unicode_ci;
+ALTER TABLE `v2_server_mihomo` ADD COLUMN `host` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL;
+ALTER TABLE `v2_server_mihomo` ADD COLUMN `port` int(11) DEFAULT NULL;
+ALTER TABLE `v2_server_mihomo` ADD COLUMN `server_port` int(11) DEFAULT NULL;
+ALTER TABLE `v2_server_mihomo` ADD COLUMN `rate` decimal(10,2) NOT NULL DEFAULT '1.00';
