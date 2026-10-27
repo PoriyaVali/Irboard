@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Jobs\StatServerJob;
 use App\Jobs\StatUserJob;
 use App\Jobs\TrafficFetchJob;
+use App\Protocols\Mihomo\ManagedServer;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
@@ -20,7 +21,7 @@ class NodeApiContractTest extends TestCase
     {
         parent::setUp();
         $this->setUpPanel();
-        $types = ['shadowsocks', 'vmess', 'vless', 'trojan', 'tuic', 'hysteria', 'anytls', 'mdns', 'trusttunnel'];
+        $types = array_merge(['shadowsocks', 'vmess', 'vless', 'trojan', 'tuic', 'hysteria', 'anytls', 'mdns', 'trusttunnel'], ManagedServer::TYPES);
         $this->createInstallTables(array_map(fn ($type) => 'v2_server_' . $type, $types));
         config([
             'v2board.server_token' => 'fictional-contract-token',
@@ -45,6 +46,10 @@ class NodeApiContractTest extends TestCase
             'anytls' => ['tls' => 2, 'tls_settings' => $tls, 'padding_scheme' => '["stop=8"]'],
             'mdns' => ['domain' => '["tunnel.example.test"]', 'encryption_method' => 2, 'encryption_key' => str_repeat('ab', 32)],
             'trusttunnel' => ['hostname' => 'cert.example.test', 'cert_type' => 'self-signed', 'has_ipv6' => 1],
+            'http' => ['managed' => 1, 'username' => '', 'password' => '', 'tls' => 1, 'sni' => 'node.example.test'],
+            'socks5' => ['managed' => 1, 'username' => '', 'password' => '', 'tls' => 1],
+            'mieru' => ['managed' => 1, 'username' => '', 'password' => '', 'transport' => 'TCP'],
+            'shadowquic' => ['managed' => 1, 'username' => '', 'password' => ''],
         ];
         foreach ($types as $type) DB::table('v2_server_' . $type)->insert($common + $extra[$type]);
         DB::table('v2_server_hysteria')->insert(array_replace($common, ['id' => 2, 'version' => 2, 'up_mbps' => 0, 'down_mbps' => 0, 'obfs' => 'salamander', 'obfs_password' => 'fictional-obfs']));
@@ -69,11 +74,15 @@ class NodeApiContractTest extends TestCase
     public function testActualNodeResponsesAndConditionalRequests(): void
     {
         $out = ['configs' => [], 'responses' => []];
-        foreach (['shadowsocks', 'vmess', 'vless', 'trojan', 'tuic', 'hysteria', 'hysteria2', 'anytls', 'mdns', 'trusttunnel', 'v2ray'] as $type) {
+        foreach (array_merge(['shadowsocks', 'vmess', 'vless', 'trojan', 'tuic', 'hysteria', 'hysteria2', 'anytls', 'mdns', 'trusttunnel', 'v2ray'], ManagedServer::TYPES) as $type) {
             $path = $this->endpoint('config', $type, $type === 'hysteria2' ? 2 : 1);
             $response = $this->getJson($path)->assertOk()->assertJsonPath('server_port', 2443)
                 ->assertJsonPath('base_config.push_interval', 41)->assertJsonPath('base_config.pull_interval', 31);
             $out['configs'][$type] = $this->fixture($response);
+            if (ManagedServer::supports($type)) {
+                $response->assertJsonPath('host', 'node.example.test')
+                    ->assertJsonPath('username', '{{uuid}}')->assertJsonPath('password', '{{uuid}}');
+            }
             if (in_array($type, ['vmess', 'vless', 'trojan', 'tuic', 'hysteria', 'hysteria2', 'anytls', 'v2ray'], true)) {
                 $response->assertJsonPath('host', 'node.example.test');
             }
@@ -171,5 +180,31 @@ class NodeApiContractTest extends TestCase
         Queue::assertPushed(StatServerJob::class, 1);
         $this->postJson($this->endpoint('push'), $body, ['X-Report-Id' => 'contract-batch-0002'])->assertOk();
         Queue::assertPushed(TrafficFetchJob::class, 2);
+    }
+
+    public function testManagedProtocolsExchangeUsersDevicesTrafficAndStatus(): void
+    {
+        $user = $this->makeActiveUser($this->makePlan(), ['speed_limit' => 23, 'device_limit' => 2]);
+        foreach (ManagedServer::TYPES as $type) {
+            Queue::fake();
+            $this->getJson($this->endpoint('user', $type))->assertOk()->assertJsonCount(1, 'users')
+                ->assertJsonPath('users.0.id', $user->id)->assertJsonPath('users.0.speed_limit', 23)
+                ->assertJsonPath('users.0.device_limit', 2);
+            $user->update(['banned' => 1]);
+            $this->getJson($this->endpoint('user', $type))->assertOk()->assertJsonCount(0, 'users');
+            $user->update(['banned' => 0]);
+            $this->getJson($this->endpoint('user', $type))->assertOk()->assertJsonCount(1, 'users');
+            $this->postJson($this->endpoint('alive', $type), [$user->id => ['192.0.2.1_1']])->assertOk();
+            $this->getJson($this->endpoint('alivelist', $type))->assertOk()->assertJsonPath('alive.' . $user->id, 1);
+            $this->postJson($this->endpoint('alive', $type), [$user->id => []])->assertOk();
+            $this->getJson($this->endpoint('alivelist', $type))->assertOk()->assertJsonPath('alive.' . $user->id, 0);
+            for ($attempt = 0; $attempt < 2; $attempt++) {
+                $this->postJson($this->endpoint('push', $type), [$user->id => [105, 209]], ['X-Report-Id' => 'managed-contract-batch-' . $type])->assertOk();
+            }
+            Queue::assertPushed(TrafficFetchJob::class, 1);
+            Queue::assertPushed(StatServerJob::class, 1);
+            $this->postJson($this->endpoint('status', $type), ['cpu' => 1.2, 'mem' => ['total' => 1024, 'used' => 128]])
+                ->assertOk()->assertExactJson(['data' => true]);
+        }
     }
 }
