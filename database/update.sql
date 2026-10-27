@@ -1126,6 +1126,7 @@ CREATE TABLE IF NOT EXISTS `v2_server_ssr` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `v2_server_socks5` (
+  `managed` tinyint(1) NOT NULL DEFAULT '0',
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `group_id` text COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1160,6 +1161,7 @@ CREATE TABLE IF NOT EXISTS `v2_server_socks5` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `v2_server_http` (
+  `managed` tinyint(1) NOT NULL DEFAULT '0',
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `group_id` text COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1268,6 +1270,7 @@ CREATE TABLE IF NOT EXISTS `v2_server_wireguard` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `v2_server_shadowquic` (
+  `managed` tinyint(1) NOT NULL DEFAULT '0',
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `group_id` text COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1380,6 +1383,7 @@ CREATE TABLE IF NOT EXISTS `v2_server_ssh` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `v2_server_mieru` (
+  `managed` tinyint(1) NOT NULL DEFAULT '0',
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `group_id` text COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -1679,3 +1683,9 @@ CREATE TABLE IF NOT EXISTS `v2_server_easytier` (
   PRIMARY KEY (`id`),
   KEY `parent_id` (`parent_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Managed Mihomo listeners are opt-in; existing external profiles stay external.
+ALTER TABLE `v2_server_http` ADD COLUMN `managed` tinyint(1) NOT NULL DEFAULT '0';
+ALTER TABLE `v2_server_socks5` ADD COLUMN `managed` tinyint(1) NOT NULL DEFAULT '0';
+ALTER TABLE `v2_server_mieru` ADD COLUMN `managed` tinyint(1) NOT NULL DEFAULT '0';
+ALTER TABLE `v2_server_shadowquic` ADD COLUMN `managed` tinyint(1) NOT NULL DEFAULT '0';

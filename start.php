@@ -59,9 +59,10 @@ function run()
 
     ob_start();
 
-    $response = $kernel->handle(
-        $request = Illuminate\Http\Request::capture()
-    );
+    $request = defined('isWEBMAN') && isWEBMAN
+        ? App\Http\WebmanRequest::capture()
+        : Illuminate\Http\Request::capture();
+    $response = $kernel->handle($request);
 
     $response->send();
 

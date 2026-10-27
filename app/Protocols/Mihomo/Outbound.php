@@ -13,7 +13,10 @@ class Outbound
     public static function catalog(): array
     {
         $catalog = ProtocolRegistry::all();
-        foreach ($catalog as &$definition) unset($definition['model'], $definition['table']);
+        foreach ($catalog as $type => &$definition) {
+            unset($definition['model'], $definition['table']);
+            $definition['managed_server'] = ManagedServer::supports($type);
+        }
         return $catalog;
     }
 
@@ -111,6 +114,7 @@ class Outbound
         }
         if (!empty($row['parent_id'])) {
             foreach (self::catalog()[$type]['fields'] as $column => $field) $row[$column] = $source[$column] ?? null;
+            $row['managed'] = $source['managed'] ?? false;
             $row['created_at'] = $source['created_at'] ?? $row['created_at'] ?? null;
         }
         return $row;
@@ -119,6 +123,7 @@ class Outbound
     public static function render(array $server, $user): array
     {
         $settings = ProtocolRegistry::options($server['type'], $server);
+        if (!empty($server['managed'])) $settings = ManagedServer::credentials($settings);
         $replace = function ($value) use (&$replace, $user) {
             if (is_array($value)) return array_map($replace, $value);
             if (!is_string($value)) return $value;
