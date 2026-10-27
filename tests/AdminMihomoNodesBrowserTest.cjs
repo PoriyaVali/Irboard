@@ -141,10 +141,17 @@ before(async () => {
 beforeEach(() => { state = freshState(); });
 afterEach(async () => { for (const page of Array.from(pages)) await page.close(); });
 after(async () => {
+    // Browser.close replies before Chromium finishes writing its profile.
+    // Observe exit before deleting it, including the signal/exit-already case.
+    const stopped = chrome && new Promise(resolve => {
+        if (chrome.exitCode !== null || chrome.signalCode !== null) resolve();
+        else chrome.once('exit', resolve);
+    });
     if (cdp) { try { await cdp.call('Browser.close'); } catch (_) {} cdp.ws.close(); }
     if (chrome) chrome.kill();
+    if (stopped) await stopped;
     if (server) await new Promise(resolve => server.close(resolve));
-    if (profile) fs.rmSync(profile, { recursive: true, force: true });
+    if (profile) await fs.promises.rm(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 });
 async function addMenu(page) {
     const box = await page.evaluate('(()=>{const b=document.querySelector("[data-mihomo-add-menu]").getBoundingClientRect();return {x:b.x+b.width/2,y:b.y+b.height/2};})()');
