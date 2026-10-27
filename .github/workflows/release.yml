@@ -101,5 +101,5 @@ jobs:
       - name: Attach all verified files before publishing
         run: |
           gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber release_assets/*
-          test "$(git ls-remote origin "refs/tags/$TAG^{}" | cut -f1)" = "$EXPECTED_SHA"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/commits/$TAG" --jq '.sha')" = "$EXPECTED_SHA"
           gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
