@@ -53,6 +53,37 @@ class MihomoNodesTest extends TestCase
         ], $attrs);
     }
 
+    public function testManagedServerContractAndUniqueSubscriptionCredentials(): void
+    {
+        config(['v2board.server_token' => 'managed-test-key']);
+        $headers = $this->auth();
+        foreach (\App\Protocols\Mihomo\ManagedServer::TYPES as $type) {
+            $node = $this->node($type, ['managed' => true, 'username' => '', 'password' => '', 'server_port' => 32001]);
+            $this->withHeaders($headers)->postJson($this->path($type, 'save'), $node)->assertOk();
+            $stored = Registry::model($type)::first();
+            $api = '/api/v1/server/UniProxy/config?token=managed-test-key&node_type=' . $type . '&node_id=' . $stored->id;
+            $body = $this->getJson($api)->assertOk()->assertJsonPath('server_port', 32001)
+                ->assertJsonPath('username', '{{uuid}}')->assertJsonPath('password', '{{uuid}}')->json();
+            $this->assertArrayNotHasKey('private_key', $body);
+            $this->assertArrayNotHasKey('certificate', $body);
+            Cache::put(CacheKey::get('SERVER_' . strtoupper($type) . '_LAST_CHECK_AT', $stored->id), time(), 3600);
+            Cache::put(CacheKey::get('SERVER_' . strtoupper($type) . '_LAST_PUSH_AT', $stored->id), time(), 3600);
+            $managed = array_values(array_filter((new ServerService())->getAllProtocolNodes(), function ($row) use ($type) { return $row['type'] === $type; }));
+            $this->assertTrue($managed[0]['managed']);
+            $runtimeNodes = (new ServerService())->getAllServers(false);
+            $matches = array_values(array_filter($runtimeNodes, function ($row) use ($type) { return $row['type'] === $type; }));
+            $this->assertSame(2, $matches[0]['available_status']);
+
+            $outbound = Outbound::render($stored->toArray() + ['type' => $type], ['id' => 17, 'uuid' => 'individual-secret']);
+            $this->assertSame('individual-secret', $outbound['username']);
+            $this->assertSame('individual-secret', $outbound['password']);
+            $node['id'] = $stored->id; $node['password'] = 'shared-password';
+            $this->withHeaders($headers)->postJson($this->path($type, 'save'), $node)->assertUnprocessable()->assertJsonValidationErrors('password');
+            $stored->update(['managed' => false]);
+            $this->getJson($api)->assertStatus(501);
+        }
+    }
+
     public function testEveryProtocolHasItsOwnRealTableModelColumnsAndProtectedCrud(): void
     {
         $this->assertCount(15, Registry::types());

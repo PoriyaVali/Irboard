@@ -375,9 +375,14 @@ class UniProxyController extends Controller
     // 后端获取配置
     public function config(Request $request)
     {
-        abort_if(\App\Protocols\Mihomo\ProtocolRegistry::has($this->nodeType), 501,
-            'پیکربندی هستهٔ سرور این پروتکل در V2bX هنوز پیاده‌سازی نشده است.');
+        if (\App\Protocols\Mihomo\ProtocolRegistry::has($this->nodeType)) {
+            abort_if($this->nodeInfo->parent_id, 409, 'برای نود دارای والد، V2bX را به شناسهٔ نود اصلی متصل کنید.');
+            abort_unless(\App\Protocols\Mihomo\ManagedServer::supports($this->nodeType) && $this->nodeInfo->managed, 501, 'این نود در حالت سرویس خارجی است یا هنوز ورودی سرور چندکاربره ندارد.');
+        }
         switch ($this->nodeType) {
+            case 'http': case 'socks5': case 'mieru': case 'shadowquic':
+                $response = \App\Protocols\Mihomo\ManagedServer::config($this->nodeType, $this->nodeInfo->toArray());
+                break;
             case 'mdns':
                 $response = [
                     'server_port' => $this->nodeInfo->server_port,

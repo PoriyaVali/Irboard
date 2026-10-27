@@ -64,7 +64,8 @@
                 "option": "dialer-proxy",
                 "kind": "string"
             }
-        }
+        },
+        "managed_server": false
     },
     "socks5": {
         "label": "SOCKS5",
@@ -137,7 +138,8 @@
                 "option": "dialer-proxy",
                 "kind": "string"
             }
-        }
+        },
+        "managed_server": true
     },
     "http": {
         "label": "HTTP / HTTPS",
@@ -214,7 +216,8 @@
                 "option": "dialer-proxy",
                 "kind": "string"
             }
-        }
+        },
+        "managed_server": true
     },
     "snell": {
         "label": "Snell",
@@ -275,7 +278,8 @@
                 "option": "dialer-proxy",
                 "kind": "string"
             }
-        }
+        },
+        "managed_server": false
     },
     "wireguard": {
         "label": "WireGuard / AmneziaWG",
@@ -381,7 +385,8 @@
                 "option": "dialer-proxy",
                 "kind": "string"
             }
-        }
+        },
+        "managed_server": false
     },
     "shadowquic": {
         "label": "ShadowQUIC",
@@ -490,7 +495,8 @@
                 "option": "dialer-proxy",
                 "kind": "string"
             }
-        }
+        },
+        "managed_server": true
     },
     "gostrelay": {
         "label": "GOST Relay",
@@ -579,7 +585,8 @@
                 "option": "dialer-proxy",
                 "kind": "string"
             }
-        }
+        },
+        "managed_server": false
     },
     "ssh": {
         "label": "SSH",
@@ -639,7 +646,8 @@
                 "option": "dialer-proxy",
                 "kind": "string"
             }
-        }
+        },
+        "managed_server": false
     },
     "mieru": {
         "label": "Mieru",
@@ -709,7 +717,8 @@
                 "option": "dialer-proxy",
                 "kind": "string"
             }
-        }
+        },
+        "managed_server": true
     },
     "sudoku": {
         "label": "Sudoku",
@@ -812,7 +821,8 @@
                 "option": "dialer-proxy",
                 "kind": "string"
             }
-        }
+        },
+        "managed_server": false
     },
     "masque": {
         "label": "MASQUE",
@@ -922,7 +932,8 @@
                 "option": "dialer-proxy",
                 "kind": "string"
             }
-        }
+        },
+        "managed_server": false
     },
     "openvpn": {
         "label": "OpenVPN",
@@ -1065,7 +1076,8 @@
                 "option": "dialer-proxy",
                 "kind": "string"
             }
-        }
+        },
+        "managed_server": false
     },
     "tailscale": {
         "label": "Tailscale / Headscale",
@@ -1137,7 +1149,8 @@
                 "option": "dialer-proxy",
                 "kind": "string"
             }
-        }
+        },
+        "managed_server": false
     },
     "zerotier": {
         "label": "ZeroTier",
@@ -1247,7 +1260,8 @@
                 "option": "dialer-proxy",
                 "kind": "string"
             }
-        }
+        },
+        "managed_server": false
     },
     "easytier": {
         "label": "EasyTier",
@@ -1405,6 +1419,7 @@
                 "option": "dialer-proxy",
                 "kind": "string"
             }
-        }
+        },
+        "managed_server": false
     }
 }

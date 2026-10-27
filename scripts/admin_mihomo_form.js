@@ -68,7 +68,7 @@ class MihomoNodeDrawer extends y.a.Component {
             if(!definition)throw new Error(imnText('پروتکل در این نسخه موجود نیست.','This protocol is unavailable.'));
             var sample=definition.example,server=this.props.record?imnCopy(this.props.record):{
                 type:type,name:'',host:sample.server || '',port:sample.port || null,server_port:sample.port || null,
-                rate:1,group_id:[],route_id:[],tags:[],parent_id:null,show:0,sort:0
+                rate:1,group_id:[],route_id:[],tags:[],parent_id:null,show:0,sort:0,managed:false
             };
             if(!this.props.record)Object.keys(definition.fields).forEach(column=>{
                 var option=definition.fields[column].option;
@@ -104,6 +104,7 @@ class MihomoNodeDrawer extends y.a.Component {
         try {Object.keys(this.state.drafts).forEach(key=>{if(this.state.drafts[key].trim())JSON.parse(this.state.drafts[key]);});}
         catch(_){this.setState({error:imnText('فیلد JSON را اصلاح کنید.','Correct the JSON field before saving.')});return;}
         ['id','name','host','port','server_port','rate','group_id','route_id','tags','parent_id','show','sort'].concat(Object.keys(definition.fields)).forEach(key=>{if(Object.prototype.hasOwnProperty.call(server,key))payload[key]=server[key];});
+        if(definition.managed_server)payload.managed=!!server.managed;
         ['port','server_port','parent_id'].forEach(key=>{payload[key]=payload[key]==='' || payload[key]==null?null:Number(payload[key]);});
         payload.host=payload.host || null;payload.rate=Number(payload.rate);payload.sort=Number(payload.sort);payload.show=!!payload.show;
         this.setState({busy:true,error:''});
@@ -136,7 +137,7 @@ class MihomoNodeDrawer extends y.a.Component {
     }
     body() {
         var server=this.state.server;if(!server)return null;
-        var source=this.source(server),overlay=['tailscale','zerotier','easytier'].indexOf(server.type)>=0 || (server.type==='wireguard' && source.peers && source.peers.length);
+        var definition=this.state.catalog[server.type],source=this.source(server),overlay=['tailscale','zerotier','easytier'].indexOf(server.type)>=0 || (server.type==='wireguard' && source.peers && source.peers.length);
         return y.a.createElement('form',{'data-mihomo-form':server.type,onSubmit:event=>this.save(event)},
             y.a.createElement('div',{className:'row'},y.a.createElement('div',{className:'col-md-8'},this.input(imnText('نام نود','Node name'),'name',server.name,v=>this.common('name',v),{required:true,maxLength:255})),
                 y.a.createElement('div',{className:'col-md-4'},this.input(imnText('ضریب','Rate'),'rate',server.rate,v=>this.common('rate',v),{type:'number',min:0,step:'0.01',required:true}))),
@@ -150,6 +151,7 @@ class MihomoNodeDrawer extends y.a.Component {
                 y.a.createElement('div',{className:'col-md-3'},this.input(imnText('پورت اتصال','Connection port'),'port',server.port,v=>this.common('port',v),{type:'number',min:1,max:65535,disabled:this.state.busy || !!source.port_range})),
                 y.a.createElement('div',{className:'col-md-3'},this.input(imnText('پورت سرویس','Service port'),'server_port',server.server_port,v=>this.common('server_port',v),{type:'number',min:1,max:65535}))),
             y.a.createElement('div',{className:'form-group'},y.a.createElement('label',null,imnText('مسیریابی','Routes')),y.a.createElement(N['a'],{mode:'multiple',value:server.route_id || [],style:{width:'100%'},disabled:this.state.busy,onChange:values=>this.common('route_id',values)},this.props.routes.map(route=>y.a.createElement(N['a'].Option,{key:String(route.id),value:String(route.id)},route.remarks || route.name || String(route.id))))),
+            !server.parent_id && definition.managed_server && y.a.createElement('div',{className:'form-group'},y.a.createElement('label',null,y.a.createElement('input',{name:'managed',type:'checkbox',checked:!!server.managed,disabled:this.state.busy,onChange:event=>this.common('managed',event.target.checked)}),' ',imnText('مدیریت کاربران با V2bX / هستهٔ Mihomo','Manage users with V2bX / Mihomo')),server.managed && y.a.createElement('p',{className:'text-muted'},imnText('نام کاربری و رمز عبور را خالی بگذارید یا از {{uuid}} استفاده کنید. گواهی TLS و تنظیمات JLS در سرور V2bX تعیین می‌شوند.','Leave credentials blank or use {{uuid}}. Configure server TLS certificates and JLS on V2bX.'))),
             server.parent_id?y.a.createElement('p',{className:'text-muted'},imnText('تنظیمات پروتکل از نود والد گرفته می‌شود.','Protocol settings are inherited from the parent node.')):
                 y.a.createElement(y.a.Fragment,null,y.a.createElement('h4',null,imnProtocolNames[server.type]),this.fields(false),y.a.createElement('details',null,y.a.createElement('summary',null,imnText('تنظیمات پیشرفتهٔ پروتکل','Advanced protocol settings')),this.fields(true))),
             this.input(imnText('ترتیب','Sort order'),'sort',server.sort,v=>this.common('sort',v),{type:'number',min:0,max:2147483647}),

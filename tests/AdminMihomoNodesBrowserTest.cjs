@@ -318,3 +318,19 @@ test('parent choices stay within one protocol and optional booleans preserve the
     const request = state.requests.find(r=>r.action==='save');
     assert.equal(request.type, 'http');assert.equal(request.payload.id, 2);assert.equal(request.payload.parent_id, null);assert.equal(request.payload.tls, false);
 });
+
+test('managed server mode is available only for the four implemented server protocols', async () => {
+    const page = await openPage();
+    for (const type of ['http','socks5','mieru','shadowquic']) {
+        await draft(page,type,'Managed '+type);
+        assert.equal(await page.evaluate('document.querySelector("[name=managed]").checked'),false);
+        await page.click('[name=managed]');
+        assert.match(await page.evaluate('document.querySelector("[data-mihomo-form]").textContent'), /\{\{uuid\}\}/);
+        await page.set('username','{{uuid}}');await page.set('password','{{uuid}}');
+        await page.click('[data-mihomo-save]');await saved(page,state.nodes.length+1);
+        const request=state.requests.filter(r=>r.action==='save').at(-1);
+        assert.equal(request.payload.managed,true);assert.equal(request.payload.username,'{{uuid}}');
+    }
+    await openForm(page,'wireguard');
+    assert.equal(await page.evaluate('!!document.querySelector("[name=managed]")'),false);
+});

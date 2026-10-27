@@ -418,11 +418,11 @@ class ServerService
                 if (!$row['show'] || !$this->groupCanReach($groups, $row['group_id'])) continue;
                 $server = Outbound::inherit($type, $row, $rows);
                 $server['type'] = $type;
-                $server['managed'] = false;
+                $server['managed'] = (bool)($server['managed'] ?? false);
                 $server['mihomo'] = Outbound::render($server, $user);
                 // Only rendered credentials cross the admin boundary.
                 foreach (ProtocolRegistry::all()[$type]['fields'] as $column => $field) unset($server[$column]);
-                $server['last_check_at'] = null;
+                $server['last_check_at'] = $server['managed'] ? Cache::get(CacheKey::get('SERVER_' . strtoupper($type) . '_LAST_CHECK_AT', $server['parent_id'] ?: $server['id'])) : null;
                 $servers[] = $server;
             }
         }
@@ -728,10 +728,11 @@ class ServerService
         foreach (ProtocolRegistry::types() as $type) {
             if (!Schema::hasTable(ProtocolRegistry::table($type))) continue;
             $model = ProtocolRegistry::model($type);
-            foreach ($model::orderBy('sort')->orderBy('id')->get() as $node) {
-                $row = $node->toArray();
+            $nodes = $model::orderBy('sort')->orderBy('id')->get()->keyBy('id')->toArray();
+            foreach ($nodes as $row) {
+                $effective = Outbound::inherit($type, $row, $nodes);
                 $row['type'] = $type;
-                $row['managed'] = false;
+                $row['managed'] = (bool)($effective['managed'] ?? false);
                 $servers[] = $row;
             }
         }
@@ -741,7 +742,7 @@ class ServerService
     private function mergeData(&$servers)
     {
         foreach ($servers as $k => $v) {
-            if (ProtocolRegistry::has($v['type'])) {
+            if (ProtocolRegistry::has($v['type']) && empty($v['managed'])) {
                 $servers[$k]['available_status'] = null;
                 $servers[$k]['online'] = null;
                 continue;
@@ -775,7 +776,9 @@ class ServerService
             $this->getAllMdns(),
             $this->getAllTrustTunnel()
         );
-        if ($includeProtocolNodes) $servers = array_merge($servers, $this->getAllProtocolNodes());
+        $protocolNodes = $this->getAllProtocolNodes();
+        if (!$includeProtocolNodes) $protocolNodes = array_filter($protocolNodes, function ($row) { return !empty($row['managed']); });
+        $servers = array_merge($servers, $protocolNodes);
         $this->mergeData($servers);
         $tmp = array_column($servers, 'sort');
         array_multisort($tmp, SORT_ASC, $servers);

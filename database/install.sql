@@ -620,6 +620,7 @@ CREATE TABLE `v2_server_ssr` (
 
 DROP TABLE IF EXISTS `v2_server_socks5`;
 CREATE TABLE `v2_server_socks5` (
+  `managed` tinyint(1) NOT NULL DEFAULT '0',
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `group_id` text COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -655,6 +656,7 @@ CREATE TABLE `v2_server_socks5` (
 
 DROP TABLE IF EXISTS `v2_server_http`;
 CREATE TABLE `v2_server_http` (
+  `managed` tinyint(1) NOT NULL DEFAULT '0',
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `group_id` text COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -766,6 +768,7 @@ CREATE TABLE `v2_server_wireguard` (
 
 DROP TABLE IF EXISTS `v2_server_shadowquic`;
 CREATE TABLE `v2_server_shadowquic` (
+  `managed` tinyint(1) NOT NULL DEFAULT '0',
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `group_id` text COLLATE utf8mb4_unicode_ci NOT NULL,
@@ -881,6 +884,7 @@ CREATE TABLE `v2_server_ssh` (
 
 DROP TABLE IF EXISTS `v2_server_mieru`;
 CREATE TABLE `v2_server_mieru` (
+  `managed` tinyint(1) NOT NULL DEFAULT '0',
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
   `group_id` text COLLATE utf8mb4_unicode_ci NOT NULL,

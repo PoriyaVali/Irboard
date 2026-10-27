@@ -4,6 +4,7 @@ namespace App\Http\Controllers\V1\Admin\Server;
 
 use App\Http\Controllers\Controller;
 use App\Protocols\Mihomo\Outbound;
+use App\Protocols\Mihomo\ManagedServer;
 use App\Protocols\Mihomo\ProtocolRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -44,12 +45,14 @@ abstract class ProtocolNodeController extends Controller
             'tags' => 'nullable|array|max:20', 'tags.*' => 'required|string|max:100',
             'sort' => 'required|integer|between:0,2147483647', 'show' => 'required|boolean',
         ];
+        if (ManagedServer::supports($this->type)) $rules['managed'] = 'sometimes|boolean';
         foreach ($fields as $column => $field) $rules[$column] = 'sometimes|nullable|' . [
             'string' => 'string|max:65535', 'int' => 'integer', 'bool' => 'boolean', 'json' => 'array',
         ][$field['kind']];
         $unknown = array_diff(array_keys($request->except('user')), array_keys($rules));
         if ($unknown) throw ValidationException::withMessages([reset($unknown) => 'این فیلد متعلق به این پروتکل نیست.']);
         $params = $request->validate($rules);
+        if (ManagedServer::supports($this->type)) abort_unless(Schema::hasColumn(ProtocolRegistry::table($this->type), 'managed'), 503, 'ابتدا به‌روزرسانی پایگاه دادهٔ پنل را اجرا کنید.');
         abort_if(strlen(json_encode($params)) > 131072, 422, 'تنظیمات بیش از حد بزرگ است.');
         $params['group_id'] = array_map('strval', $params['group_id']);
         $params['route_id'] = array_map('strval', $params['route_id'] ?? []);
@@ -74,7 +77,10 @@ abstract class ProtocolNodeController extends Controller
             } while (count($affected) !== $count);
             foreach (array_intersect_key($data, $affected) as $rowId => $row) {
                 $effective = Outbound::inherit($this->type, $row, $data);
-                Outbound::validate($this->type, ProtocolRegistry::options($this->type, $effective));
+                ManagedServer::validate($this->type, $effective);
+                $settings = ProtocolRegistry::options($this->type, $effective);
+                if (!empty($effective['managed'])) $settings = ManagedServer::credentials($settings);
+                Outbound::validate($this->type, $settings);
             }
             $node->save();
         });
