@@ -638,7 +638,7 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Test tailored sidebar tab and pricing editor
+      - name: Test native node forms and tailored pricing editor
         if: matrix.php == '8.2'
         run: |
           set -e
@@ -650,6 +650,37 @@ jobs:
             node --check public/assets/admin/umi-fa.js
           node --check public/assets/admin/tailored-pricing.js
           node --test tests/AdminTailoredPricingBrowserTest.cjs
+          python3 scripts/patch_admin_mihomo_nodes.py --check
+          node --test tests/AdminMihomoNodesBrowserTest.cjs
+
+      - name: New node protocol administration and subscription contract
+        env:
+          IRBOARD_MIHOMO_CONTRACT_DIR: ${{ runner.temp }}/mihomo-contract
+        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'MihomoNodesTest|MihomoSubscriptionTest'
+
+      - name: Simulate node traffic, limits, bans and reporting with real Redis
+        env:
+          IRBOARD_NODE_SIMULATION: '1'
+          REDIS_HOST: 127.0.0.1
+        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter NodeLifecycleSimulationTest --log-junit "${{ runner.temp }}/node-lifecycle.xml"
+
+      - name: Save node simulation test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-lifecycle-php-${{ matrix.php }}
+          path: ${{ runner.temp }}/node-lifecycle.xml
+          if-no-files-found: ignore
+
+      - name: Validate exported profiles with Mihomo v1.19.33
+        if: matrix.php == '8.2'
+        run: |
+          set -e
+          curl -fsSL --retry 3 --connect-timeout 15 --max-time 120 https://github.com/MetaCubeX/mihomo/releases/download/v1.19.33/mihomo-linux-amd64-v1-v1.19.33.gz -o "$RUNNER_TEMP/mihomo.gz"
+          printf '8ec92e7b2fdc6b853ba00156bab7e4e965c8b0d843b8c4ac8ab98795f02ad524  %s\n' "$RUNNER_TEMP/mihomo.gz" | sha256sum -c -
+          gzip -dc "$RUNNER_TEMP/mihomo.gz" > "$RUNNER_TEMP/mihomo"
+          chmod +x "$RUNNER_TEMP/mihomo"
+          python3 tests/ValidateMihomoConfig.py --binary "$RUNNER_TEMP/mihomo" --profiles "$RUNNER_TEMP/mihomo-contract/ClashMeta.json"
 
       - name: Node API host, TLS metadata and reporting contract
         run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter NodeApiContractTest
@@ -861,7 +892,7 @@ jobs:
             v2_order v2_payment v2_plan v2_plan_prices v2_reseller_log v2_reserved_plans \
             v2_server_anytls v2_server_group v2_server_hysteria v2_server_mdns \
             v2_server_route v2_server_shadowsocks v2_server_trojan v2_server_tuic \
-            v2_server_v2node v2_server_v2ray v2_server_vless v2_server_vmess v2_sms_log \
+            v2_server_v2node v2_server_v2ray v2_server_vless v2_server_vmess v2_server_ssr v2_server_socks5 v2_server_http v2_server_snell v2_server_wireguard v2_server_shadowquic v2_server_gostrelay v2_server_ssh v2_server_mieru v2_server_sudoku v2_server_masque v2_server_openvpn v2_server_tailscale v2_server_zerotier v2_server_easytier v2_sms_log \
             v2_stat v2_stat_server v2_stat_user v2_ticket v2_ticket_message v2_tunnel_map \
             v2_tutorial v2_user v2_user_banned_backup v2_user_group"
           for t in $EXPECTED; do
@@ -881,6 +912,13 @@ jobs:
           for c in user_id plan_id type period trade_no total_amount status; do col v2_order "$c"; done
           col v2_ticket subject
           col v2_server_anytls host
+          for type in ssr socks5 http snell wireguard shadowquic gostrelay ssh mieru sudoku masque openvpn tailscale zerotier easytier; do
+            for c in parent_id group_id route_id host port server_port rate show sort; do col "v2_server_$type" "$c"; done
+          done
+          col v2_server_ssr ssr_protocol
+          col v2_server_wireguard private_key
+          col v2_server_masque public_key
+          col v2_server_openvpn ca
           echo "✓ All key columns present on core tables."
 
       - name: Storage engine check

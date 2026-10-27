@@ -1,0 +1,1410 @@
+{
+    "ssr": {
+        "label": "ShadowsocksR",
+        "mihomo_type": "ssr",
+        "example": {
+            "server": "node.example.com",
+            "port": 443,
+            "cipher": "chacha20-ietf",
+            "password": "",
+            "protocol": "auth_sha1_v4",
+            "obfs": "tls1.2_ticket_auth",
+            "udp": true
+        },
+        "fields": {
+            "password": {
+                "option": "password",
+                "kind": "string"
+            },
+            "cipher": {
+                "option": "cipher",
+                "kind": "string"
+            },
+            "obfs": {
+                "option": "obfs",
+                "kind": "string"
+            },
+            "obfs_param": {
+                "option": "obfs-param",
+                "kind": "string"
+            },
+            "ssr_protocol": {
+                "option": "protocol",
+                "kind": "string"
+            },
+            "protocol_param": {
+                "option": "protocol-param",
+                "kind": "string"
+            },
+            "udp": {
+                "option": "udp",
+                "kind": "bool"
+            },
+            "tfo": {
+                "option": "tfo",
+                "kind": "bool"
+            },
+            "mptcp": {
+                "option": "mptcp",
+                "kind": "bool"
+            },
+            "interface_name": {
+                "option": "interface-name",
+                "kind": "string"
+            },
+            "routing_mark": {
+                "option": "routing-mark",
+                "kind": "int"
+            },
+            "ip_version": {
+                "option": "ip-version",
+                "kind": "string"
+            },
+            "dialer_proxy": {
+                "option": "dialer-proxy",
+                "kind": "string"
+            }
+        }
+    },
+    "socks5": {
+        "label": "SOCKS5",
+        "mihomo_type": "socks5",
+        "example": {
+            "server": "node.example.com",
+            "port": 443,
+            "username": "",
+            "password": "",
+            "udp": true
+        },
+        "fields": {
+            "username": {
+                "option": "username",
+                "kind": "string"
+            },
+            "password": {
+                "option": "password",
+                "kind": "string"
+            },
+            "tls": {
+                "option": "tls",
+                "kind": "bool"
+            },
+            "udp": {
+                "option": "udp",
+                "kind": "bool"
+            },
+            "skip_cert_verify": {
+                "option": "skip-cert-verify",
+                "kind": "bool"
+            },
+            "name_cert_verify": {
+                "option": "name-cert-verify",
+                "kind": "string"
+            },
+            "fingerprint": {
+                "option": "fingerprint",
+                "kind": "string"
+            },
+            "certificate": {
+                "option": "certificate",
+                "kind": "string"
+            },
+            "private_key": {
+                "option": "private-key",
+                "kind": "string"
+            },
+            "tfo": {
+                "option": "tfo",
+                "kind": "bool"
+            },
+            "mptcp": {
+                "option": "mptcp",
+                "kind": "bool"
+            },
+            "interface_name": {
+                "option": "interface-name",
+                "kind": "string"
+            },
+            "routing_mark": {
+                "option": "routing-mark",
+                "kind": "int"
+            },
+            "ip_version": {
+                "option": "ip-version",
+                "kind": "string"
+            },
+            "dialer_proxy": {
+                "option": "dialer-proxy",
+                "kind": "string"
+            }
+        }
+    },
+    "http": {
+        "label": "HTTP / HTTPS",
+        "mihomo_type": "http",
+        "example": {
+            "server": "node.example.com",
+            "port": 443,
+            "username": "",
+            "password": "",
+            "tls": true
+        },
+        "fields": {
+            "username": {
+                "option": "username",
+                "kind": "string"
+            },
+            "password": {
+                "option": "password",
+                "kind": "string"
+            },
+            "tls": {
+                "option": "tls",
+                "kind": "bool"
+            },
+            "sni": {
+                "option": "sni",
+                "kind": "string"
+            },
+            "skip_cert_verify": {
+                "option": "skip-cert-verify",
+                "kind": "bool"
+            },
+            "name_cert_verify": {
+                "option": "name-cert-verify",
+                "kind": "string"
+            },
+            "fingerprint": {
+                "option": "fingerprint",
+                "kind": "string"
+            },
+            "certificate": {
+                "option": "certificate",
+                "kind": "string"
+            },
+            "private_key": {
+                "option": "private-key",
+                "kind": "string"
+            },
+            "headers": {
+                "option": "headers",
+                "kind": "json"
+            },
+            "tfo": {
+                "option": "tfo",
+                "kind": "bool"
+            },
+            "mptcp": {
+                "option": "mptcp",
+                "kind": "bool"
+            },
+            "interface_name": {
+                "option": "interface-name",
+                "kind": "string"
+            },
+            "routing_mark": {
+                "option": "routing-mark",
+                "kind": "int"
+            },
+            "ip_version": {
+                "option": "ip-version",
+                "kind": "string"
+            },
+            "dialer_proxy": {
+                "option": "dialer-proxy",
+                "kind": "string"
+            }
+        }
+    },
+    "snell": {
+        "label": "Snell",
+        "mihomo_type": "snell",
+        "example": {
+            "server": "node.example.com",
+            "port": 443,
+            "psk": "",
+            "version": 4,
+            "udp": true
+        },
+        "fields": {
+            "psk": {
+                "option": "psk",
+                "kind": "string"
+            },
+            "udp": {
+                "option": "udp",
+                "kind": "bool"
+            },
+            "version": {
+                "option": "version",
+                "kind": "int"
+            },
+            "reuse": {
+                "option": "reuse",
+                "kind": "bool"
+            },
+            "obfs_opts": {
+                "option": "obfs-opts",
+                "kind": "json"
+            },
+            "client_fingerprint": {
+                "option": "client-fingerprint",
+                "kind": "string"
+            },
+            "tfo": {
+                "option": "tfo",
+                "kind": "bool"
+            },
+            "mptcp": {
+                "option": "mptcp",
+                "kind": "bool"
+            },
+            "interface_name": {
+                "option": "interface-name",
+                "kind": "string"
+            },
+            "routing_mark": {
+                "option": "routing-mark",
+                "kind": "int"
+            },
+            "ip_version": {
+                "option": "ip-version",
+                "kind": "string"
+            },
+            "dialer_proxy": {
+                "option": "dialer-proxy",
+                "kind": "string"
+            }
+        }
+    },
+    "wireguard": {
+        "label": "WireGuard / AmneziaWG",
+        "mihomo_type": "wireguard",
+        "example": {
+            "server": "node.example.com",
+            "port": 51820,
+            "ip": "10.0.0.2",
+            "private-key": "",
+            "public-key": "",
+            "udp": true
+        },
+        "fields": {
+            "public_key": {
+                "option": "public-key",
+                "kind": "string"
+            },
+            "pre_shared_key": {
+                "option": "pre-shared-key",
+                "kind": "string"
+            },
+            "reserved": {
+                "option": "reserved",
+                "kind": "json"
+            },
+            "allowed_ips": {
+                "option": "allowed-ips",
+                "kind": "json"
+            },
+            "ip": {
+                "option": "ip",
+                "kind": "string"
+            },
+            "ipv6": {
+                "option": "ipv6",
+                "kind": "string"
+            },
+            "private_key": {
+                "option": "private-key",
+                "kind": "string"
+            },
+            "workers": {
+                "option": "workers",
+                "kind": "int"
+            },
+            "mtu": {
+                "option": "mtu",
+                "kind": "int"
+            },
+            "udp": {
+                "option": "udp",
+                "kind": "bool"
+            },
+            "persistent_keepalive": {
+                "option": "persistent-keepalive",
+                "kind": "int"
+            },
+            "ip_stack": {
+                "option": "ip-stack",
+                "kind": "json"
+            },
+            "amnezia_wg_option": {
+                "option": "amnezia-wg-option",
+                "kind": "json"
+            },
+            "peers": {
+                "option": "peers",
+                "kind": "json"
+            },
+            "remote_dns_resolve": {
+                "option": "remote-dns-resolve",
+                "kind": "bool"
+            },
+            "dns": {
+                "option": "dns",
+                "kind": "json"
+            },
+            "refresh_server_ip_interval": {
+                "option": "refresh-server-ip-interval",
+                "kind": "int"
+            },
+            "tfo": {
+                "option": "tfo",
+                "kind": "bool"
+            },
+            "mptcp": {
+                "option": "mptcp",
+                "kind": "bool"
+            },
+            "interface_name": {
+                "option": "interface-name",
+                "kind": "string"
+            },
+            "routing_mark": {
+                "option": "routing-mark",
+                "kind": "int"
+            },
+            "ip_version": {
+                "option": "ip-version",
+                "kind": "string"
+            },
+            "dialer_proxy": {
+                "option": "dialer-proxy",
+                "kind": "string"
+            }
+        }
+    },
+    "shadowquic": {
+        "label": "ShadowQUIC",
+        "mihomo_type": "shadowquic",
+        "example": {
+            "server": "node.example.com",
+            "port": 443,
+            "username": "",
+            "password": "",
+            "sni": "node.example.com"
+        },
+        "fields": {
+            "username": {
+                "option": "username",
+                "kind": "string"
+            },
+            "password": {
+                "option": "password",
+                "kind": "string"
+            },
+            "sni": {
+                "option": "sni",
+                "kind": "string"
+            },
+            "alpn": {
+                "option": "alpn",
+                "kind": "json"
+            },
+            "quic_versions": {
+                "option": "quic-versions",
+                "kind": "json"
+            },
+            "udp_over_stream": {
+                "option": "udp-over-stream",
+                "kind": "bool"
+            },
+            "zero_rtt": {
+                "option": "zero-rtt",
+                "kind": "bool"
+            },
+            "keep_alive_interval": {
+                "option": "keep-alive-interval",
+                "kind": "int"
+            },
+            "congestion_controller": {
+                "option": "congestion-controller",
+                "kind": "string"
+            },
+            "up": {
+                "option": "up",
+                "kind": "string"
+            },
+            "down": {
+                "option": "down",
+                "kind": "string"
+            },
+            "cwnd": {
+                "option": "cwnd",
+                "kind": "int"
+            },
+            "bbr_profile": {
+                "option": "bbr-profile",
+                "kind": "string"
+            },
+            "recv_window_conn": {
+                "option": "recv-window-conn",
+                "kind": "int"
+            },
+            "recv_window": {
+                "option": "recv-window",
+                "kind": "int"
+            },
+            "disable_mtu_discovery": {
+                "option": "disable-mtu-discovery",
+                "kind": "bool"
+            },
+            "max_datagram_frame_size": {
+                "option": "max-datagram-frame-size",
+                "kind": "int"
+            },
+            "max_open_streams": {
+                "option": "max-open-streams",
+                "kind": "int"
+            },
+            "tfo": {
+                "option": "tfo",
+                "kind": "bool"
+            },
+            "mptcp": {
+                "option": "mptcp",
+                "kind": "bool"
+            },
+            "interface_name": {
+                "option": "interface-name",
+                "kind": "string"
+            },
+            "routing_mark": {
+                "option": "routing-mark",
+                "kind": "int"
+            },
+            "ip_version": {
+                "option": "ip-version",
+                "kind": "string"
+            },
+            "dialer_proxy": {
+                "option": "dialer-proxy",
+                "kind": "string"
+            }
+        }
+    },
+    "gostrelay": {
+        "label": "GOST Relay",
+        "mihomo_type": "gost-relay",
+        "example": {
+            "server": "node.example.com",
+            "port": 443,
+            "username": "",
+            "password": "",
+            "udp": true
+        },
+        "fields": {
+            "forward": {
+                "option": "forward",
+                "kind": "bool"
+            },
+            "udp": {
+                "option": "udp",
+                "kind": "bool"
+            },
+            "tls": {
+                "option": "tls",
+                "kind": "bool"
+            },
+            "mux": {
+                "option": "mux",
+                "kind": "bool"
+            },
+            "sni": {
+                "option": "sni",
+                "kind": "string"
+            },
+            "username": {
+                "option": "username",
+                "kind": "string"
+            },
+            "password": {
+                "option": "password",
+                "kind": "string"
+            },
+            "skip_cert_verify": {
+                "option": "skip-cert-verify",
+                "kind": "bool"
+            },
+            "name_cert_verify": {
+                "option": "name-cert-verify",
+                "kind": "string"
+            },
+            "fingerprint": {
+                "option": "fingerprint",
+                "kind": "string"
+            },
+            "certificate": {
+                "option": "certificate",
+                "kind": "string"
+            },
+            "private_key": {
+                "option": "private-key",
+                "kind": "string"
+            },
+            "client_fingerprint": {
+                "option": "client-fingerprint",
+                "kind": "string"
+            },
+            "tfo": {
+                "option": "tfo",
+                "kind": "bool"
+            },
+            "mptcp": {
+                "option": "mptcp",
+                "kind": "bool"
+            },
+            "interface_name": {
+                "option": "interface-name",
+                "kind": "string"
+            },
+            "routing_mark": {
+                "option": "routing-mark",
+                "kind": "int"
+            },
+            "ip_version": {
+                "option": "ip-version",
+                "kind": "string"
+            },
+            "dialer_proxy": {
+                "option": "dialer-proxy",
+                "kind": "string"
+            }
+        }
+    },
+    "ssh": {
+        "label": "SSH",
+        "mihomo_type": "ssh",
+        "example": {
+            "server": "node.example.com",
+            "port": 22,
+            "username": "",
+            "password": ""
+        },
+        "fields": {
+            "username": {
+                "option": "username",
+                "kind": "string"
+            },
+            "password": {
+                "option": "password",
+                "kind": "string"
+            },
+            "private_key": {
+                "option": "private-key",
+                "kind": "string"
+            },
+            "private_key_passphrase": {
+                "option": "private-key-passphrase",
+                "kind": "string"
+            },
+            "host_key": {
+                "option": "host-key",
+                "kind": "json"
+            },
+            "host_key_algorithms": {
+                "option": "host-key-algorithms",
+                "kind": "json"
+            },
+            "tfo": {
+                "option": "tfo",
+                "kind": "bool"
+            },
+            "mptcp": {
+                "option": "mptcp",
+                "kind": "bool"
+            },
+            "interface_name": {
+                "option": "interface-name",
+                "kind": "string"
+            },
+            "routing_mark": {
+                "option": "routing-mark",
+                "kind": "int"
+            },
+            "ip_version": {
+                "option": "ip-version",
+                "kind": "string"
+            },
+            "dialer_proxy": {
+                "option": "dialer-proxy",
+                "kind": "string"
+            }
+        }
+    },
+    "mieru": {
+        "label": "Mieru",
+        "mihomo_type": "mieru",
+        "example": {
+            "server": "node.example.com",
+            "port": 443,
+            "transport": "TCP",
+            "username": "",
+            "password": "",
+            "udp": true
+        },
+        "fields": {
+            "port_range": {
+                "option": "port-range",
+                "kind": "string"
+            },
+            "transport": {
+                "option": "transport",
+                "kind": "string"
+            },
+            "udp": {
+                "option": "udp",
+                "kind": "bool"
+            },
+            "username": {
+                "option": "username",
+                "kind": "string"
+            },
+            "password": {
+                "option": "password",
+                "kind": "string"
+            },
+            "multiplexing": {
+                "option": "multiplexing",
+                "kind": "string"
+            },
+            "handshake_mode": {
+                "option": "handshake-mode",
+                "kind": "string"
+            },
+            "traffic_pattern": {
+                "option": "traffic-pattern",
+                "kind": "string"
+            },
+            "tfo": {
+                "option": "tfo",
+                "kind": "bool"
+            },
+            "mptcp": {
+                "option": "mptcp",
+                "kind": "bool"
+            },
+            "interface_name": {
+                "option": "interface-name",
+                "kind": "string"
+            },
+            "routing_mark": {
+                "option": "routing-mark",
+                "kind": "int"
+            },
+            "ip_version": {
+                "option": "ip-version",
+                "kind": "string"
+            },
+            "dialer_proxy": {
+                "option": "dialer-proxy",
+                "kind": "string"
+            }
+        }
+    },
+    "sudoku": {
+        "label": "Sudoku",
+        "mihomo_type": "sudoku",
+        "example": {
+            "server": "node.example.com",
+            "port": 443,
+            "key": "",
+            "aead-method": "chacha20-poly1305",
+            "padding-min": 2,
+            "padding-max": 7,
+            "table-type": "prefer_ascii"
+        },
+        "fields": {
+            "key": {
+                "option": "key",
+                "kind": "string"
+            },
+            "aead_method": {
+                "option": "aead-method",
+                "kind": "string"
+            },
+            "padding_min": {
+                "option": "padding-min",
+                "kind": "int"
+            },
+            "padding_max": {
+                "option": "padding-max",
+                "kind": "int"
+            },
+            "table_type": {
+                "option": "table-type",
+                "kind": "string"
+            },
+            "enable_pure_downlink": {
+                "option": "enable-pure-downlink",
+                "kind": "bool"
+            },
+            "http_mask": {
+                "option": "http-mask",
+                "kind": "bool"
+            },
+            "http_mask_mode": {
+                "option": "http-mask-mode",
+                "kind": "string"
+            },
+            "http_mask_tls": {
+                "option": "http-mask-tls",
+                "kind": "bool"
+            },
+            "http_mask_host": {
+                "option": "http-mask-host",
+                "kind": "string"
+            },
+            "path_root": {
+                "option": "path-root",
+                "kind": "string"
+            },
+            "multiplex": {
+                "option": "multiplex",
+                "kind": "string"
+            },
+            "http_mask_multiplex": {
+                "option": "http-mask-multiplex",
+                "kind": "string"
+            },
+            "httpmask": {
+                "option": "httpmask",
+                "kind": "json"
+            },
+            "custom_table": {
+                "option": "custom-table",
+                "kind": "string"
+            },
+            "custom_tables": {
+                "option": "custom-tables",
+                "kind": "json"
+            },
+            "tfo": {
+                "option": "tfo",
+                "kind": "bool"
+            },
+            "mptcp": {
+                "option": "mptcp",
+                "kind": "bool"
+            },
+            "interface_name": {
+                "option": "interface-name",
+                "kind": "string"
+            },
+            "routing_mark": {
+                "option": "routing-mark",
+                "kind": "int"
+            },
+            "ip_version": {
+                "option": "ip-version",
+                "kind": "string"
+            },
+            "dialer_proxy": {
+                "option": "dialer-proxy",
+                "kind": "string"
+            }
+        }
+    },
+    "masque": {
+        "label": "MASQUE",
+        "mihomo_type": "masque",
+        "example": {
+            "server": "node.example.com",
+            "port": 443,
+            "private-key": "",
+            "public-key": "",
+            "ip": "10.0.0.2",
+            "udp": true
+        },
+        "fields": {
+            "private_key": {
+                "option": "private-key",
+                "kind": "string"
+            },
+            "public_key": {
+                "option": "public-key",
+                "kind": "string"
+            },
+            "ip": {
+                "option": "ip",
+                "kind": "string"
+            },
+            "ipv6": {
+                "option": "ipv6",
+                "kind": "string"
+            },
+            "uri": {
+                "option": "uri",
+                "kind": "string"
+            },
+            "sni": {
+                "option": "sni",
+                "kind": "string"
+            },
+            "mtu": {
+                "option": "mtu",
+                "kind": "int"
+            },
+            "udp": {
+                "option": "udp",
+                "kind": "bool"
+            },
+            "handshake_timeout": {
+                "option": "handshake-timeout",
+                "kind": "int"
+            },
+            "skip_cert_verify": {
+                "option": "skip-cert-verify",
+                "kind": "bool"
+            },
+            "name_cert_verify": {
+                "option": "name-cert-verify",
+                "kind": "string"
+            },
+            "network": {
+                "option": "network",
+                "kind": "string"
+            },
+            "congestion_controller": {
+                "option": "congestion-controller",
+                "kind": "string"
+            },
+            "cwnd": {
+                "option": "cwnd",
+                "kind": "int"
+            },
+            "bbr_profile": {
+                "option": "bbr-profile",
+                "kind": "string"
+            },
+            "ip_stack": {
+                "option": "ip-stack",
+                "kind": "json"
+            },
+            "remote_dns_resolve": {
+                "option": "remote-dns-resolve",
+                "kind": "bool"
+            },
+            "dns": {
+                "option": "dns",
+                "kind": "json"
+            },
+            "tfo": {
+                "option": "tfo",
+                "kind": "bool"
+            },
+            "mptcp": {
+                "option": "mptcp",
+                "kind": "bool"
+            },
+            "interface_name": {
+                "option": "interface-name",
+                "kind": "string"
+            },
+            "routing_mark": {
+                "option": "routing-mark",
+                "kind": "int"
+            },
+            "ip_version": {
+                "option": "ip-version",
+                "kind": "string"
+            },
+            "dialer_proxy": {
+                "option": "dialer-proxy",
+                "kind": "string"
+            }
+        }
+    },
+    "openvpn": {
+        "label": "OpenVPN",
+        "mihomo_type": "openvpn",
+        "example": {
+            "server": "node.example.com",
+            "port": 1194,
+            "proto": "udp",
+            "ca": "",
+            "username": "",
+            "password": "",
+            "udp": true
+        },
+        "fields": {
+            "proto": {
+                "option": "proto",
+                "kind": "string"
+            },
+            "dev": {
+                "option": "dev",
+                "kind": "string"
+            },
+            "cipher": {
+                "option": "cipher",
+                "kind": "string"
+            },
+            "data_ciphers": {
+                "option": "data-ciphers",
+                "kind": "json"
+            },
+            "data_ciphers_fallback": {
+                "option": "data-ciphers-fallback",
+                "kind": "string"
+            },
+            "auth": {
+                "option": "auth",
+                "kind": "string"
+            },
+            "comp_lzo": {
+                "option": "comp-lzo",
+                "kind": "string"
+            },
+            "ca": {
+                "option": "ca",
+                "kind": "string"
+            },
+            "cert": {
+                "option": "cert",
+                "kind": "string"
+            },
+            "key": {
+                "option": "key",
+                "kind": "string"
+            },
+            "tls_auth": {
+                "option": "tls-auth",
+                "kind": "string"
+            },
+            "key_direction": {
+                "option": "key-direction",
+                "kind": "string"
+            },
+            "tls_crypt": {
+                "option": "tls-crypt",
+                "kind": "string"
+            },
+            "tls_crypt_v2": {
+                "option": "tls-crypt-v2",
+                "kind": "string"
+            },
+            "username": {
+                "option": "username",
+                "kind": "string"
+            },
+            "password": {
+                "option": "password",
+                "kind": "string"
+            },
+            "peer_info": {
+                "option": "peer-info",
+                "kind": "json"
+            },
+            "ping": {
+                "option": "ping",
+                "kind": "int"
+            },
+            "ping_restart": {
+                "option": "ping-restart",
+                "kind": "int"
+            },
+            "tran_window": {
+                "option": "tran-window",
+                "kind": "int"
+            },
+            "handshake_timeout": {
+                "option": "handshake-timeout",
+                "kind": "int"
+            },
+            "mtu": {
+                "option": "mtu",
+                "kind": "int"
+            },
+            "udp": {
+                "option": "udp",
+                "kind": "bool"
+            },
+            "ip_stack": {
+                "option": "ip-stack",
+                "kind": "json"
+            },
+            "remote_dns_resolve": {
+                "option": "remote-dns-resolve",
+                "kind": "bool"
+            },
+            "dns": {
+                "option": "dns",
+                "kind": "json"
+            },
+            "tfo": {
+                "option": "tfo",
+                "kind": "bool"
+            },
+            "mptcp": {
+                "option": "mptcp",
+                "kind": "bool"
+            },
+            "interface_name": {
+                "option": "interface-name",
+                "kind": "string"
+            },
+            "routing_mark": {
+                "option": "routing-mark",
+                "kind": "int"
+            },
+            "ip_version": {
+                "option": "ip-version",
+                "kind": "string"
+            },
+            "dialer_proxy": {
+                "option": "dialer-proxy",
+                "kind": "string"
+            }
+        }
+    },
+    "tailscale": {
+        "label": "Tailscale / Headscale",
+        "mihomo_type": "tailscale",
+        "example": {
+            "hostname": "irboard-{{user_id}}",
+            "auth-key": "",
+            "exit-node": "auto:any",
+            "udp": true
+        },
+        "fields": {
+            "hostname": {
+                "option": "hostname",
+                "kind": "string"
+            },
+            "auth_key": {
+                "option": "auth-key",
+                "kind": "string"
+            },
+            "control_url": {
+                "option": "control-url",
+                "kind": "string"
+            },
+            "state_dir": {
+                "option": "state-dir",
+                "kind": "string"
+            },
+            "ephemeral": {
+                "option": "ephemeral",
+                "kind": "bool"
+            },
+            "udp": {
+                "option": "udp",
+                "kind": "bool"
+            },
+            "accept_routes": {
+                "option": "accept-routes",
+                "kind": "bool"
+            },
+            "exit_node": {
+                "option": "exit-node",
+                "kind": "string"
+            },
+            "exit_node_allow_lan_access": {
+                "option": "exit-node-allow-lan-access",
+                "kind": "bool"
+            },
+            "tfo": {
+                "option": "tfo",
+                "kind": "bool"
+            },
+            "mptcp": {
+                "option": "mptcp",
+                "kind": "bool"
+            },
+            "interface_name": {
+                "option": "interface-name",
+                "kind": "string"
+            },
+            "routing_mark": {
+                "option": "routing-mark",
+                "kind": "int"
+            },
+            "ip_version": {
+                "option": "ip-version",
+                "kind": "string"
+            },
+            "dialer_proxy": {
+                "option": "dialer-proxy",
+                "kind": "string"
+            }
+        }
+    },
+    "zerotier": {
+        "label": "ZeroTier",
+        "mihomo_type": "zerotier",
+        "example": {
+            "network": "",
+            "udp": true
+        },
+        "fields": {
+            "network": {
+                "option": "network",
+                "kind": "string"
+            },
+            "state_dir": {
+                "option": "state-dir",
+                "kind": "string"
+            },
+            "identity_secret": {
+                "option": "identity-secret",
+                "kind": "string"
+            },
+            "planet": {
+                "option": "planet",
+                "kind": "string"
+            },
+            "mtu": {
+                "option": "mtu",
+                "kind": "int"
+            },
+            "ip_stack": {
+                "option": "ip-stack",
+                "kind": "json"
+            },
+            "physical_mtu": {
+                "option": "physical-mtu",
+                "kind": "int"
+            },
+            "udp": {
+                "option": "udp",
+                "kind": "bool"
+            },
+            "remote_dns_resolve": {
+                "option": "remote-dns-resolve",
+                "kind": "bool"
+            },
+            "dns": {
+                "option": "dns",
+                "kind": "json"
+            },
+            "low_bandwidth": {
+                "option": "low-bandwidth",
+                "kind": "bool"
+            },
+            "encrypted_hello": {
+                "option": "encrypted-hello",
+                "kind": "bool"
+            },
+            "primary_port": {
+                "option": "primary-port",
+                "kind": "int"
+            },
+            "secondary_port": {
+                "option": "secondary-port",
+                "kind": "int"
+            },
+            "tcp_fallback_mode": {
+                "option": "tcp-fallback-mode",
+                "kind": "string"
+            },
+            "tcp_fallback_relay": {
+                "option": "tcp-fallback-relay",
+                "kind": "string"
+            },
+            "orbit": {
+                "option": "orbit",
+                "kind": "json"
+            },
+            "remote_trace_target": {
+                "option": "remote-trace-target",
+                "kind": "string"
+            },
+            "remote_trace_level": {
+                "option": "remote-trace-level",
+                "kind": "int"
+            },
+            "tfo": {
+                "option": "tfo",
+                "kind": "bool"
+            },
+            "mptcp": {
+                "option": "mptcp",
+                "kind": "bool"
+            },
+            "interface_name": {
+                "option": "interface-name",
+                "kind": "string"
+            },
+            "routing_mark": {
+                "option": "routing-mark",
+                "kind": "int"
+            },
+            "ip_version": {
+                "option": "ip-version",
+                "kind": "string"
+            },
+            "dialer_proxy": {
+                "option": "dialer-proxy",
+                "kind": "string"
+            }
+        }
+    },
+    "easytier": {
+        "label": "EasyTier",
+        "mihomo_type": "easytier",
+        "example": {
+            "network-name": "",
+            "network-secret": "",
+            "peers": [
+                "tcp://node.example.com:11010"
+            ],
+            "udp": true
+        },
+        "fields": {
+            "network_name": {
+                "option": "network-name",
+                "kind": "string"
+            },
+            "network_secret": {
+                "option": "network-secret",
+                "kind": "string"
+            },
+            "hostname": {
+                "option": "hostname",
+                "kind": "string"
+            },
+            "ipv4": {
+                "option": "ipv4",
+                "kind": "string"
+            },
+            "dhcp": {
+                "option": "dhcp",
+                "kind": "bool"
+            },
+            "peers": {
+                "option": "peers",
+                "kind": "json"
+            },
+            "listeners": {
+                "option": "listeners",
+                "kind": "json"
+            },
+            "no_listener": {
+                "option": "no-listener",
+                "kind": "bool"
+            },
+            "mapped_listeners": {
+                "option": "mapped-listeners",
+                "kind": "json"
+            },
+            "exit_nodes": {
+                "option": "exit-nodes",
+                "kind": "json"
+            },
+            "proxy_networks": {
+                "option": "proxy-networks",
+                "kind": "json"
+            },
+            "instance_name": {
+                "option": "instance-name",
+                "kind": "string"
+            },
+            "state_dir": {
+                "option": "state-dir",
+                "kind": "string"
+            },
+            "udp": {
+                "option": "udp",
+                "kind": "bool"
+            },
+            "accept_dns": {
+                "option": "accept-dns",
+                "kind": "bool"
+            },
+            "enable_exit_node": {
+                "option": "enable-exit-node",
+                "kind": "bool"
+            },
+            "enable_encryption": {
+                "option": "enable-encryption",
+                "kind": "bool"
+            },
+            "encryption_algorithm": {
+                "option": "encryption-algorithm",
+                "kind": "string"
+            },
+            "private_mode": {
+                "option": "private-mode",
+                "kind": "bool"
+            },
+            "latency_first": {
+                "option": "latency-first",
+                "kind": "bool"
+            },
+            "disable_p2p": {
+                "option": "disable-p2p",
+                "kind": "bool"
+            },
+            "enable_kcp_proxy": {
+                "option": "enable-kcp-proxy",
+                "kind": "bool"
+            },
+            "disable_kcp_input": {
+                "option": "disable-kcp-input",
+                "kind": "bool"
+            },
+            "enable_quic_proxy": {
+                "option": "enable-quic-proxy",
+                "kind": "bool"
+            },
+            "disable_quic_input": {
+                "option": "disable-quic-input",
+                "kind": "bool"
+            },
+            "mtu": {
+                "option": "mtu",
+                "kind": "int"
+            },
+            "tld_dns_zone": {
+                "option": "tld-dns-zone",
+                "kind": "string"
+            },
+            "secure_mode": {
+                "option": "secure-mode",
+                "kind": "bool"
+            },
+            "local_private_key": {
+                "option": "local-private-key",
+                "kind": "string"
+            },
+            "local_public_key": {
+                "option": "local-public-key",
+                "kind": "string"
+            },
+            "tfo": {
+                "option": "tfo",
+                "kind": "bool"
+            },
+            "mptcp": {
+                "option": "mptcp",
+                "kind": "bool"
+            },
+            "interface_name": {
+                "option": "interface-name",
+                "kind": "string"
+            },
+            "routing_mark": {
+                "option": "routing-mark",
+                "kind": "int"
+            },
+            "ip_version": {
+                "option": "ip-version",
+                "kind": "string"
+            },
+            "dialer_proxy": {
+                "option": "dialer-proxy",
+                "kind": "string"
+            }
+        }
+    }
+}

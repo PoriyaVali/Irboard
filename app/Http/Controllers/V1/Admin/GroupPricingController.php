@@ -134,9 +134,9 @@ class GroupPricingController extends Controller
     private function nodeCountsByGroup(): array
     {
         $counts = [];
-        foreach (['v2_server_anytls', 'v2_server_mdns', 'v2_server_trusttunnel', 'v2_server_vless', 'v2_server_vmess',
+        foreach (array_merge(array_map(function ($type) { return 'v2_server_' . $type; }, \App\Protocols\Mihomo\ProtocolRegistry::types()), ['v2_server_anytls', 'v2_server_mdns', 'v2_server_trusttunnel', 'v2_server_vless', 'v2_server_vmess',
                   'v2_server_trojan', 'v2_server_hysteria', 'v2_server_tuic',
-                  'v2_server_shadowsocks', 'v2_server_v2node'] as $table) {
+                  'v2_server_shadowsocks', 'v2_server_v2node']) as $table) {
             try {
                 $rows = DB::table($table)->where('show', 1)->pluck('group_id');
             } catch (\Throwable $e) {
