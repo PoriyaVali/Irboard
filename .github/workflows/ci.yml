@@ -658,6 +658,20 @@ jobs:
           IRBOARD_MIHOMO_CONTRACT_DIR: ${{ runner.temp }}/mihomo-contract
         run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'MihomoNodesTest|MihomoSubscriptionTest'
 
+      - name: Simulate node traffic, limits, bans and reporting with real Redis
+        env:
+          IRBOARD_NODE_SIMULATION: '1'
+          REDIS_HOST: 127.0.0.1
+        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter NodeLifecycleSimulationTest --log-junit "${{ runner.temp }}/node-lifecycle.xml"
+
+      - name: Save node simulation test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-lifecycle-php-${{ matrix.php }}
+          path: ${{ runner.temp }}/node-lifecycle.xml
+          if-no-files-found: ignore
+
       - name: Validate exported profiles with Mihomo v1.19.33
         if: matrix.php == '8.2'
         run: |

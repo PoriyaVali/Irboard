@@ -9,6 +9,7 @@ use App\Utils\CacheKey;
 use App\Utils\Helper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\ValidationException;
 use MessagePack\Packer;
 
 class UniProxyController extends Controller
@@ -130,16 +131,9 @@ class UniProxyController extends Controller
     // 后端提交数据
     public function push(Request $request)
     {
-        $data = $request->json()->all();
-        if (empty($data)) {
-            $data = $_POST;
-        }
-        if ($data === null && json_last_error() !== JSON_ERROR_NONE) {
-            // JSON decoding error
-            return response([
-                'error' => 'Invalid traffic data'
-            ], 400);
-        }
+        // Reject malformed reports before counters, heartbeat or dedupe state
+        // changes. A rejected batch may be corrected and retried under its id.
+        $data = $this->trafficReport($request);
         // A batch that arrives again under the id it was first sent with has
         // already been counted: answer as if accepted and add nothing. V2bX
         // (1.5+) keeps one id per batch across its HTTP retries and its
@@ -155,8 +149,10 @@ class UniProxyController extends Controller
         try {
             Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_ONLINE_USER', $this->nodeInfo->id), count($data), 3600);
             Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_LAST_PUSH_AT', $this->nodeInfo->id), time(), 3600);
-            $userService = new UserService();
-            $userService->trafficFetch($this->nodeInfo->toArray(), $this->nodeType, $data);
+            if ($data) {
+                $userService = new UserService();
+                $userService->trafficFetch($this->nodeInfo->toArray(), $this->nodeType, $data);
+            }
         } catch (\Throwable $e) {
             // Not counted after all: let the resend through.
             if ($dedupeKey !== null) {
@@ -168,6 +164,43 @@ class UniProxyController extends Controller
         return response([
             'data' => true
         ]);
+    }
+
+    private function trafficReport(Request $request): array
+    {
+        if ($request->isJson()) {
+            try {
+                $data = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+            } catch (\JsonException $e) {
+                abort(400, 'Invalid traffic JSON');
+            }
+        } else {
+            $data = $request->request->all();
+        }
+        if (!is_array($data)) {
+            throw ValidationException::withMessages(['traffic' => 'Traffic must map user ids to [upload, download] bytes.']);
+        }
+        $validated = [];
+        $maxBytes = intdiv(PHP_INT_MAX, max(1, (int)ceil((float)$this->nodeInfo->rate)));
+        foreach ($data as $uid => $counts) {
+            if (filter_var($uid, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false || !is_array($counts) || array_keys($counts) !== [0, 1]) {
+                throw ValidationException::withMessages(['traffic' => 'Each positive user id needs exactly [upload, download].']);
+            }
+            $bytes = [];
+            foreach ($counts as $count) {
+                $integer = (is_int($count) || (!$request->isJson() && is_string($count)))
+                    ? filter_var($count, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]) : false;
+                if ($integer === false) {
+                    throw ValidationException::withMessages(['traffic.' . $uid => 'Byte counts must be non-negative integers.']);
+                }
+                $bytes[] = $integer;
+            }
+            if ($bytes[0] > $maxBytes || $bytes[1] > $maxBytes - $bytes[0]) {
+                throw ValidationException::withMessages(['traffic.' . $uid => 'Traffic counters exceed the supported integer range.']);
+            }
+            $validated[(int)$uid] = $bytes;
+        }
+        return $validated;
     }
 
     // The cache key that marks one traffic batch as counted, or null when the
@@ -289,6 +322,9 @@ class UniProxyController extends Controller
         foreach ($updates as $key => $value) {
             Cache::put($key, $value, $keepFor);
         }
+        // A node may poll immediately after a device connects/disconnects.
+        // Do not return the global snapshot from before this report.
+        Cache::forget('ALIVE_LIST');
 
         return response([
             'data' => true

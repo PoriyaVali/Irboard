@@ -105,3 +105,6 @@ python3 tests/ValidateMihomoConfig.py --binary /path/to/mihomo --profiles /tmp/m
 تست مرورگر هر دو bundle واقعی را اجرا می‌کند. metadata فیکسچر مرورگر با endpoint
 واقعی مقایسه می‌شود. خروجی ۱۵ نوع جدید و TrustTunnel با باینری pinned نسخهٔ
 v1.19.33 بررسی می‌شود؛ ابزار تست کلید و گواهی خروجی را تعویض یا اصلاح نمی‌کند.
+
+گزارش شبیه‌سازی مصرف، سیاست سرعت، دستگاه‌ها، مسدودی و پردازش گزارش‌ها در
+[گزارش چرخهٔ نود](node-lifecycle-simulation.md) آمده است.
