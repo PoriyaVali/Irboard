@@ -15,7 +15,7 @@ use App\Models\ServerTuic;
 use App\Models\ServerAnytls;
 use App\Models\ServerMdns;
 use App\Models\ServerTrusttunnel;
-use App\Models\ServerMihomo;
+use App\Protocols\Mihomo\ProtocolRegistry;
 use App\Protocols\Mihomo\Outbound;
 use App\Models\UserGroup;
 use App\Services\AddonBillingService;
@@ -406,20 +406,25 @@ class ServerService
         return $servers;
     }
 
-    public function getAvailableMihomo(User $user): array
+    public function getAvailableProtocolNodes(User $user): array
     {
         $groups = $this->getUserGroupIds($user);
         $servers = [];
-        foreach ($this->getAllMihomo() as $server) {
-            if (!$server['show'] || !$this->groupCanReach($groups, $server['group_id'])) continue;
-            $server['mihomo'] = Outbound::render($server, $user);
-            $server['host'] = $server['mihomo']['server'] ?? '';
-            $server['port'] = $server['mihomo']['port'] ?? 0;
-            // Only the rendered profile leaves the admin boundary. Never return
-            // the stored template alongside the current user's credentials.
-            unset($server['outbound_settings']);
-            $server['last_check_at'] = null;
-            $servers[] = $server;
+        foreach (ProtocolRegistry::types() as $type) {
+            $model = ProtocolRegistry::model($type);
+            if (!Schema::hasTable(ProtocolRegistry::table($type))) continue;
+            $rows = $model::orderBy('sort')->orderBy('id')->get()->keyBy('id')->toArray();
+            foreach ($rows as $row) {
+                if (!$row['show'] || !$this->groupCanReach($groups, $row['group_id'])) continue;
+                $server = Outbound::inherit($type, $row, $rows);
+                $server['type'] = $type;
+                $server['managed'] = false;
+                $server['mihomo'] = Outbound::render($server, $user);
+                // Only rendered credentials cross the admin boundary.
+                foreach (ProtocolRegistry::all()[$type]['fields'] as $column => $field) unset($server[$column]);
+                $server['last_check_at'] = null;
+                $servers[] = $server;
+            }
         }
         return $servers;
     }
@@ -437,16 +442,16 @@ class ServerService
             $this->getAvailableV2node($user),
             $this->getAvailableMdns($user),
             $this->getAvailableTrustTunnel($user),
-            $this->getAvailableMihomo($user)
+            $this->getAvailableProtocolNodes($user)
         );
         $tmp = array_column($servers, 'sort');
         array_multisort($tmp, SORT_ASC, $servers);
         $servers = $this->dropDuplicateServers($servers);
         return array_map(function ($server) {
-            if ($server['type'] === 'mihomo') {
+            if (ProtocolRegistry::has($server['type'])) {
                 // Node-backend integration is implemented separately in V2bX.
                 $server['is_online'] = null;
-                $server['cache_key'] = 'mihomo-' . $server['id'] . '-' . $server['updated_at'] . '-' . sha1(json_encode($server['mihomo']));
+                $server['cache_key'] = $server['type'] . '-' . $server['id'] . '-' . $server['updated_at'] . '-' . sha1(json_encode($server['mihomo']));
                 return $server;
             }
             if (strpos($server['port'], '-')) {
@@ -480,10 +485,10 @@ class ServerService
         $seen = [];
         $unique = [];
         foreach ($servers as $server) {
-            if (($server['type'] ?? null) === 'mihomo') {
+            if (ProtocolRegistry::has($server['type'] ?? '')) {
                 $settings = $server['mihomo'];
                 unset($settings['name']);
-                $key = 'mihomo|' . sha1(json_encode($settings));
+                $key = $server['type'] . '|' . sha1(json_encode($settings));
             } else {
                 $key = strtolower(
                     ($server['type'] ?? '') . '|' .
@@ -717,29 +722,26 @@ class ServerService
         return $servers;
     }
 
-    public function getAllMihomo(): array
+    public function getAllProtocolNodes(): array
     {
-        // Code can be updated before update.sql is applied. Existing native
-        // subscriptions must keep working during that interval.
-        if (!Schema::hasTable('v2_server_mihomo')) return [];
-        return ServerMihomo::orderBy('sort')->orderBy('id')->get()->map(function ($server) {
-            $row = $server->toArray();
-            $row['type'] = 'mihomo';
-            $row['managed'] = false;
-            $row['parent_id'] = null;
-            $row['host'] = $row['host'] ?? $row['outbound_settings']['server'] ?? '';
-            $row['port'] = $row['port'] ?? $row['outbound_settings']['port'] ?? 0;
-            $row['server_port'] = $row['server_port'] ?? ($row['port'] ?: null);
-            $row['rate'] = $row['rate'] ?? 1;
-            $row['route_id'] = $row['route_id'] ?? [];
-            return $row;
-        })->all();
+        $servers = [];
+        foreach (ProtocolRegistry::types() as $type) {
+            if (!Schema::hasTable(ProtocolRegistry::table($type))) continue;
+            $model = ProtocolRegistry::model($type);
+            foreach ($model::orderBy('sort')->orderBy('id')->get() as $node) {
+                $row = $node->toArray();
+                $row['type'] = $type;
+                $row['managed'] = false;
+                $servers[] = $row;
+            }
+        }
+        return $servers;
     }
 
     private function mergeData(&$servers)
     {
         foreach ($servers as $k => $v) {
-            if ($v['type'] === 'mihomo') {
+            if (ProtocolRegistry::has($v['type'])) {
                 $servers[$k]['available_status'] = null;
                 $servers[$k]['online'] = null;
                 continue;
@@ -759,7 +761,7 @@ class ServerService
         }
     }
 
-    public function getAllServers(bool $includeMihomo = true)
+    public function getAllServers(bool $includeProtocolNodes = true)
     {
         $servers = array_merge(
             $this->getAllShadowsocks(),
@@ -773,7 +775,7 @@ class ServerService
             $this->getAllMdns(),
             $this->getAllTrustTunnel()
         );
-        if ($includeMihomo) $servers = array_merge($servers, $this->getAllMihomo());
+        if ($includeProtocolNodes) $servers = array_merge($servers, $this->getAllProtocolNodes());
         $this->mergeData($servers);
         $tmp = array_column($servers, 'sort');
         array_multisort($tmp, SORT_ASC, $servers);
@@ -797,6 +799,10 @@ class ServerService
 
     public function getServer($serverId, $serverType)
     {
+        if (ProtocolRegistry::has($serverType)) {
+            $model = ProtocolRegistry::model($serverType);
+            return Schema::hasTable(ProtocolRegistry::table($serverType)) ? $model::find($serverId) : false;
+        }
         switch ($serverType) {
             case 'v2node':
                 return ServerV2node::find($serverId);

@@ -1,77 +1,98 @@
-# پروتکل‌های جدید در مدیریت نود
+# پروتکل‌های جدید در مدیریت نود Irboard
 
-پروتکل‌های زیر به **همان منوی + در صفحهٔ مدیریت نودها** اضافه شده‌اند:
+۱۵ پروتکل زیر در **همان منوی + و جدول مدیریت نودها** تعریف می‌شوند. مبنا،
+[parser رسمی Mihomo v1.19.33](https://github.com/MetaCubeX/mihomo/blob/v1.19.33/adapter/parser.go)
+در commit `3f27ef39f8c96bbfbc8b0b9bb10f5c9ef60149d8` و ساختار Option هر پروتکل است.
+Shadowsocks، VMess، VLESS، Trojan، Hysteria 1/2، TUIC، AnyTLS و TrustTunnel از قبل
+وجود داشتند. `direct`، `dns`، `reject` و `rematch` عمل مسیریابی هستند.
 
-| پروتکل | حالت‌ها / نام‌های مرتبط |
-| --- | --- |
-| ShadowsocksR | SSR |
-| SOCKS5 | TLS و UDP |
-| HTTP | HTTPS با TLS |
-| Snell | نسخه‌های ۱ تا ۵ |
-| WireGuard | AmneziaWG با تنظیمات مربوط |
-| ShadowQUIC | |
-| GOST Relay | |
-| SSH | رمز یا کلید خصوصی |
-| Mieru | TCP / UDP |
-| Sudoku | |
-| MASQUE | |
-| OpenVPN | |
-| Tailscale | Headscale با control-url |
-| ZeroTier | |
-| EasyTier | |
+## جدول‌ها و فیلدهای اختصاصی
 
-مبنای مقایسه، [parser رسمی Mihomo v1.19.33](https://github.com/MetaCubeX/mihomo/blob/v1.19.33/adapter/parser.go)
-با commit `3f27ef39f8c96bbfbc8b0b9bb10f5c9ef60149d8` است. Shadowsocks، VMess،
-VLESS، Trojan، Hysteria 1/2، TUIC، AnyTLS و TrustTunnel قبلاً در پنل وجود داشتند.
-گزینه‌های `direct`، `dns`، `reject` و `rematch` عمل مسیریابی محلی هستند و می‌توانند
-در قالب سفارشی Clash تنظیم شوند.
+هر ردیف زیر مدل Eloquent و کنترلر مستقل و مسیر
+`/server/<type>/{save,update,copy,drop}` دارد. مکانیزم‌های مشترک CRUD در
+`ProtocolNodeController` و نگاشت دقیق گزینه‌ها در `ProtocolRegistry` قرار دارند.
 
-## استفاده
+| پروتکل / type پنل | جدول | نمونهٔ فیلدهای اختصاصی |
+| --- | --- | --- |
+| ShadowsocksR / `ssr` | `v2_server_ssr` | cipher، password، ssr_protocol، obfs، protocol_param |
+| SOCKS5 / `socks5` | `v2_server_socks5` | username، password، tls، udp، certificate |
+| HTTP / `http` | `v2_server_http` | username، password، tls، sni، headers |
+| Snell / `snell` | `v2_server_snell` | psk، version، reuse، obfs_opts |
+| WireGuard و AmneziaWG / `wireguard` | `v2_server_wireguard` | ip، ipv6، private_key، public_key، peers، amnezia_wg_option |
+| ShadowQUIC / `shadowquic` | `v2_server_shadowquic` | username، password، sni، alpn، quic_versions |
+| GOST Relay / `gostrelay` | `v2_server_gostrelay` | forward، tls، mux، username، password |
+| SSH / `ssh` | `v2_server_ssh` | username، password، private_key، host_key |
+| Mieru / `mieru` | `v2_server_mieru` | transport، port_range، username، password، multiplexing |
+| Sudoku / `sudoku` | `v2_server_sudoku` | key، aead_method، padding_min/max، table_type، httpmask |
+| MASQUE / `masque` | `v2_server_masque` | private_key، public_key، ip، ipv6، uri، network |
+| OpenVPN / `openvpn` | `v2_server_openvpn` | ca، cert، key، username، password، proto، tls_crypt |
+| Tailscale و Headscale / `tailscale` | `v2_server_tailscale` | auth_key، control_url، hostname، exit_node، accept_routes |
+| ZeroTier / `zerotier` | `v2_server_zerotier` | network، identity_secret، orbit، tcp_fallback_mode |
+| EasyTier / `easytier` | `v2_server_easytier` | network_name/secret، peers، listeners، secure_mode |
 
-1. ارتقای معمول پنل و دیتابیس را با مسیر موجود (`php artisan v2board:update`) انجام دهید.
-2. در **مدیریت نودها** روی **+** بزنید و پروتکل دلخواه را از همان منوی نودهای قبلی انتخاب کنید.
-3. نام، گروه دسترسی، آدرس اتصال، پورت اتصال، پورت سمت سرور و ضریب را در فرم معمول نود وارد کنید.
-   پروتکل‌های overlay می‌توانند بدون آدرس/پورت مستقیم و با تنظیمات شبکهٔ خودشان تعریف شوند.
-4. فیلدهای اختصاصی همان پروتکل را کامل کنید. تنظیمات پیشرفتهٔ تو در تو در بخش اختیاری JSON قابل تنظیم است.
-5. نود در **همان جدول مدیریت نودها** ظاهر می‌شود و ویرایش، نمایش/پنهان‌کردن، کپی، حذف و ترتیب آن از همان‌جا انجام می‌شود.
-   کپی جدید همیشه مخفی ساخته می‌شود.
+جدول‌ها مانند پروتکل‌های قبلی، ستون‌های نام، گروه، مسیر، والد، برچسب، آدرس،
+پورت اتصال، پورت سرویس، ضریب، نمایش و ترتیب دارند. هرکدام توالی شناسهٔ مستقل
+دارد؛ هویت نود در مرتب‌سازی، کش و آمار، **type + id** است.
 
-خروجی اشتراک از `flag=mihomo`، `flag=meta`، `flag=verge` یا `flag=nyanpasu`
-پشتیبانی می‌کند. نام و آدرس و پورت خروجی با اطلاعات ذخیره‌شدهٔ نود هماهنگ است.
-مقادیر متنی `{{uuid}}` و `{{user_id}}` در تنظیمات اختصاصی برای هر مشترک جایگزین
-می‌شوند. قالب اطلاعات حجم و تاریخ انقضا هم نام‌های معتبر و مجزا تولید می‌کند.
+تمام گزینه‌های اختصاصی و گزینه‌های مشترک BasicOption نسخهٔ مرجع ستون مشخص دارند.
+نوع‌های boolean و عدد و آرایه در مدل cast می‌شوند. فقط ساختارهای واقعاً تو در تو،
+مانند `peers` و `obfs-opts`، JSON هستند. تنظیمات اصلی در یک blob یا جدول مشترک
+ذخیره نمی‌شوند. در نام ستون‌ها `-` به `_` تبدیل می‌شود؛ `protocol` در SSR به
+`ssr_protocol` و type داخلی `gostrelay` در خروجی به `gost-relay` نگاشت می‌شود.
 
-**دامنهٔ این تغییر پنل Irboard و سابسکریپشن است.** پیاده‌سازی این پروتکل‌ها در
-هستهٔ سرور V2bX، دریافت کاربر/تنظیمات نود و گزارش مصرف آن‌ها مرحلهٔ بعد است؛ در
-این تغییر فایلی از V2bX ویرایش نمی‌شود. تا آن مرحله، نود جدید گزارش سلامت/مصرف
-از V2bX ندارد. انتخاب پروتکل در پنل به‌تنهایی سرویس سمت سرور را راه‌اندازی نمی‌کند.
+## استفاده و رفتار پنل
 
-## Implementation and compatibility
+1. ارتقای معمول پنل و دیتابیس را با `php artisan v2board:update` اجرا کنید.
+2. در مدیریت نودها، از منوی + پروتکل را انتخاب و گروه دسترسی را مشخص کنید.
+3. فیلدهای عادی و اختصاصی پروتکل را کامل کنید. گزینه‌های کمتر رایج در بخش
+   تنظیمات پیشرفتهٔ همان پروتکل قرار دارند و هرکدام فیلد مستقل دارند.
+4. نود در همان جدول ثبت می‌شود. نمایش/پنهان‌کردن، کپی، حذف، فیلتر و مرتب‌سازی
+   از همان‌جا انجام می‌شود. کپی جدید همیشه مخفی است.
 
-The shared `v2_server_mihomo` table stores common node fields and each selected
-protocol's nested `outbound_settings`. The native management endpoint returns
-these nodes together with existing protocols. Native mixed sorting, group counts,
-group-deletion guards and subscription group filtering include them. There is
-no separate profile-management section.
+والد باید در جدول همین پروتکل وجود داشته باشد. انتخاب خود نود یا زنجیرهٔ چرخه‌ای
+مجاز نیست و والد دارای فرزند حذف نمی‌شود. فرزند تنظیمات پروتکل را از ریشهٔ
+زنجیره می‌گیرد و نام، گروه، ضریب و آدرس اتصال خودش را حفظ می‌کند. در حالت
+چندهمتایی WireGuard، آدرس‌های اتصال در فهرست peers قرار دارند. تغییر تنظیمات
+والد نیز اعتبار فرزندهای وابسته را دوباره بررسی می‌کند.
 
-The panel validates common fields and required protocol settings. Advanced
-options retain their original JSON types and credential whitespace. For protocols
-with endpoints, the form's common host and port are authoritative. Full option
-examples are in [Mihomo's reference config](https://github.com/MetaCubeX/mihomo/blob/v1.19.33/docs/config.yaml).
-Use a compatible Mihomo build and verify complete subscriptions with
-`mihomo -t -f subscription.yaml`; older cores may reject new types. Other client
-exporters keep their supported protocol set.
+Tailscale، ZeroTier و EasyTier آدرس/پورت مستقیم لازم ندارند. Mieru باید **پورت یا
+بازهٔ پورت** داشته باشد. WireGuard با peers می‌تواند آدرس/پورت مستقیم نداشته باشد.
+مقدار خالی گزینهٔ boolean اختیاری، پیش‌فرض خود پروتکل را حفظ می‌کند؛ مقدار false
+به‌صورت false ذخیره و صادر می‌شود. فاصله و خط جدید در رمزها و PEM حفظ می‌شود.
 
-Existing TrustTunnel nodes now export to Mihomo using UUID for both username and
-password, matching V2bX. Their certificate hostname/custom SNI, self-signed TLS
-mode and explicit HTTP/3 choice are preserved.
+## اعتبارسنجی و خروجی
 
-The upgrade creates the new table idempotently. Existing subscriptions continue
-working if the code is updated before the schema; new protocol saves report that
-an upgrade is needed. Server heartbeat monitoring skips these new protocols until
-server-core integration exists.
+علاوه بر قواعد مشترک و وجود گروه/مسیر/والد، اعتبارسنجی شامل تنظیمات الزامی،
+نوع فیلدها، گزینه‌های enum، ناسازگاری UDP با Snell 1/2، بازهٔ پورت Mieru،
+کلیدها و شبکه‌های WireGuard، کلیدهای EC با قالب DER/Base64 در MASQUE، گواهی PEM
+و جفت cert/key در OpenVPN، padding و HTTP mask در Sudoku و شناسهٔ شبکهٔ ZeroTier
+است. فیلد متعلق به پروتکل دیگر و گزینهٔ ناشناخته رد می‌شود.
 
-## Verification
+خروجی‌های `mihomo`، `meta`، `verge` و `nyanpasu` از این پروتکل‌ها پشتیبانی می‌کنند.
+آدرس و پورت از فیلدهای نود و نوع از کنترلر همان پروتکل گرفته می‌شود. مقادیر متنی
+`{{uuid}}` و `{{user_id}}` برای هر مشترک جایگزین می‌شوند؛ تنظیمات خام والد یا
+قالب رمزها همراه پاسخ کاربر ارسال نمی‌شود. نام proxy با نام جاری نود، از جمله
+نام‌های اطلاعات حجم/انقضا، هماهنگ می‌ماند. گروه‌های عادی، اعطاشده و منقضی‌شده
+از همان منطق دسترسی موجود Irboard استفاده می‌کنند.
+
+TrustTunnel موجود نیز با نام کاربری و رمز UUID، مطابق V2bX، صادر می‌شود. SNI،
+حالت گواهی و انتخاب HTTP/3 آن حفظ می‌شود. خروجی‌های کلاینت‌های دیگر مجموعهٔ
+پروتکل‌های پشتیبانی‌شدهٔ خود را حفظ می‌کنند.
+
+**دامنهٔ تغییر، مدیریت Irboard و سابسکریپشن است.** پیاده‌سازی هستهٔ سرور V2bX
+مرحلهٔ بعد است. API تنظیمات سرور برای این typeهای جدید صریحاً 501 می‌دهد؛ پنل
+برای آن‌ها وضعیت آنلاین ساختگی یا هشدار آفلاین تولید نمی‌کند. فایلی از V2bX در
+این تغییر ویرایش نشده است. تنظیم موفق اشتراک، آزمون اتصال به یک سرویس زنده نیست.
+فایل‌های محلی کلاینت، پذیرش کلید در سرویس مقصد و قابلیت‌های build کلاینت باید
+در همان محیط کلاینت بررسی شوند.
+
+## نصب و بررسی
+
+`install.sql` و `update.sql` هر ۱۵ جدول را با ستون‌های یکسان می‌سازند.
+به‌روزرسانی با `CREATE TABLE IF NOT EXISTS` تکرارپذیر است و دادهٔ نودها را حفظ
+می‌کند. اگر جدول هنوز نصب نشده باشد، اشتراک‌های قبلی ادامه می‌یابند و ذخیرهٔ
+پروتکل جدید با پیام لزوم ارتقا، 503 می‌دهد. این تغییر برای ارتقا از ساختار اصلی
+Irboard است؛ دادهٔ جدول آزمایشی شاخه‌های منتشرنشده حذف یا منتقل نمی‌شود.
 
 ```sh
 python3 scripts/patch_admin_mihomo_nodes.py --check
@@ -81,7 +102,6 @@ IRBOARD_MIHOMO_CONTRACT_DIR=/tmp/mihomo-contract vendor/bin/phpunit --filter Mih
 python3 tests/ValidateMihomoConfig.py --binary /path/to/mihomo --profiles /tmp/mihomo-contract/ClashMeta.json
 ```
 
-Browser checks exercise the actual Add Node menu and forms in both shipped admin
-bundles. Core checks parse all 15 added types and TrustTunnel with the pinned
-v1.19.33 binary and disposable test keys. They do not assert live VPN connectivity
-or a V2bX implementation for these types.
+تست مرورگر هر دو bundle واقعی را اجرا می‌کند. metadata فیکسچر مرورگر با endpoint
+واقعی مقایسه می‌شود. خروجی ۱۵ نوع جدید و TrustTunnel با باینری pinned نسخهٔ
+v1.19.33 بررسی می‌شود؛ ابزار تست کلید و گواهی خروجی را تعویض یا اصلاح نمی‌کند.

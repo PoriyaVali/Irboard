@@ -8,6 +8,7 @@ use App\Protocols\ClashNyanpasu;
 use App\Protocols\ClashVerge;
 use App\Protocols\Mihomo;
 use App\Protocols\Mihomo\Outbound;
+use App\Protocols\Mihomo\ProtocolRegistry as Registry;
 use Symfony\Component\Yaml\Yaml;
 use Tests\Fixtures\MihomoProfiles;
 use Tests\TestCase;
@@ -23,9 +24,8 @@ class MihomoSubscriptionTest extends TestCase
         $servers = [];
         foreach (array_keys(Outbound::catalog()) as $protocol) {
             $settings = MihomoProfiles::settings($protocol);
-            $settings['udp'] = false;
-            $settings['smux'] = ['enabled' => false, 'max-connections' => 4];
-            $server = ['name' => 'fixture ' . $protocol . ' : فارسی', 'type' => 'mihomo', 'protocol' => $protocol, 'outbound_settings' => $settings];
+            if (isset($settings['udp'])) $settings['udp'] = false;
+            $server = ['name' => 'fixture ' . $protocol . ' : فارسی', 'type' => $protocol] + Registry::storage($protocol, $settings);
             $server['mihomo'] = Outbound::render($server, $user);
             $servers[] = $server;
         }
@@ -38,8 +38,7 @@ class MihomoSubscriptionTest extends TestCase
             foreach (array_keys(Outbound::catalog()) as $index => $protocol) {
                 $proxy = $proxies[$index];
                 $this->assertSame($servers[$index]['mihomo'], $proxy, $class . ' ' . $protocol);
-                $this->assertFalse($proxy['udp']);
-                $this->assertSame(['enabled' => false, 'max-connections' => 4], $proxy['smux']);
+                if (isset($proxy['udp'])) $this->assertFalse($proxy['udp']);
                 $this->assertContains($proxy['name'], $config['proxy-groups'][0]['proxies']);
             }
             $trust = $proxies[15];
@@ -86,7 +85,7 @@ class MihomoSubscriptionTest extends TestCase
     public function testInformationAliasesUseCurrentNamesWithoutChangingTheStoredProfile(): void
     {
         $user = ['id' => 91, 'uuid' => 'fictional-uuid', 'u' => 0, 'd' => 0, 'transfer_enable' => 100000, 'expired_at' => time() + 86400];
-        $original = ['name' => 'original node', 'type' => 'mihomo', 'protocol' => 'socks5', 'outbound_settings' => MihomoProfiles::settings('socks5')];
+        $original = ['name' => 'original node', 'type' => 'socks5'] + Registry::storage('socks5', MihomoProfiles::settings('socks5'));
         $original['mihomo'] = Outbound::render($original, $user);
         $names = ['ترافیک: ۱۰۰ گیگ', 'تاریخ: فردا', 'original node'];
         $servers = array_map(function ($name) use ($original) {

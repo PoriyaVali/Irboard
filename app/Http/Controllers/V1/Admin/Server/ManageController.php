@@ -33,8 +33,8 @@ class ManageController extends Controller
             'v2node',
             'mdns',
             'trusttunnel',
-            'mihomo',
         ];
+        $types = array_merge($types, \App\Protocols\Mihomo\ProtocolRegistry::types());
         $params = $request->only($types);
         if (empty($params)) {
             foreach ($types as $type) {

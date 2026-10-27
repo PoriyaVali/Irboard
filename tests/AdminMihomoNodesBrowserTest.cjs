@@ -35,7 +35,7 @@ class CDP {
     }
 }
 
-const types = ['ssr', 'socks5', 'http', 'snell', 'wireguard', 'shadowquic', 'gost-relay', 'ssh', 'mieru', 'sudoku', 'masque', 'openvpn', 'tailscale', 'zerotier', 'easytier'];
+const types = ['ssr', 'socks5', 'http', 'snell', 'wireguard', 'shadowquic', 'gostrelay', 'ssh', 'mieru', 'sudoku', 'masque', 'openvpn', 'tailscale', 'zerotier', 'easytier'];
 const formSelector = '[data-mihomo-form]';
 async function openPage(lang = 'en', bundle = 'umi.js', auth = 'fixture-admin-token') {
     const { targetId } = await cdp.call('Target.createTarget', { url: 'about:blank' });
@@ -73,33 +73,11 @@ async function openPage(lang = 'en', bundle = 'umi.js', auth = 'fixture-admin-to
     return page;
 }
 function freshState() {
-    const endpoint = { server: '192.0.2.10', port: 443 };
-    const examples = {
-        ssr: { ...endpoint, cipher: 'chacha20-ietf', password: '', protocol: 'auth_sha1_v4', obfs: 'tls1.2_ticket_auth', udp: true },
-        socks5: { ...endpoint, username: '', password: '', udp: true },
-        http: { ...endpoint, username: '', password: '', tls: true },
-        snell: { ...endpoint, psk: '', version: 4, udp: true },
-        wireguard: { ...endpoint, port: 51820, ip: '10.0.0.2', 'private-key': '', 'public-key': '', udp: true },
-        shadowquic: { ...endpoint, username: '', password: '', sni: 'node.example.com' },
-        'gost-relay': { ...endpoint, username: '', password: '', udp: true },
-        ssh: { ...endpoint, port: 22, username: '', password: '' },
-        mieru: { ...endpoint, transport: 'TCP', username: '', password: '', udp: true },
-        sudoku: { ...endpoint, key: '', 'aead-method': 'chacha20-poly1305', 'padding-min': 2, 'padding-max': 7, 'table-type': 'prefer_ascii' },
-        masque: { ...endpoint, 'private-key': '', 'public-key': '', ip: '10.0.0.2', udp: true },
-        openvpn: { ...endpoint, port: 1194, proto: 'udp', ca: '', username: '', password: '', udp: true },
-        tailscale: { hostname: 'irboard-{{user_id}}', 'auth-key': '', 'exit-node': 'auto:any', udp: true },
-        zerotier: { network: '', udp: true },
-        easytier: { 'network-name': '', 'network-secret': '', peers: ['tcp://node.example.com:11010'], udp: true }
-    };
-    const protocols = Object.fromEntries(types.map(type => [type, { label: type, example: examples[type] }]));
-    return { protocols, nodes: [], requests: [], fail: false, forbidden: false };
+    return { protocols: JSON.parse(fs.readFileSync(path.join(__dirname, 'Fixtures/MihomoCatalog.json'), 'utf8')), nodes: [], requests: [], fail: false, forbidden: false };
 }
 function nativeNode(row) {
-    const settings = row.outbound_settings || {};
-    return { ...row, type: row.type || 'mihomo', host: row.host || settings.server || '', port: row.port || settings.port || 0,
-        server_port: row.server_port || row.port || settings.port || 0, group_id: row.group_id || ['1'], route_id: row.route_id || [],
-        tags: row.tags || [], rate: row.rate || 1, sort: row.sort || 0, show: Number(row.show || 0), parent_id: null,
-        available_status: null, online: null, load_status: null, last_check_at: null, last_push_at: null };
+    return { host: '', port: null, server_port: null, group_id: ['1'], route_id: [], tags: [], rate: 1, sort: 0, show: 0, parent_id: null,
+        available_status: null, online: null, load_status: null, last_check_at: null, last_push_at: null, ...row };
 }
 before(async () => {
     state = freshState();
@@ -112,20 +90,20 @@ before(async () => {
         }
         if (url.pathname.startsWith('/api/')) {
             res.setHeader('Content-Type', 'application/json');
-            const specific = url.pathname.includes('/server/mihomo/');
+            const type = url.pathname.split('/').slice(-2)[0];
+            const catalog = url.pathname.endsWith('/server/protocols');
+            const specific = types.includes(type);
             const sorting = url.pathname.endsWith('/server/manage/sort');
-            if (specific || sorting) {
+            if (specific || sorting || catalog) {
                 let raw = ''; for await (const part of req) raw += part;
-                const action = sorting ? 'sort' : url.pathname.split('/').pop(), payload = raw ? JSON.parse(raw) : undefined;
-                state.requests.push({ action, payload, auth: req.headers.authorization });
+                const action = sorting ? 'sort' : catalog ? 'fetch' : url.pathname.split('/').pop(), payload = raw ? JSON.parse(raw) : undefined;
+                state.requests.push({ action, type, payload, auth: req.headers.authorization });
                 if (state.forbidden || req.headers.authorization !== 'fixture-admin-token') { res.statusCode = 403; res.end(JSON.stringify({ message: 'Admin access required' })); return; }
-                if (action === 'fetch') { res.end(JSON.stringify({ data: { version: '1.19.33', protocols: state.protocols, nodes: state.nodes.filter(row => row.type === 'mihomo') } })); return; }
-                if (state.fail) { res.statusCode = 422; res.end(JSON.stringify({ message: 'Invalid settings', errors: { 'outbound_settings.password': ['Required credential'] } })); return; }
-                const index = payload.id ? state.nodes.findIndex(row => row.id === payload.id && row.type === 'mihomo') : -1;
+                if (action === 'fetch') { res.end(JSON.stringify({ data: { version: '1.19.33', protocols: state.protocols,  } })); return; }
+                if (state.fail) { res.statusCode = 422; res.end(JSON.stringify({ message: 'Invalid settings', errors: { 'password': ['Required credential'] } })); return; }
+                const index = payload.id ? state.nodes.findIndex(row => row.id === payload.id && row.type === type) : -1;
                 if (action === 'save') {
-                    const row = nativeNode({ ...payload, id: payload.id || Math.max(0, ...state.nodes.filter(row => row.type === 'mihomo').map(row => row.id)) + 1 });
-                    if (row.host) row.outbound_settings.server = row.host;
-                    if (row.port) row.outbound_settings.port = Number(row.port);
+                    const row = nativeNode({ ...payload, type, id: payload.id || Math.max(0, ...state.nodes.filter(row => row.type === type).map(row => row.id)) + 1 });
                     if (index >= 0) state.nodes[index] = row; else state.nodes.push(row);
                 }
                 if (action === 'update') state.nodes[index].show = Number(payload.show);
@@ -220,7 +198,7 @@ test('all fifteen protocol choices open normal forms from the existing + menu in
             await openForm(page, type);
             assert.equal(await page.evaluate('document.querySelector("[data-mihomo-form]").dataset.mihomoForm'), type);
             assert.ok(await page.evaluate('Boolean(document.querySelector("[data-mihomo-form] [name=name]") && document.querySelector("[data-mihomo-form] [name=rate]") && document.querySelector("[data-mihomo-form] .ant-select"))'));
-            assert.ok(await page.evaluate('Array.from(document.querySelectorAll("[data-mihomo-form] [name]")).some(e=>e.name.startsWith("outbound."))'), type + ' has ordinary protocol fields');
+            assert.ok(await page.evaluate('Array.from(document.querySelectorAll("[data-mihomo-form] [name]")).some(e=>!["name","rate","host","port","server_port","parent_id","sort","show"].includes(e.name))'), type + ' has ordinary protocol fields');
             if (!['tailscale', 'zerotier', 'easytier'].includes(type)) assert.ok(await page.evaluate('Boolean(document.querySelector("[data-mihomo-form] [name=host]") && document.querySelector("[data-mihomo-form] [name=server_port]"))'));
             assert.equal(await page.evaluate('document.querySelector("[data-mihomo-form] details").open'), false);
             assert.equal(await page.evaluate('!!document.querySelector("[data-mihomo-form] b")'), false);
@@ -234,22 +212,21 @@ test('all fifteen protocol choices open normal forms from the existing + menu in
 
 test('ordinary fields create and edit a node in the same native table and keep typed advanced options', async () => {
     const page = await openPage(); const name = '<img src=x onerror="window.pwned=1">';
-    await draft(page, 'socks5', name);
-    await page.set('outbound.username', 'fixture-user'); await page.set('outbound.password', ' secret ');
-    await page.click('[data-mihomo-form] [name="outbound.udp"]');
-    await page.set('sort', '8');
-    const advanced = { server: 'old.example.test', port: 443, username: 'fixture-user', password: ' secret ', udp: false,
-        smux: { enabled: false, 'max-connections': 4 }, headers: { 'X-Test': ['a', 'b'] } };
+    await draft(page, 'http', name);
+    await page.set('username', 'fixture-user'); await page.set('password', ' secret ');
+    await page.set('tls', 'false'); await page.set('sort', '8');
     await page.click('[data-mihomo-form] details summary');
-    await page.set('outbound_settings', JSON.stringify(advanced, null, 2));
+    const headers = { 'X-Test': ' value ' };
+    await page.set('headers', JSON.stringify(headers));
     await page.click('[data-mihomo-save]'); await saved(page, 1);
-    const payload = state.requests.find(request => request.action === 'save').payload;
+    const request = state.requests.find(request => request.action === 'save'), payload = request.payload;
+    assert.equal(request.type, 'http');
+    assert.equal(payload.type, undefined); assert.equal(payload.outbound_settings, undefined);
     assert.equal(payload.host, 'new.example.test'); assert.equal(payload.port, 1443); assert.equal(payload.server_port, 2443); assert.equal(payload.rate, 1.5);
-    assert.equal(payload.outbound_settings.password, ' secret '); assert.equal(payload.outbound_settings.udp, false);
-    assert.deepEqual(payload.outbound_settings.smux, advanced.smux); assert.deepEqual(payload.outbound_settings.headers, advanced.headers);
+    assert.equal(payload.password, ' secret '); assert.equal(payload.tls, false); assert.deepEqual(payload.headers, headers);
     assert.deepEqual(payload.group_id, ['1']);
     assert.equal(await page.evaluate('!!document.querySelector("#main-container img[src=x]") || !!window.pwned'), false);
-    assert.match(await page.evaluate('document.querySelector("#main-container .ant-table").textContent'), /SOCKS5/);
+    assert.match(await page.evaluate('document.querySelector("#main-container .ant-table").textContent'), /HTTP/);
     await page.click('#main-container [data-mihomo-edit="1"]');
     await page.wait('document.querySelector("[data-mihomo-form] [name=server_port]")');
     assert.equal(await page.evaluate('document.querySelector("[data-mihomo-form] [name=server_port]").value'), '2443');
@@ -263,11 +240,11 @@ test('ordinary fields create and edit a node in the same native table and keep t
 
 test('native visibility, copy, delete and mixed ordering controls work for new protocols', async () => {
     state.nodes = [nativeNode({ id: 1, name: 'existing SS node', type: 'shadowsocks', host: 'native.example.test', port: 8443, group_id: ['1'], show: 1 }),
-        nativeNode({ id: 1, name: 'New SOCKS node', protocol: 'socks5', host: 'node.example.test', port: 1080, server_port: 2080, group_id: ['1'], show: 0, sort: 1, outbound_settings: { server: 'node.example.test', port: 1080, username: 'fixture', password: 'fixture', udp: true } })];
+        nativeNode({ id: 1, name: 'New SOCKS node', type: 'socks5', host: 'node.example.test', port: 1080, server_port: 2080, group_id: ['1'], show: 0, sort: 1, username: 'fixture', password: 'fixture', udp: true })];
     const page = await openPage();
     await page.evaluate('Array.from(document.querySelectorAll("#main-container tr.ant-table-row")).find(row=>row.textContent.includes("New SOCKS node")).querySelector(".ant-switch").click()');
     await page.wait('Array.from(document.querySelectorAll("#main-container tr.ant-table-row")).some(row=>row.textContent.includes("New SOCKS node") && row.querySelector(".ant-switch-checked"))');
-    assert.equal(state.nodes.find(row => row.type === 'mihomo').show, 1);
+    assert.equal(state.nodes.find(row => row.type === 'socks5').show, 1);
     await rowAction(page, 'New SOCKS node', 'کپی');
     await page.wait('document.querySelector("#main-container .ant-table").textContent.includes("(copy)")');
     const copy = state.nodes.find(row => row.name.endsWith('(copy)'));
@@ -277,22 +254,22 @@ test('native visibility, copy, delete and mixed ordering controls work for new p
     await page.evaluate('Array.from(document.querySelectorAll("#main-container button")).find(button=>button.textContent.includes("ذخیره‌ی ترتیب")).click()');
     await page.wait('Array.from(document.querySelectorAll("#main-container button")).some(button=>button.textContent.includes("ویرایش ترتیب"))');
     const sort = state.requests.find(request => request.action === 'sort');
-    assert.ok(sort && sort.payload.mihomo && sort.payload.shadowsocks, 'native sorting sends all node types');
+    assert.ok(sort && sort.payload.socks5 && sort.payload.shadowsocks, 'native sorting sends all node types');
     await rowAction(page, copy.name, 'حذف');
     await page.wait('!document.querySelector("#main-container .ant-table").textContent.includes("(copy)")');
-    assert.equal(state.nodes.filter(row => row.type === 'mihomo').length, 1);
+    assert.equal(state.nodes.filter(row => row.type === 'socks5').length, 1);
 });
 
 test('invalid advanced JSON and rejected saves retain ordinary form values', async () => {
-    const page = await openPage(); await draft(page);
-    await page.set('outbound.password', 'retained-password');
+    const page = await openPage(); await draft(page, 'http');
+    await page.set('password', 'retained-password');
     await page.click('[data-mihomo-form] details summary');
-    await page.set('outbound_settings', '{broken');
+    await page.set('headers', '{broken');
     await page.click('[data-mihomo-save]');
     assert.equal(state.requests.filter(request => request.action === 'save').length, 0);
-    assert.equal(await page.evaluate('document.querySelector("[data-mihomo-form] [name=outbound_settings]").value'), '{broken');
+    assert.equal(await page.evaluate('document.querySelector("[data-mihomo-form] [name=headers]").value'), '{broken');
     state.fail = true;
-    await page.set('outbound_settings', '{"username":"fixture","password":"retained-password","udp":true}');
+    await page.set('headers', '{"X-Test":"retained value"}');
     await page.click('[data-mihomo-save]');
     await page.wait('document.querySelector(".ant-drawer-open [role=alert]") && !document.querySelector("[data-mihomo-save]").disabled');
     assert.match(await page.evaluate('document.querySelector(".ant-drawer-open [role=alert]").textContent'), /Required credential/);
@@ -301,11 +278,11 @@ test('invalid advanced JSON and rejected saves retain ordinary form values', asy
 });
 
 test('route and account changes discard a drawer draft and stale credentials', async () => {
-    const page = await openPage(); await draft(page); await page.set('outbound.password', 'private-draft');
+    const page = await openPage(); await draft(page); await page.set('password', 'private-draft');
     await page.evaluate('location.hash="/plan"'); await page.wait('!document.querySelector("[data-mihomo-form]")');
     await page.evaluate('location.hash="/server/manage"'); await page.wait('document.querySelector("[data-mihomo-add-menu]")');
     assert.equal(await page.evaluate('!!document.querySelector("[data-mihomo-form]")'), false);
-    await draft(page); await page.set('outbound.password', 'private-draft');
+    await draft(page); await page.set('password', 'private-draft');
     const saves = state.requests.filter(request => request.action === 'save').length;
     await page.evaluate('localStorage.setItem("authorization","another-account")');
     await page.wait('!document.querySelector("[data-mihomo-form]")');
@@ -317,4 +294,27 @@ test('logged out pages do not fetch protocol settings without opening a valid dr
     const page = await openPage('en', 'umi.js', ''); await delay(350);
     assert.equal(await page.evaluate('!!document.querySelector("[data-mihomo-form]")'), false);
     assert.equal(state.requests.filter(request => request.action === 'fetch').length, 0);
+});
+
+
+test('parent choices stay within one protocol and optional booleans preserve their default', async () => {
+    state.nodes = [
+        nativeNode({id:1, type:'http', name:'HTTP root', host:'root.test', port:443}),
+        nativeNode({id:2, type:'http', name:'HTTP child', parent_id:1, host:'child.test', port:443}),
+        nativeNode({id:3, type:'http', name:'HTTP grandchild', parent_id:2, host:'grandchild.test', port:443}),
+        nativeNode({id:4, type:'socks5', name:'Other protocol', host:'other.test', port:1080})
+    ];
+    const page = await openPage();
+    await page.click('#main-container [data-mihomo-edit="2"]');
+    await page.wait('document.querySelector("[data-mihomo-form] [name=parent_id]")');
+    assert.deepEqual(await page.evaluate('Array.from(document.querySelector("[data-mihomo-form] [name=parent_id]").options).map(e=>e.value)'), ['', '1']);
+    assert.equal(await page.evaluate('!!document.querySelector("[data-mihomo-form] [name=password]")'), false);
+    await page.set('parent_id', '');
+    await page.wait('document.querySelector("[data-mihomo-form] [name=password]")');
+    assert.equal(await page.evaluate('document.querySelector("[data-mihomo-form] [name=tls]").value'), '');
+    await page.set('tls', 'false');
+    await page.click('[data-mihomo-save]');
+    await saved(page, 4);
+    const request = state.requests.find(r=>r.action==='save');
+    assert.equal(request.type, 'http');assert.equal(request.payload.id, 2);assert.equal(request.payload.parent_id, null);assert.equal(request.payload.tls, false);
 });

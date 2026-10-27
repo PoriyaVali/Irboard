@@ -3,10 +3,9 @@
 
 First run MihomoSubscriptionTest with IRBOARD_MIHOMO_CONTRACT_DIR set, then:
 python3 tests/ValidateMihomoConfig.py --binary /path/to/mihomo --profiles /path/to/ClashMeta.json
-Only disposable test keys/certificates and state directories are generated.
+Exported credentials are validated without substitution. State lives in a temporary directory.
 """
 import argparse
-import base64
 import json
 import pathlib
 import subprocess
@@ -29,21 +28,8 @@ def main():
         raise SystemExit('The exported contract must contain all 15 added protocols and TrustTunnel.')
     with tempfile.TemporaryDirectory(prefix='irboard-mihomo-') as folder:
         root = pathlib.Path(folder)
-        def openssl(*command):
-            subprocess.run(['openssl', *map(str, command)], check=True, capture_output=True)
-        openssl('ecparam', '-name', 'prime256v1', '-genkey', '-noout', '-out', root / 'ec.pem')
-        openssl('ec', '-in', root / 'ec.pem', '-outform', 'DER', '-out', root / 'private.der')
-        openssl('ec', '-in', root / 'ec.pem', '-pubout', '-outform', 'DER', '-out', root / 'public.der')
-        openssl('req', '-x509', '-new', '-key', root / 'ec.pem', '-days', '1', '-subj', '/CN=fixture.invalid', '-out', root / 'ca.pem')
         for profile in profiles:
             protocol = profile['type']
-            if protocol == 'masque':
-                profile['private-key'] = base64.b64encode((root / 'private.der').read_bytes()).decode()
-                profile['public-key'] = base64.b64encode((root / 'public.der').read_bytes()).decode()
-            if protocol == 'openvpn':
-                profile['ca'] = (root / 'ca.pem').read_text()
-            if protocol in ('tailscale', 'zerotier', 'easytier'):
-                profile['state-dir'] = str(root / protocol)
             config = {'mode': 'rule', 'log-level': 'error', 'proxies': [profile],
                       'proxy-groups': [{'name': 'TEST', 'type': 'select', 'proxies': [profile['name']]}],
                       'rules': ['MATCH,DIRECT']}

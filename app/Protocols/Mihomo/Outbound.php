@@ -12,44 +12,19 @@ class Outbound
 
     public static function catalog(): array
     {
-        $endpoint = ['server' => 'node.example.com', 'port' => 443];
-        return [
-            'ssr' => ['label' => 'ShadowsocksR', 'example' => $endpoint + [
-                'cipher' => 'chacha20-ietf', 'password' => '', 'protocol' => 'auth_sha1_v4', 'obfs' => 'tls1.2_ticket_auth', 'udp' => true,
-            ]],
-            'socks5' => ['label' => 'SOCKS5', 'example' => $endpoint + ['username' => '', 'password' => '', 'udp' => true]],
-            'http' => ['label' => 'HTTP / HTTPS', 'example' => $endpoint + ['username' => '', 'password' => '', 'tls' => true]],
-            'snell' => ['label' => 'Snell', 'example' => $endpoint + ['psk' => '', 'version' => 4, 'udp' => true]],
-            'wireguard' => ['label' => 'WireGuard / AmneziaWG', 'example' => [
-                'server' => 'node.example.com', 'port' => 51820, 'ip' => '10.0.0.2', 'private-key' => '', 'public-key' => '', 'udp' => true,
-            ]],
-            'shadowquic' => ['label' => 'ShadowQUIC', 'example' => $endpoint + ['username' => '', 'password' => '', 'sni' => 'node.example.com']],
-            'gost-relay' => ['label' => 'GOST Relay', 'example' => $endpoint + ['username' => '', 'password' => '', 'udp' => true]],
-            'ssh' => ['label' => 'SSH', 'example' => ['server' => 'node.example.com', 'port' => 22, 'username' => '', 'password' => '']],
-            'mieru' => ['label' => 'Mieru', 'example' => $endpoint + ['transport' => 'TCP', 'username' => '', 'password' => '', 'udp' => true]],
-            'sudoku' => ['label' => 'Sudoku', 'example' => $endpoint + [
-                'key' => '', 'aead-method' => 'chacha20-poly1305', 'padding-min' => 2, 'padding-max' => 7, 'table-type' => 'prefer_ascii',
-            ]],
-            'masque' => ['label' => 'MASQUE', 'example' => $endpoint + ['private-key' => '', 'public-key' => '', 'ip' => '10.0.0.2', 'udp' => true]],
-            'openvpn' => ['label' => 'OpenVPN', 'example' => [
-                'server' => 'node.example.com', 'port' => 1194, 'proto' => 'udp', 'ca' => '', 'username' => '', 'password' => '', 'udp' => true,
-            ]],
-            'tailscale' => ['label' => 'Tailscale / Headscale', 'example' => ['hostname' => 'irboard-{{user_id}}', 'auth-key' => '', 'exit-node' => 'auto:any', 'udp' => true]],
-            'zerotier' => ['label' => 'ZeroTier', 'example' => ['network' => '', 'udp' => true]],
-            'easytier' => ['label' => 'EasyTier', 'example' => [
-                'network-name' => '', 'network-secret' => '', 'peers' => ['tcp://node.example.com:11010'], 'udp' => true,
-            ]],
-        ];
+        $catalog = ProtocolRegistry::all();
+        foreach ($catalog as &$definition) unset($definition['model'], $definition['table']);
+        return $catalog;
     }
 
     /** Preserve Mihomo's nested/advanced options instead of flattening them. */
     public static function validate(string $protocol, array $settings): array
     {
-        if (!isset(self::catalog()[$protocol])) {
+        if (!ProtocolRegistry::has($protocol)) {
             throw ValidationException::withMessages(['protocol' => 'پروتکل Mihomo پشتیبانی نمی‌شود.']);
         }
-        if (isset($settings['type']) && $settings['type'] !== $protocol) {
-            throw ValidationException::withMessages(['outbound_settings.type' => 'نوع تنظیمات باید با پروتکل انتخاب‌شده یکسان باشد.']);
+        if (isset($settings['type']) && $settings['type'] !== self::catalog()[$protocol]['mihomo_type']) {
+            throw ValidationException::withMessages(['type' => 'نوع تنظیمات باید با پروتکل انتخاب‌شده یکسان باشد.']);
         }
         $rules = [];
         if (!in_array($protocol, ['wireguard', 'tailscale', 'zerotier', 'easytier'], true)) {
@@ -80,7 +55,9 @@ class Outbound
                 'public-key' => 'required_without:peers|nullable|string',
                 'peers' => 'sometimes|array|min:1', 'peers.*.server' => 'required|string',
                 'peers.*.port' => 'required|integer|between:1,65535', 'peers.*.public-key' => 'required|string',
-                'peers.*.allowed-ips' => 'required|array|min:1',
+                'peers.*.allowed-ips' => 'required|array|min:1', 'peers.*.allowed-ips.*' => 'required|string',
+                'peers.*.reserved' => 'sometimes|array|size:3', 'peers.*.reserved.*' => 'integer|between:0,255',
+                'peers.*.pre-shared-key' => 'sometimes|string',
             ];
         }
         if ($protocol === 'mieru') {
@@ -100,43 +77,61 @@ class Outbound
             $rules += ['ip' => 'required_without:ipv6|nullable|string', 'ipv6' => 'required_without:ip|nullable|string'];
         }
         if ($protocol === 'easytier') {
-            $rules += ['peers' => 'required_without:listeners|array|min:1', 'peers.*' => 'required|string',
-                'listeners' => 'required_without:peers|array|min:1', 'listeners.*' => 'required|string'];
+            $rules += ['network-name' => 'required|string', 'peers' => 'sometimes|array', 'peers.*' => 'required|string',
+                'listeners' => 'sometimes|array', 'listeners.*' => 'required|string'];
         }
         $validator = Validator::make($settings, $rules);
         if ($validator->fails()) {
             $errors = [];
-            foreach ($validator->errors()->messages() as $field => $messages) $errors['outbound_settings.' . $field] = $messages;
+            foreach ($validator->errors()->messages() as $field => $messages) $errors[$field] = $messages;
             throw ValidationException::withMessages($errors);
         }
         if ($protocol === 'mieru' && !empty($settings['port-range'])) {
             [$first, $last] = array_map('intval', explode('-', $settings['port-range']));
             if ($first < 1 || $last > 65535 || $last < $first) {
-                throw ValidationException::withMessages(['outbound_settings.port-range' => 'بازهٔ پورت معتبر نیست.']);
+                throw ValidationException::withMessages(['port-range' => 'بازهٔ پورت معتبر نیست.']);
             }
         }
         unset($settings['name'], $settings['type']);
+        ProtocolValidator::validate($protocol, $settings);
         return $settings;
+    }
+
+    public static function inherit(string $type, array $row, array $rows): array
+    {
+        $source = $row;
+        $seen = [($row['id'] ?? 0) => true];
+        while (!empty($source['parent_id'])) {
+            $id = (int)$source['parent_id'];
+            if (isset($seen[$id]) || !isset($rows[$id])) {
+                throw ValidationException::withMessages(['parent_id' => 'والد باید نودی از همین پروتکل باشد و چرخه ایجاد نکند.']);
+            }
+            $seen[$id] = true;
+            $source = $rows[$id];
+        }
+        if (!empty($row['parent_id'])) {
+            foreach (self::catalog()[$type]['fields'] as $column => $field) $row[$column] = $source[$column] ?? null;
+            $row['created_at'] = $source['created_at'] ?? $row['created_at'] ?? null;
+        }
+        return $row;
     }
 
     public static function render(array $server, $user): array
     {
-        $settings = $server['outbound_settings'];
-        if (!empty($server['host'])) $settings['server'] = $server['host'];
-        if (!empty($server['port'])) $settings['port'] = (int)$server['port'];
+        $settings = ProtocolRegistry::options($server['type'], $server);
         $replace = function ($value) use (&$replace, $user) {
             if (is_array($value)) return array_map($replace, $value);
             if (!is_string($value)) return $value;
             return strtr($value, ['{{uuid}}' => (string)$user['uuid'], '{{user_id}}' => (string)$user['id']]);
         };
-        return ['name' => $server['name'], 'type' => $server['protocol']] + $replace($settings);
+        return ['name' => $server['name'], 'type' => self::catalog()[$server['type']]['mihomo_type']] + $replace($settings);
     }
 
     /** Shared by all three Mihomo-based Clash subscription exporters. */
     public static function fromServer($user, array $server): ?array
     {
-        if (($server['type'] ?? null) === 'mihomo') {
-            $outbound = $server['mihomo'];
+        if (ProtocolRegistry::has($server['type'] ?? '')) {
+            $outbound = $server['mihomo'] ?? self::render($server, $user);
             // Subscription-info aliases change the current row's name after
             // rendering. Keep the proxy name and group references in sync.
             $outbound['name'] = $server['name'];

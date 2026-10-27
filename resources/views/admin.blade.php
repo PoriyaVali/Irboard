@@ -43,7 +43,7 @@
     // so a genuinely different umi-fa.js build would still be picked up.
     window.adminLang = localStorage.getItem('admin_lang') || 'fa';
     var umiFile = window.adminLang === 'fa' ? 'umi-fa.js' : 'umi.js';
-    document.write('<script src="/assets/admin/' + umiFile + '?v={{$version}}-node-protocols-2"><\/script>');
+    document.write('<script src="/assets/admin/' + umiFile + '?v={{$version}}-node-protocols-3"><\/script>');
 </script>
 <script src="/assets/admin/tailored-pricing.js?v={{$version}}-2"></script>
 </body>

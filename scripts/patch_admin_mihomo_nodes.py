@@ -17,17 +17,17 @@ FORM = Path(__file__).with_name('admin_mihomo_form.js')
 def changes():
     return [
         ('TAG_METHOD', '            getTypeTag(e, t) {\n                switch (e) {',
-         '            getTypeTag(e, t, protocol) {\n                if (e === "mihomo") return y.a.createElement(g["a"], {color:"#5B6FC7"}, (imnProtocolNames[protocol] || protocol || "") + " " + t);\n                switch (e) {', 1),
+         '            getTypeTag(e, t, protocol) {\n                if (imnProtocolNames[e]) return y.a.createElement(g["a"], {color:"#5B6FC7"}, imnProtocolNames[e] + " " + t);\n                switch (e) {', 1),
         ('TABLE_TAG', 'this.getTypeTag(t.type, t.parent_id ? e + " => " + t.parent_id : e)',
          'this.getTypeTag(t.type, t.parent_id ? e + " => " + t.parent_id : e, t.protocol)', 2),
         ('MOBILE_TAG', 'this.getTypeTag(e.type, e.parent_id ? e.id + " => " + e.parent_id : e.id)',
          'this.getTypeTag(e.type, e.parent_id ? e.id + " => " + e.parent_id : e.id, e.protocol)', 1),
         ('COPY', '            copy(e) {\n                this.props.dispatch({',
-         '            copy(e) {\n                if (e && e.type === "mihomo") { imnMutation(this, "copy", {id:e.id}); return; }\n                this.props.dispatch({', 1),
+         '            copy(e) {\n                if (e && imnProtocolNames[e.type]) { imnMutation(this, e.type, "copy", {id:e.id}); return; }\n                this.props.dispatch({', 1),
         ('UPDATE', '            update(e, t, n) {\n                this.props.dispatch({',
-         '            update(e, t, n) {\n                if (e && e.type === "mihomo") { imnMutation(this, "update", {id:e.id,show:!!n}); return; }\n                this.props.dispatch({', 1),
+         '            update(e, t, n) {\n                if (e && imnProtocolNames[e.type]) { imnMutation(this, e.type, "update", {id:e.id,show:!!n}); return; }\n                this.props.dispatch({', 1),
         ('DROP', '            drop(e) {\n                this.props.dispatch({',
-         '            drop(e) {\n                if (e && e.type === "mihomo") { imnMutation(this, "drop", {id:e.id}); return; }\n                this.props.dispatch({', 1),
+         '            drop(e) {\n                if (e && imnProtocolNames[e.type]) { imnMutation(this, e.type, "drop", {id:e.id}); return; }\n                this.props.dispatch({', 1),
         ('FILTERS', '''filters: ["V2node", "Shadowsocks", "Vmess", "Trojan", "Hysteria", "Tuic", "Vless", "AnyTLS", "Mdns"].map(e=>({
                         text: e,
                         value: e
@@ -36,7 +36,7 @@ def changes():
                         text: e,
                         value: e
                     })).concat(Object.keys(imnProtocolNames).map(key=>({text:imnProtocolNames[key],value:key}))),
-                    onFilter: (e,t)=>(t.type === "mihomo" ? t.protocol : t.type) === e.toLowerCase(),''', 1),
+                    onFilter: (e,t)=>t.type === e.toLowerCase(),''', 1),
         ('EDIT', '''"v2node" === e.type && y.a.createElement(mV2node, {
                         key: e.id,
                         record: e
@@ -47,7 +47,7 @@ def changes():
                         record: e
                     }, y.a.createElement("a", null, y.a.createElement(m["a"], {
                         type: "edit"
-                    }), " ویرایش")), "mihomo" === e.type && y.a.createElement(mMihomo, {key:"mihomo-"+e.id,record:e}, y.a.createElement("a", {"data-mihomo-edit":e.id}, y.a.createElement(m["a"], {type:"edit"}), " ویرایش")))''', 1),
+                    }), " ویرایش")), imnProtocolNames[e.type] && y.a.createElement(mMihomo, {key:e.type+"-"+e.id,record:e}, y.a.createElement("a", {"data-mihomo-edit":e.id}, y.a.createElement(m["a"], {type:"edit"}), " ویرایش")))''', 1),
         ('CONTEXT_EDIT', '''"vless" === (null === (v = this.record) || void 0 === v ? void 0 : v.type) && y.a.createElement(G, {
                     key: Math.random(),
                     record: this.record
@@ -58,7 +58,7 @@ def changes():
                     record: this.record
                 }, y.a.createElement("a", null, y.a.createElement(m["a"], {
                     type: "form"
-                }), " ویرایش")), this.record && this.record.type === "mihomo" && y.a.createElement(mMihomo, {key:"mihomo-context-"+this.record.id,record:this.record}, y.a.createElement("a", {"data-mihomo-edit":this.record.id}, y.a.createElement(m["a"], {type:"form"}), " ویرایش")))''', 1),
+                }), " ویرایش")), this.record && imnProtocolNames[this.record.type] && y.a.createElement(mMihomo, {key:this.record.type+"-context-"+this.record.id,record:this.record}, y.a.createElement("a", {"data-mihomo-edit":this.record.id}, y.a.createElement(m["a"], {type:"form"}), " ویرایش")))''', 1),
         ('ADD_MENU', '''                    }, y.a.createElement("a", null, this.getTypeTag("trusttunnel", "TrustTunnel")))))''', '''                    }, y.a.createElement("a", null, this.getTypeTag("trusttunnel", "TrustTunnel")))), Object.keys(imnProtocolNames).map(protocol=>y.a.createElement(p["a"].Item, {key:"mihomo-"+protocol},y.a.createElement(mMihomo,{key:protocol,protocol:protocol},y.a.createElement("a",{"data-mihomo-add":protocol},y.a.createElement(g["a"],{color:"#5B6FC7"},imnProtocolNames[protocol]))))))''', 1),
         ('ADD_MENU_SCROLL', '''                    overlay: y.a.createElement(p["a"], null, y.a.createElement(p["a"].Item, null, y.a.createElement(mV2node, {''', '''                    overlay: y.a.createElement(p["a"], {style:{maxHeight:"65vh",overflowY:"auto"}}, y.a.createElement(p["a"].Item, null, y.a.createElement(mV2node, {''', 1),
         ('ADD_TRIGGER', '''                }, y.a.createElement(l["a"], null, y.a.createElement(m["a"], {
@@ -66,12 +66,12 @@ def changes():
                 }))), y.a.createElement(s["a"], {''', '''                }, y.a.createElement(l["a"], {"data-mihomo-add-menu":true}, y.a.createElement(m["a"], {
                     type: "plus"
                 }))), y.a.createElement(s["a"], {''', 1),
-        ('ROW_NAME', '''}), y.a.createElement("span", null, e), /*__NODELOAD__*/''', '''}), t.type === "mihomo" ? y.a.createElement(mMihomo,{record:t},y.a.createElement("a",{"data-mihomo-edit":t.id},e)) : y.a.createElement("span", null, e), /*__NODELOAD__*/''', 1),
-        ('ADDRESS', '}, t.host + ":" + t.port)', '}, t.type === "mihomo" ? imnAddress(t) : t.host + ":" + t.port)', 1),
-        ('ADDRESS_COPY', 'S()(t.host),', 'S()(t.type === "mihomo" ? imnAddress(t) : t.host),', 1),
-        ('MOBILE_ADDRESS', 'description: "".concat(e.host, ":").concat(e.port)', 'description: e.type === "mihomo" ? imnAddress(e) : "".concat(e.host, ":").concat(e.port)', 1),
-        ('STATUS', 'status: D[t.available_status]', 'status: t.type === "mihomo" && t.available_status == null ? "default" : D[t.available_status]', 1),
-        ('MOBILE_STATUS', 'status: D[e.available_status]', 'status: e.type === "mihomo" && e.available_status == null ? "default" : D[e.available_status]', 1),
+        ('ROW_NAME', '''}), y.a.createElement("span", null, e), /*__NODELOAD__*/''', '''}), imnProtocolNames[t.type] ? y.a.createElement(mMihomo,{record:t},y.a.createElement("a",{"data-mihomo-edit":t.id},e)) : y.a.createElement("span", null, e), /*__NODELOAD__*/''', 1),
+        ('ADDRESS', '}, t.host + ":" + t.port)', '}, imnProtocolNames[t.type] ? imnAddress(t) : t.host + ":" + t.port)', 1),
+        ('ADDRESS_COPY', 'S()(t.host),', 'S()(imnProtocolNames[t.type] ? imnAddress(t) : t.host),', 1),
+        ('MOBILE_ADDRESS', 'description: "".concat(e.host, ":").concat(e.port)', 'description: imnProtocolNames[e.type] ? imnAddress(e) : "".concat(e.host, ":").concat(e.port)', 1),
+        ('STATUS', 'status: D[t.available_status]', 'status: imnProtocolNames[t.type] && t.available_status == null ? "default" : D[t.available_status]', 1),
+        ('MOBILE_STATUS', 'status: D[e.available_status]', 'status: imnProtocolNames[e.type] && e.available_status == null ? "default" : D[e.available_status]', 1),
     ]
 
 

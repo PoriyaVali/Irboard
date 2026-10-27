@@ -339,6 +339,8 @@ class UniProxyController extends Controller
     // 后端获取配置
     public function config(Request $request)
     {
+        abort_if(\App\Protocols\Mihomo\ProtocolRegistry::has($this->nodeType), 501,
+            'پیکربندی هستهٔ سرور این پروتکل در V2bX هنوز پیاده‌سازی نشده است.');
         switch ($this->nodeType) {
             case 'mdns':
                 $response = [

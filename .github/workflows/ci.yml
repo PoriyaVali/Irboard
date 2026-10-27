@@ -878,7 +878,7 @@ jobs:
             v2_order v2_payment v2_plan v2_plan_prices v2_reseller_log v2_reserved_plans \
             v2_server_anytls v2_server_group v2_server_hysteria v2_server_mdns \
             v2_server_route v2_server_shadowsocks v2_server_trojan v2_server_tuic \
-            v2_server_v2node v2_server_v2ray v2_server_vless v2_server_vmess v2_server_mihomo v2_sms_log \
+            v2_server_v2node v2_server_v2ray v2_server_vless v2_server_vmess v2_server_ssr v2_server_socks5 v2_server_http v2_server_snell v2_server_wireguard v2_server_shadowquic v2_server_gostrelay v2_server_ssh v2_server_mieru v2_server_sudoku v2_server_masque v2_server_openvpn v2_server_tailscale v2_server_zerotier v2_server_easytier v2_sms_log \
             v2_stat v2_stat_server v2_stat_user v2_ticket v2_ticket_message v2_tunnel_map \
             v2_tutorial v2_user v2_user_banned_backup v2_user_group"
           for t in $EXPECTED; do
@@ -898,6 +898,13 @@ jobs:
           for c in user_id plan_id type period trade_no total_amount status; do col v2_order "$c"; done
           col v2_ticket subject
           col v2_server_anytls host
+          for type in ssr socks5 http snell wireguard shadowquic gostrelay ssh mieru sudoku masque openvpn tailscale zerotier easytier; do
+            for c in parent_id group_id route_id host port server_port rate show sort; do col "v2_server_$type" "$c"; done
+          done
+          col v2_server_ssr ssr_protocol
+          col v2_server_wireguard private_key
+          col v2_server_masque public_key
+          col v2_server_openvpn ca
           echo "✓ All key columns present on core tables."
 
       - name: Storage engine check

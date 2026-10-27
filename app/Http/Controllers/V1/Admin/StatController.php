@@ -109,6 +109,17 @@ class StatController extends Controller
         ];
     }
 
+    private function withProtocolNodes(array $servers): array
+    {
+        foreach (\App\Protocols\Mihomo\ProtocolRegistry::all() as $type => $definition) {
+            if (\Illuminate\Support\Facades\Schema::hasTable($definition['table'])) {
+                $model = $definition['model'];
+                $servers[$type] = $model::whereNull('parent_id')->get()->toArray();
+            }
+        }
+        return $servers;
+    }
+
     public function getServerLastRank()
     {
         $servers = [
@@ -124,6 +135,7 @@ class StatController extends Controller
             'mdns' => ServerMdns::where('parent_id', null)->get()->toArray(),
             'trusttunnel' => ServerTrusttunnel::where('parent_id', null)->get()->toArray()
         ];
+        $servers = $this->withProtocolNodes($servers);
         $startAt = strtotime('-1 day', strtotime(date('Y-m-d')));
         $endAt = strtotime(date('Y-m-d'));
         $statistics = StatServer::select([
@@ -169,6 +181,7 @@ class StatController extends Controller
             'mdns' => ServerMdns::where('parent_id', null)->get()->toArray(),
             'trusttunnel' => ServerTrusttunnel::where('parent_id', null)->get()->toArray()
         ];
+        $servers = $this->withProtocolNodes($servers);
         $startAt = strtotime(date('Y-m-d'));
         $endAt = time();
         $statistics = StatServer::select([
