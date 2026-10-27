@@ -1,0 +1,105 @@
+name: Source release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag (for example v2026.10.27)
+        required: true
+      expected_sha:
+        description: Full commit SHA that the tag must resolve to
+        required: true
+      notes:
+        description: Release notes; leave empty to preserve an existing draft's notes
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+concurrency:
+  group: source-release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAG: ${{ inputs.tag }}
+      EXPECTED_SHA: ${{ inputs.expected_sha }}
+      NOTES: ${{ inputs.notes }}
+    steps:
+      - name: Validate release arguments
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.-]+)?$ ]] || { echo 'Invalid release tag'; exit 1; }
+          [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]] || { echo 'Expected a full lowercase commit SHA'; exit 1; }
+
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.expected_sha }}
+          fetch-depth: 0
+
+      - name: Require the exact tagged main-branch commit and successful CI
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$(git rev-parse "refs/tags/$TAG^{commit}")" = "$EXPECTED_SHA"
+          git merge-base --is-ancestor "$EXPECTED_SHA" origin/main
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs?head_sha=$EXPECTED_SHA&per_page=100" \
+            --jq '[.workflow_runs[] | select(.path == ".github/workflows/ci.yml" and .event == "push" and .head_branch == "main" and .status == "completed" and .conclusion == "success")] | length' > /tmp/irboard-successful-ci-count
+          test "$(cat /tmp/irboard-successful-ci-count)" -gt 0 || { echo 'The tagged main-branch commit has no successful CI run'; exit 1; }
+
+      - name: Build and verify the source package
+        run: |
+          mkdir -p release_assets
+          git archive --format=zip --prefix="Irboard-$TAG/" \
+            -o "release_assets/Irboard-$TAG.zip" "$EXPECTED_SHA"
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          import zipfile
+          from pathlib import Path
+
+          tag = os.environ['TAG']
+          root = Path('release_assets')
+          package = root / f'Irboard-{tag}.zip'
+          prefix = f'Irboard-{tag}/'
+          with zipfile.ZipFile(package) as archive:
+              assert archive.testzip() is None
+              files = {name.removeprefix(prefix) for name in archive.namelist()}
+              required = {'composer.lock', 'database/install.sql', 'database/update.sql',
+                          'public/assets/admin/umi.js', 'public/assets/admin/umi-fa.js'}
+              assert required <= files, required - files
+              assert not any(name == '.env' or name.startswith(('vendor/', '.git/')) for name in files)
+          digest = hashlib.sha256(package.read_bytes()).hexdigest()
+          metadata = {'repository': os.environ['GITHUB_REPOSITORY'], 'version': tag,
+                      'commit': os.environ['EXPECTED_SHA'], 'sha256': digest, 'files': len(files),
+                      'zip_integrity': 'pass', 'required_runtime_files': 'pass',
+                      'private_environment_vendor_and_git_excluded': True}
+          (root / 'SHA256SUMS-Irboard.txt').write_text(f'{digest}  {package.name}\n')
+          (root / 'irboard-package-verification.json').write_text(json.dumps(metadata, indent=2) + '\n')
+          print(json.dumps(metadata, indent=2))
+          PY
+
+      - name: Create or resume an unpublished draft
+        run: |
+          printf '%s\n' "$NOTES" > /tmp/irboard-release-notes.md
+          if state=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json isDraft --jq '.isDraft' 2>/dev/null); then
+            test "$state" = true || { echo 'Refusing to replace a published release'; exit 1; }
+            if test -n "$NOTES"; then
+              gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file /tmp/irboard-release-notes.md
+            fi
+          else
+            gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --draft \
+              --target "$EXPECTED_SHA" --title "Irboard $TAG" --notes-file /tmp/irboard-release-notes.md
+          fi
+
+      - name: Attach all verified files before publishing
+        run: |
+          gh release upload "$TAG" --repo "$GITHUB_REPOSITORY" --clobber release_assets/*
+          test "$(git ls-remote origin "refs/tags/$TAG^{}" | cut -f1)" = "$EXPECTED_SHA"
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest
