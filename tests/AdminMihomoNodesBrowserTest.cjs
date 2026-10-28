@@ -37,7 +37,23 @@ class CDP {
 
 const types = ['ssr', 'socks5', 'http', 'snell', 'wireguard', 'shadowquic', 'gostrelay', 'ssh', 'mieru', 'sudoku', 'masque', 'openvpn', 'tailscale', 'zerotier', 'easytier'];
 const formSelector = '[data-mihomo-form]';
-async function openPage(lang = 'en', bundle = 'umi.js', auth = 'fixture-admin-token') {
+function fieldSelector(name) { return formSelector + ' [data-mihomo-field=' + JSON.stringify(name) + ']'; }
+async function chooseSelect(page, name, value) {
+    const field = fieldSelector(name);
+    if (value === '' || value == null) {
+        const cleared = await page.evaluate(`(()=>{const field=document.querySelector(${JSON.stringify(field)}),clear=field.querySelector('.ant-select-selection__clear');if(!clear)return false;clear.click();return true;})()`);
+        if (cleared) return;
+    }
+    await page.click(field + ' .ant-select-selection');
+    await page.wait('Array.from(document.querySelectorAll(".ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-dropdown-menu-item")).some(e=>e.getBoundingClientRect().height>0)');
+    await page.evaluate(`(()=>{const value=${JSON.stringify(String(value))},items=Array.from(document.querySelectorAll('.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-dropdown-menu-item'));const item=items.find(item=>{const marked=item.matches('[data-mihomo-option]')?item:item.querySelector('[data-mihomo-option]');return marked&&marked.getAttribute('data-mihomo-option')===value;})||items.find(item=>item.getAttribute('data-value')===value||item.getAttribute('title')===value||item.textContent.trim().toLowerCase()===value.toLowerCase())||items.find(item=>value===''&&/No parent|بدون والد/.test(item.textContent));if(!item)throw new Error('Missing option '+value+' for '+${JSON.stringify(name)});item.click();})()`);
+}
+async function advanced(page) {
+    if (!await page.evaluate('document.querySelector("[data-mihomo-advanced]").getAttribute("aria-expanded")==="true"')) await page.click('[data-mihomo-advanced]');
+    await page.wait('document.querySelector("[data-mihomo-advanced]").getAttribute("aria-expanded")==="true"');
+}
+
+async function openPage(lang = 'en', bundle = 'umi.js', auth = 'fixture-admin-token', viewport = { width: 1440, height: 1100 }) {
     const { targetId } = await cdp.call('Target.createTarget', { url: 'about:blank' });
     const { sessionId } = await cdp.call('Target.attachToTarget', { targetId, flatten: true });
     const page = {
@@ -55,9 +71,14 @@ async function openPage(lang = 'en', bundle = 'umi.js', auth = 'fixture-admin-to
         },
         async click(selector) { await this.evaluate(`document.querySelector(${JSON.stringify(selector)}).click()`); },
         async set(name, value) {
-            const selector = formSelector + ' [name="' + name + '"]';
-            await this.evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e)throw new Error('Missing field '+${JSON.stringify(name)});const proto=e.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:e.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(e,${JSON.stringify(String(value))});e.dispatchEvent(new Event(e.tagName==='SELECT'?'change':'input',{bubbles:true}));})()`);
+            const selector = fieldSelector(name);
+            const kind = await this.evaluate(`(()=>{const field=document.querySelector(${JSON.stringify(selector)});if(!field)throw new Error('Missing field '+${JSON.stringify(name)});const toggle=field.matches('.ant-switch')?field:field.querySelector('.ant-switch');if(toggle){const desired=${JSON.stringify(value)}===true||${JSON.stringify(value)}==='true';if((toggle.getAttribute('aria-checked')==='true')!==desired)toggle.click();return 'switch';}const native=field.matches('input,textarea,select')?field:field.querySelector('input:not([type=hidden]),textarea,select');if(field.querySelector('.ant-select'))return 'select';if(!native)throw new Error('Missing input '+${JSON.stringify(name)});const proto=native.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:native.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(native,${JSON.stringify(String(value))});native.dispatchEvent(new Event(native.tagName==='SELECT'?'change':'input',{bubbles:true}));native.dispatchEvent(new Event('blur',{bubbles:true}));return 'input';})()`);
+            if (kind === 'select') await chooseSelect(this, name, value);
         },
+        async fieldValue(name) {
+            return this.evaluate(`(()=>{const field=document.querySelector(${JSON.stringify(fieldSelector(name))});if(!field)return null;const toggle=field.querySelector('.ant-switch');if(toggle)return toggle.getAttribute('aria-checked')==='true';const selected=field.querySelector('.ant-select-selection-selected-value');if(selected)return selected.textContent.trim();const input=field.matches('input,textarea,select')?field:field.querySelector('input:not([type=hidden]),textarea,select');return input?input.value:field.textContent;})()`);
+        },
+        async toggle(name, checked) { await this.set(name, checked); },
         async screenshot(filename) {
             const result = await cdp.call('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false }, sessionId);
             fs.writeFileSync(filename, Buffer.from(result.data, 'base64'));
@@ -66,7 +87,7 @@ async function openPage(lang = 'en', bundle = 'umi.js', auth = 'fixture-admin-to
     };
     pages.add(page);
     await cdp.call('Page.enable', {}, sessionId);
-    await cdp.call('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1100, deviceScaleFactor: 1, mobile: false }, sessionId);
+    await cdp.call('Emulation.setDeviceMetricsOverride', { ...viewport, deviceScaleFactor: 1, mobile: viewport.width <= 768 }, sessionId);
     await cdp.call('Page.navigate', { url: `${origin}/secure-fixture?lang=${lang}&bundle=${bundle}&token=${encodeURIComponent(auth)}#/server/manage` }, sessionId);
     await page.wait('window.fixtureReady && document.querySelector("#main-container .ant-table")');
     if (state.nodes.length) await page.wait('document.querySelectorAll("#main-container tr.ant-table-row").length>=' + Math.min(10, state.nodes.length));
@@ -124,7 +145,7 @@ before(async () => {
         }
         const bundle = url.searchParams.get('bundle') === 'umi-fa.js' ? 'umi-fa.js' : 'umi.js';
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        res.end(`<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="/assets/admin/components.chunk.css"><link rel="stylesheet" href="/assets/admin/umi.css"></head><body><div id="root"></div><script>localStorage.setItem('authorization',${JSON.stringify(url.searchParams.get('token'))});localStorage.setItem('umi_locale',${JSON.stringify(url.searchParams.get('lang') === 'fa' ? 'fa-IR' : 'en-US')});window.routerBase='/';window.settings={secure_path:'fixture-admin',title:'Irboard fixture',theme:{sidebar:'light',header:'light',color:'blue'},version:'test',background_url:'',logo:''};window.confirm=()=>true;window.fixtureReady=true;</script><script src="/assets/admin/vendors.async.js"></script><script src="/assets/admin/components.async.js"></script><script src="/assets/admin/${bundle}"></script></body></html>`);
+        res.end(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no"><link rel="stylesheet" href="/assets/admin/components.chunk.css"><link rel="stylesheet" href="/assets/admin/umi.css"></head><body><div id="root"></div><script>localStorage.setItem('authorization',${JSON.stringify(url.searchParams.get('token'))});localStorage.setItem('umi_locale',${JSON.stringify(url.searchParams.get('lang') === 'fa' ? 'fa-IR' : 'en-US')});window.routerBase='/';window.settings={secure_path:'fixture-admin',title:'Irboard fixture',theme:{sidebar:'light',header:'light',color:'blue'},version:'test',background_url:'',logo:''};window.confirm=()=>true;window.fixtureReady=true;</script><script src="/assets/admin/vendors.async.js"></script><script src="/assets/admin/components.async.js"></script><script src="/assets/admin/${bundle}"></script></body></html>`);
     });
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     origin = `http://127.0.0.1:${server.address().port}`;
@@ -163,8 +184,8 @@ async function openForm(page, protocol) {
     await addMenu(page);
     await page.evaluate('document.querySelector(' + JSON.stringify('[data-mihomo-add="' + protocol + '"]').toString() + ').scrollIntoView({block:"nearest"})');
     await page.click('.ant-dropdown:not(.ant-dropdown-hidden) [data-mihomo-add="' + protocol + '"]');
-    await page.wait('document.querySelector(' + JSON.stringify('[data-mihomo-form="' + protocol + '"] [data-mihomo-save]') + ') && !document.querySelector(' + JSON.stringify('[data-mihomo-form="' + protocol + '"] [data-mihomo-save]') + ').disabled');
-    await page.wait('(()=>{const form=document.querySelector("[data-mihomo-form]"),panel=form && form.closest(".ant-drawer-content-wrapper");if(!panel)return false;const box=panel.getBoundingClientRect();return box.width>=innerWidth*.75 && box.left<=innerWidth*.21 && box.right<=innerWidth+2;})()');
+    await page.wait('document.querySelector(' + JSON.stringify('[data-mihomo-form="' + protocol + '"]') + ') && document.querySelector("[data-mihomo-save]") && !document.querySelector("[data-mihomo-save]").disabled');
+    await page.wait('(()=>{const form=document.querySelector("[data-mihomo-form]"),panel=form && form.closest(".ant-drawer-content-wrapper");if(!panel)return false;const box=panel.getBoundingClientRect();return box.width>=Math.min(innerWidth,450)-2 && box.width<=Math.min(innerWidth,550)+2 && box.left>=-2 && box.right<=innerWidth+2;})()');
 }
 async function closeForm(page) {
     await page.evaluate('document.querySelector("[data-mihomo-form]").closest(".ant-drawer").querySelector(".ant-drawer-close").click()');
@@ -172,7 +193,7 @@ async function closeForm(page) {
     await page.wait('Array.from(document.querySelectorAll(".ant-drawer-mask")).every(mask=>{const style=getComputedStyle(mask),box=mask.getBoundingClientRect();return style.display==="none" || style.visibility==="hidden" || style.pointerEvents==="none" || box.width===0 || box.height===0;})');
 }
 async function selectGroup(page) {
-    await page.click('[data-mihomo-form] .ant-select .ant-select-selection');
+    await page.click(fieldSelector('group_id') + ' .ant-select-selection');
     await page.wait('document.querySelector(".ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-dropdown-menu-item")');
     await page.click('.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-dropdown-menu-item');
 }
@@ -207,8 +228,24 @@ test('all fifteen protocol choices open normal forms from the existing + menu in
             assert.ok(await page.evaluate('Boolean(document.querySelector("[data-mihomo-form] [name=name]") && document.querySelector("[data-mihomo-form] [name=rate]") && document.querySelector("[data-mihomo-form] .ant-select"))'));
             assert.ok(await page.evaluate('Array.from(document.querySelectorAll("[data-mihomo-form] [name]")).some(e=>!["name","rate","host","port","server_port","parent_id","sort","show"].includes(e.name))'), type + ' has ordinary protocol fields');
             if (!['tailscale', 'zerotier', 'easytier'].includes(type)) assert.ok(await page.evaluate('Boolean(document.querySelector("[data-mihomo-form] [name=host]") && document.querySelector("[data-mihomo-form] [name=server_port]"))'));
-            assert.equal(await page.evaluate('document.querySelector("[data-mihomo-form] details").open'), false);
-            assert.equal(await page.evaluate('!!document.querySelector("[data-mihomo-form] b")'), false);
+            assert.equal(await page.evaluate('document.querySelector("[data-mihomo-advanced]").getAttribute("aria-expanded")'), 'false');
+            const controls = await page.evaluate('(()=>{const form=document.querySelector("[data-mihomo-form]");return {plain:Array.from(form.querySelectorAll("input:not([type=hidden]),textarea")).filter(e=>!e.closest(".ant-select")&&!e.classList.contains("ant-input")).map(e=>e.name),help:Array.from(form.querySelectorAll("[data-mihomo-field]")).filter(e=>e.getBoundingClientRect().height>0).map(e=>({field:e.dataset.mihomoField,label:(e.querySelector("label")||{}).textContent||"",help:(e.querySelector("[data-mihomo-help]")||{}).textContent||""})),sections:Array.from(form.querySelectorAll("[data-mihomo-section]")).filter(e=>e.getBoundingClientRect().height>0).map(e=>e.textContent.trim()),footer:!!document.querySelector(".ant-drawer-open .v2board-drawer-action .ant-btn-primary[data-mihomo-save]")};})()');
+            assert.deepEqual(controls.plain, [], type + ' uses the bundled AntD inputs');
+            assert.ok(controls.help.length >= 7, type + ' exposes ordinary field guidance');
+            for (const field of controls.help) {
+                assert.ok(field.label.trim().length > 0, type + '/' + field.field + ' has a label');
+                assert.ok(field.help.trim().length >= 18, type + '/' + field.field + ' explains what to enter or how the option works');
+            }
+            assert.ok(controls.sections.length >= 2, type + ' separates ordinary connection and protocol settings');
+            assert.ok(controls.footer, type + ' uses the original drawer action footer');
+            if (!['tailscale', 'zerotier', 'easytier'].includes(type)) assert.equal(await page.fieldValue('host'), '', type + ' never prefills the fixture server');
+            assert.equal(await page.fieldValue('rate'), '1');
+            const secrets = await page.evaluate('Array.from(document.querySelectorAll("[data-mihomo-form] input,[data-mihomo-form] textarea")).filter(e=>/^(username|password|private_key|pre_shared_key|psk|key|auth_key|network_secret|identity_secret)$/.test(e.name)).map(e=>({name:e.name,value:e.value}))');
+            for (const field of secrets) assert.ok(field.value === '' || field.value === '{{uuid}}', type + '/' + field.name + ' has no fictional saved credential');
+            if (lang === 'fa' && type === 'http' && process.env.MIHOMO_SCREENSHOT_DIR) await page.screenshot(path.join(process.env.MIHOMO_SCREENSHOT_DIR, 'native-managed-http-fa.png'));
+            await advanced(page);
+            const advancedHelp = await page.evaluate('Array.from(document.querySelectorAll("[data-mihomo-form] [data-mihomo-field]")).filter(e=>e.getBoundingClientRect().height>0).map(e=>({field:e.dataset.mihomoField,help:(e.querySelector("[data-mihomo-help]")||{}).textContent||""}))');
+            for (const field of advancedHelp) assert.ok(field.help.trim().length >= 18, type + '/' + field.field + ' advanced guidance');
             if (lang === 'fa' && type === 'ssh' && process.env.MIHOMO_SCREENSHOT_DIR) await page.screenshot(path.join(process.env.MIHOMO_SCREENSHOT_DIR, 'native-node-form.png'));
             await closeForm(page);
         }
@@ -220,9 +257,10 @@ test('all fifteen protocol choices open normal forms from the existing + menu in
 test('ordinary fields create and edit a node in the same native table and keep typed advanced options', async () => {
     const page = await openPage(); const name = '<img src=x onerror="window.pwned=1">';
     await draft(page, 'http', name);
+    await page.toggle('managed', false);
     await page.set('username', 'fixture-user'); await page.set('password', ' secret ');
     await page.set('tls', 'false'); await page.set('sort', '8');
-    await page.click('[data-mihomo-form] details summary');
+    await advanced(page);
     const headers = { 'X-Test': ' value ' };
     await page.set('headers', JSON.stringify(headers));
     await page.click('[data-mihomo-save]'); await saved(page, 1);
@@ -269,8 +307,9 @@ test('native visibility, copy, delete and mixed ordering controls work for new p
 
 test('invalid advanced JSON and rejected saves retain ordinary form values', async () => {
     const page = await openPage(); await draft(page, 'http');
+    await page.toggle('managed', false);
     await page.set('password', 'retained-password');
-    await page.click('[data-mihomo-form] details summary');
+    await advanced(page);
     await page.set('headers', '{broken');
     await page.click('[data-mihomo-save]');
     assert.equal(state.requests.filter(request => request.action === 'save').length, 0);
@@ -313,12 +352,14 @@ test('parent choices stay within one protocol and optional booleans preserve the
     ];
     const page = await openPage();
     await page.click('#main-container [data-mihomo-edit="2"]');
-    await page.wait('document.querySelector("[data-mihomo-form] [name=parent_id]")');
-    assert.deepEqual(await page.evaluate('Array.from(document.querySelector("[data-mihomo-form] [name=parent_id]").options).map(e=>e.value)'), ['', '1']);
+    await page.wait('document.querySelector("[data-mihomo-form] [data-mihomo-field=parent_id]")');
+    await page.click(fieldSelector('parent_id') + ' .ant-select-selection');
+    assert.deepEqual(await page.evaluate('Array.from(document.querySelectorAll(".ant-select-dropdown:not(.ant-select-dropdown-hidden) [data-mihomo-option]")).map(e=>e.getAttribute("data-mihomo-option"))'), ['', '1']);
+    await page.evaluate('document.querySelector("[data-mihomo-form] [name=name]").focus()');
     assert.equal(await page.evaluate('!!document.querySelector("[data-mihomo-form] [name=password]")'), false);
     await page.set('parent_id', '');
     await page.wait('document.querySelector("[data-mihomo-form] [name=password]")');
-    assert.equal(await page.evaluate('document.querySelector("[data-mihomo-form] [name=tls]").value'), '');
+    assert.match(await page.fieldValue('tls'), /Protocol default|پیش‌فرض/);
     await page.set('tls', 'false');
     await page.click('[data-mihomo-save]');
     await saved(page, 4);
@@ -330,14 +371,135 @@ test('managed server mode is available only for the four implemented server prot
     const page = await openPage();
     for (const type of ['http','socks5','mieru','shadowquic']) {
         await draft(page,type,'Managed '+type);
-        assert.equal(await page.evaluate('document.querySelector("[name=managed]").checked'),false);
-        await page.click('[name=managed]');
+        assert.equal(await page.fieldValue('managed'),true);
         assert.match(await page.evaluate('document.querySelector("[data-mihomo-form]").textContent'), /\{\{uuid\}\}/);
         await page.set('username','{{uuid}}');await page.set('password','{{uuid}}');
-        await page.click('[data-mihomo-save]');await saved(page,state.nodes.length+1);
+        const expectedCount = state.nodes.length + 1;
+        await page.click('[data-mihomo-save]');await saved(page,expectedCount);
         const request=state.requests.filter(r=>r.action==='save').at(-1);
         assert.equal(request.payload.managed,true);assert.equal(request.payload.username,'{{uuid}}');
     }
     await openForm(page,'wireguard');
-    assert.equal(await page.evaluate('!!document.querySelector("[name=managed]")'),false);
+    assert.equal(await page.evaluate('!!document.querySelector("[data-mihomo-field=managed]")'),false);
+});
+
+
+test('required native fields show actionable inline errors before sending a save', async () => {
+    const page = await openPage();
+    await openForm(page, 'http');
+    await page.click('[data-mihomo-save]');
+    await page.wait('document.querySelector("[data-mihomo-form] .has-error, [data-mihomo-form] [data-mihomo-error]")');
+    assert.equal(state.requests.filter(request => request.action === 'save').length, 0);
+    const errors = await page.evaluate('document.querySelector("[data-mihomo-form]").textContent');
+    assert.match(errors, /required|enter|select/i);
+    await page.set('name', 'Validated node');
+    await page.set('host', 'node.example.test');
+    await page.set('port', '1443');
+    await page.set('server_port', '2443');
+    await page.set('rate', '1');
+    await page.click('[data-mihomo-save]');
+    assert.equal(state.requests.filter(request => request.action === 'save').length, 0, 'an access group must be chosen');
+    await selectGroup(page);
+    await page.click('[data-mihomo-save]');
+    await saved(page, 1);
+    assert.equal(state.requests.filter(request => request.action === 'save').length, 1);
+});
+
+test('editing an external node preserves explicit false, null and user-selected protocol settings', async () => {
+    state.nodes = [nativeNode({ id: 9, name: 'Existing external HTTP', type: 'http', host: 'external.example.test', port: 8080, server_port: 8080,
+        managed: false, tls: null, skip_cert_verify: false, udp: false, username: 'external-user', password: 'retained-secret', headers: { 'X-Original': 'preserved' } })];
+    const page = await openPage();
+    await page.click('#main-container [data-mihomo-edit="9"]');
+    await page.wait('document.querySelector("[data-mihomo-form] [data-mihomo-field=managed]")');
+    assert.equal(await page.fieldValue('managed'), false, 'new managed default is not applied to saved external nodes');
+    assert.match(await page.fieldValue('tls'), /Protocol default|پیش‌فرض/);
+    assert.equal(await page.fieldValue('username'), 'external-user');
+    await page.set('name', 'Renamed external HTTP');
+    await page.click('[data-mihomo-save]');
+    await saved(page, 1);
+    const payload = state.requests.find(request => request.action === 'save').payload;
+    assert.equal(payload.managed, false);
+    assert.equal(payload.tls, null);
+    assert.equal(payload.skip_cert_verify, false);
+    assert.equal(payload.username, 'external-user');
+    assert.equal(payload.password, 'retained-secret');
+    assert.deepEqual(payload.headers, { 'X-Original': 'preserved' });
+});
+
+test('editing a WireGuard peer list preserves its saved optional single-peer endpoint', async () => {
+    const peers = [{server: 'peer.example.test', port: 51820, 'public-key': 'YWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWE=', 'allowed-ips': ['0.0.0.0/0']}];
+    state.nodes = [nativeNode({id: 12, type: 'wireguard', name: 'Peer node', host: 'retained.example.test', port: 51820, server_port: 51820,
+        private_key: 'YmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmI=', ip: '10.0.0.2', peers: peers})];
+    const page = await openPage();
+    await page.click('#main-container [data-mihomo-edit="12"]');
+    await page.wait('document.querySelector("[data-mihomo-form] [name=name]")');
+    await page.set('name', 'Renamed peer node');
+    await page.set('peers', JSON.stringify(peers, null, 2));
+    await page.click('[data-mihomo-save]'); await saved(page, 1);
+    const payload = state.requests.find(request => request.action === 'save').payload;
+    assert.equal(payload.host, 'retained.example.test'); assert.equal(payload.port, 51820);
+    assert.deepEqual(payload.peers, peers);
+});
+
+test('mobile Persian forms fit the viewport and retain the native drawer actions', async () => {
+    const page = await openPage('fa', 'umi-fa.js', 'fixture-admin-token', { width: 390, height: 844 });
+    await openForm(page, 'http');
+    const geometry = await page.evaluate('(()=>{const form=document.querySelector("[data-mihomo-form]"),panel=form.closest(".ant-drawer-content-wrapper"),box=panel.getBoundingClientRect(),action=document.querySelector(".ant-drawer-open .v2board-drawer-action"),save=document.querySelector("[data-mihomo-save]");return {width:box.width,left:box.left,right:box.right,scroll:form.scrollWidth,client:form.clientWidth,actions:action?Array.from(action.querySelectorAll("button")).map(b=>({text:b.textContent,native:b.classList.contains("ant-btn")})):[],save:save.getBoundingClientRect().toJSON(),drawer:{scroll:form.closest(".ant-drawer-body").scrollWidth,client:form.closest(".ant-drawer-body").clientWidth},offenders:Array.from(form.querySelectorAll("*")).map(e=>({tag:e.tagName,cls:e.className,box:e.getBoundingClientRect().toJSON()})).filter(e=>e.box.height>0&&(e.box.right>innerWidth+2||e.box.left < -2)).slice(0,8)};})()');
+    assert.ok(geometry.left >= -2 && geometry.right <= 392, JSON.stringify(geometry));
+    assert.ok(geometry.width >= 388 && geometry.width <= 392, JSON.stringify(geometry));
+    if (process.env.MIHOMO_SCREENSHOT_DIR) await page.screenshot(path.join(process.env.MIHOMO_SCREENSHOT_DIR, 'native-node-mobile-fa.png'));
+    assert.ok(geometry.drawer.scroll <= geometry.drawer.client + 2, 'drawer content has no horizontal overflow: '+JSON.stringify(geometry));
+    assert.ok(geometry.actions.length >= 2 && geometry.actions.every(action => action.native));
+    assert.ok(geometry.save.bottom <= 846 && geometry.save.top >= 0, 'save remains visible at the bottom of the mobile drawer');
+    await advanced(page);
+    assert.ok(await page.evaluate('document.querySelector("[data-mihomo-form]").closest(".ant-drawer-body").scrollWidth<=document.querySelector("[data-mihomo-form]").closest(".ant-drawer-body").clientWidth+2'));
+    if (process.env.MIHOMO_SCREENSHOT_DIR) await page.screenshot(path.join(process.env.MIHOMO_SCREENSHOT_DIR, 'native-node-mobile-fa.png'));
+});
+
+test('managed forms reject shared fixed credentials before sending them to the server', async () => {
+    const page = await openPage();
+    await draft(page, 'socks5', 'Managed credentials');
+    assert.equal(await page.fieldValue('managed'), true);
+    await page.set('username', 'shared-user');
+    await page.set('password', 'shared-password');
+    await page.click('[data-mihomo-save]');
+    await page.wait('document.querySelector("[data-mihomo-form] .has-error, [data-mihomo-form] [data-mihomo-error]")');
+    assert.equal(state.requests.filter(request => request.action === 'save').length, 0);
+    assert.match(await page.evaluate('document.querySelector("[data-mihomo-form]").textContent'), /\{\{uuid\}\}/);
+    await page.set('username', '');
+    await page.set('password', '');
+    await page.click('[data-mihomo-save]');
+    await saved(page, 1);
+    const payload = state.requests.find(request => request.action === 'save').payload;
+    assert.equal(payload.managed, true);
+    assert.ok(payload.username == null || payload.username === '');
+    assert.ok(payload.password == null || payload.password === '');
+});
+
+test('the ten original protocol drawers keep their native controls and explain their fields', async () => {
+    const protocols = [
+        ['v2node', 'V2node'], ['shadowsocks', 'Shadowsocks'], ['vmess', 'VMess'],
+        ['trojan', 'Trojan'], ['hysteria', 'Hysteria'], ['tuic', 'Tuic'],
+        ['vless', 'VLess'], ['anytls', 'AnyTLS'], ['mdns', 'MDNS'], ['trusttunnel', 'TrustTunnel']
+    ];
+    for (const [lang, bundle] of [['en', 'umi.js'], ['fa', 'umi-fa.js']]) {
+        const page = await openPage(lang, bundle);
+        for (const [protocol, label] of protocols) {
+            await addMenu(page);
+            await page.evaluate(`(()=>{const dropdown=document.querySelector('.ant-dropdown:not(.ant-dropdown-hidden) [data-mihomo-add]').closest('.ant-dropdown'),item=Array.from(dropdown.querySelectorAll('li')).find(item=>!item.querySelector('[data-mihomo-add]')&&item.textContent.trim().toLowerCase().includes(${JSON.stringify(label.toLowerCase())}));if(!item)throw new Error('Missing original protocol '+${JSON.stringify(protocol)});const trigger=item.querySelector('a');trigger.scrollIntoView({block:'nearest'});trigger.click();})()`);
+            const hook = '.ant-drawer-open [data-native-node-intro="' + protocol + '"]';
+            await page.wait('document.querySelector(' + JSON.stringify(hook) + ')');
+            const guidance = await page.evaluate(`(()=>{const intro=document.querySelector(${JSON.stringify(hook)}),drawer=intro.closest('.ant-drawer');return {intro:intro.textContent,help:Array.from(drawer.querySelectorAll('[data-native-node-help]')).filter(e=>e.getBoundingClientRect().height>0).map(e=>({field:e.dataset.nativeNodeHelp,text:e.textContent})),groups:Array.from(drawer.querySelectorAll('.form-group')).filter(e=>e.getBoundingClientRect().height>0&&e.querySelector('input.ant-input,textarea.ant-input,.ant-select,.ant-switch')).map(e=>({label:(e.querySelector('label')||{}).textContent||'',help:!!e.querySelector('[data-native-node-help]')})),inputs:Array.from(drawer.querySelectorAll('input.ant-input,textarea.ant-input')).filter(e=>e.getBoundingClientRect().height>0).map(e=>({label:e.getAttribute('aria-label'),help:e.getAttribute('aria-describedby')})),footer:!!drawer.querySelector('.v2board-drawer-action .ant-btn-primary')};})()`);
+            assert.ok(guidance.intro.trim().length >= 30, protocol + ' explains the protocol');
+            assert.ok(guidance.help.length >= 5, protocol + ' has guidance for the native fields');
+            for (const field of guidance.help) assert.ok(field.text.trim().length >= 18, protocol + '/' + field.field + ' guidance');
+            for (const group of guidance.groups) assert.ok(group.help, protocol + '/' + group.label + ' has field guidance');
+            for (const input of guidance.inputs) assert.ok(input.help, protocol + ' inputs associate visible guidance for assistive technology');
+            assert.ok(guidance.footer, protocol + ' keeps the native fixed action footer');
+            if (process.env.MIHOMO_SCREENSHOT_DIR && lang === 'fa' && protocol === 'vless') await page.screenshot(path.join(process.env.MIHOMO_SCREENSHOT_DIR, 'native-original-vless-fa.png'));
+            await page.evaluate('document.querySelector(' + JSON.stringify(hook) + ').closest(".ant-drawer").querySelector(".ant-drawer-close").click()');
+            await page.wait('!document.querySelector(' + JSON.stringify(hook) + ')');
+        }
+        await page.close();
+    }
 });
