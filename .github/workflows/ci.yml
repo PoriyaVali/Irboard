@@ -644,19 +644,22 @@ jobs:
           set -e
           export CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           test -x "$CHROME_BIN"
-            python3 scripts/patch_admin_tailored_pricing.py --check
-            python3 scripts/patch_admin_smartbot_credentials.py --check
-            node --check public/assets/admin/umi.js
-            node --check public/assets/admin/umi-fa.js
-          node --check public/assets/admin/tailored-pricing.js
+          python3 scripts/patch_admin_tailored_pricing.py --check
+          python3 scripts/patch_admin_smartbot_credentials.py --check
+          node --check public/assets/admin/umi.js
+          node --check public/assets/admin/umi-fa.js
+          node --check scripts/admin_tailored_pricing.js
           node --test tests/AdminTailoredPricingBrowserTest.cjs
+          node --check scripts/admin_mihomo_form.js
+          node --check scripts/admin_native_node_help.js
           python3 scripts/patch_admin_mihomo_nodes.py --check
+          python3 scripts/patch_admin_native_node_help.py --check
           node --test tests/AdminMihomoNodesBrowserTest.cjs
 
       - name: New node protocol administration and subscription contract
         env:
           IRBOARD_MIHOMO_CONTRACT_DIR: ${{ runner.temp }}/mihomo-contract
-        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'MihomoNodesTest|MihomoSubscriptionTest'
+        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'AdminFormMetadataTest|MihomoNodesTest|MihomoSubscriptionTest'
 
       - name: Simulate node traffic, limits, bans and reporting with real Redis
         env:

@@ -51,7 +51,8 @@ async function openPage(language = 'en', route = '/tailored-pricing', token = 't
     const { sessionId } = await cdp.call('Target.attachToTarget', { targetId, flatten: true });
     await cdp.call('Runtime.enable', {}, sessionId);
     await cdp.call('Page.enable', {}, sessionId);
-    await cdp.call('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false }, sessionId);
+    const viewport = options.viewport || {width: 1440, height: 1000};
+    await cdp.call('Emulation.setDeviceMetricsOverride', {...viewport, deviceScaleFactor: 1, mobile: viewport.width <= 768}, sessionId);
     const page = {
         targetId, sessionId,
         async evaluate(expression) {
@@ -65,7 +66,16 @@ async function openPage(language = 'en', route = '/tailored-pricing', token = 't
             throw new Error('Browser condition timed out: ' + description);
         },
         async click(selector) { await this.evaluate(`document.querySelector(${JSON.stringify(selector)}).click()`); },
-        async select(id, value) { await this.evaluate(`(()=>{const s=document.querySelector('[data-classification="${id}"]');s.value=${JSON.stringify(value)};s.dispatchEvent(new Event('change',{bubbles:true}));})()`); },
+        async selectOption(selector, value) {
+            const list = await this.evaluate(`document.querySelector(${JSON.stringify(selector)}).getAttribute('aria-controls')`);
+            await this.click(selector);
+            await this.wait(`document.getElementById(${JSON.stringify(list)}) && document.querySelector(${JSON.stringify(selector)}).getAttribute('aria-expanded')==='true'`);
+            await this.evaluate(`(()=>{const item=Array.from(document.getElementById(${JSON.stringify(list)}).querySelectorAll('[data-tailored-option]')).find(n=>n.dataset.tailoredOption===${JSON.stringify(value)});if(!item)throw new Error('Missing option '+${JSON.stringify(value)});item.click();})()`);
+            await this.wait(`document.querySelector(${JSON.stringify(selector)}).getAttribute('aria-expanded')==='false'`);
+        },
+        async select(id, value) { await this.selectOption('[data-classification="' + id + '"]', value); },
+        async quantity(key, value) { await this.evaluate(`(()=>{const input=document.querySelector('[data-quantity="${key}"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(String(value))});input.dispatchEvent(new Event('input',{bubbles:true}));})()`); },
+        async slide(key, value) { await this.evaluate(`(()=>{const input=document.querySelector('[data-slider="${key}"]');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(String(value))});input.dispatchEvent(new Event('input',{bubbles:true}));})()`); },
         async ref(id, period) { await this.click(`[data-reference="${id}:${period}"]`); },
         async preview() { const count = state.requests.length; await this.click('[data-action="preview"]'); await this.wait(`!document.querySelector('[data-action="preview"]').disabled`); assert.ok(state.requests.length > count, 'preview reached server'); },
         async close() { await cdp.call('Target.closeTarget', { targetId }); pages.delete(page); }
@@ -117,10 +127,8 @@ before(async () => {
         res.setHeader('Content-Type', 'text/html; charset=utf-8');
         const language = url.searchParams.get('lang') || 'en';
         const token = url.searchParams.get('token') || '';
-        const full = url.searchParams.get('full') === '1';
         const bundle = url.searchParams.get('bundle') === 'umi.js' ? 'umi.js' : 'umi-fa.js';
-        const shell = `<main class="ant-layout-content"><div id="existing-plans" style="padding:24px;background:white">${language === 'fa' ? 'مدیریت اشتراک‌ها — جدول و ویرایشگر فعلی' : 'Subscription management — existing tariff table and editor'}</div><div id="doctor-tailored-host"></div></main>`;
-        res.end(`<!doctype html><html><head><meta charset="utf-8">${full ? '<link rel="stylesheet" href="/assets/admin/components.chunk.css"><link rel="stylesheet" href="/assets/admin/umi.css">' : ''}<link rel="stylesheet" href="/assets/admin/tailored-pricing.css"></head><body style="margin:0;background:#f0f3f7"><div id="root">${full ? '' : shell}</div><script>localStorage.setItem('authorization',${JSON.stringify(token)});localStorage.setItem('umi_locale',${JSON.stringify(language === 'fa' ? 'fa-IR' : 'en-US')});window.routerBase='/';window.settings={secure_path:'fixture-admin',title:'Doctor Mobile',theme:{sidebar:'light',header:'light',color:'blue'},version:'test',background_url:'',logo:''};window.confirm=()=>true;window.fixtureReady=true;</script>${full ? '<script src="/assets/admin/vendors.async.js"></script><script src="/assets/admin/components.async.js"></script><script src="/assets/admin/' + bundle + '"></script>' : ''}<script src="/assets/admin/tailored-pricing.js"></script></body></html>`);
+        res.end(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/assets/admin/components.chunk.css"><link rel="stylesheet" href="/assets/admin/umi.css"><link rel="stylesheet" href="/assets/admin/tailored-pricing.css"></head><body><div id="root"></div><script>localStorage.setItem('authorization',${JSON.stringify(token)});localStorage.setItem('umi_locale',${JSON.stringify(language === 'fa' ? 'fa-IR' : 'en-US')});window.routerBase='/';window.settings={secure_path:'fixture-admin',title:'Doctor Mobile',theme:{sidebar:'light',header:'light',color:'blue'},version:'test',background_url:'',logo:''};window.confirm=()=>true;window.fixtureReady=true;</script><script src="/assets/admin/vendors.async.js"></script><script src="/assets/admin/components.async.js"></script><script src="/assets/admin/${bundle}"></script></body></html>`);
     });
     await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
     origin = `http://127.0.0.1:${server.address().port}`;
@@ -178,7 +186,7 @@ test('bundle patch is idempotent, ordered after subscriptions, and preserves cus
 
 test('ordinary subscription route is unchanged and makes no tailored API request', async () => {
     const page = await openPage('en', '/plan'); await delay(600);
-    assert.equal(await page.evaluate('!!document.querySelector("#existing-plans")'), true);
+    await page.wait('document.querySelector("#main-container .ant-table")');
     assert.equal(await page.evaluate('!!document.querySelector("#doctor-tailored-pricing")'), false);
     assert.equal(state.requests.length, 0);
 });
@@ -194,13 +202,14 @@ for (const [bundle, language, label] of [['umi-fa.js', 'fa', 'دست‌دوز'],
         await page.evaluate(`Array.from(document.querySelectorAll('#sidebar .nav-main-link-name')).find(n=>n.textContent===${JSON.stringify(label)}).closest('a').click()`);
         await page.wait('document.querySelector("[data-classification]")', 'new editor appears on first click');
         assert.equal(await page.evaluate('location.hash'), '#/tailored-pricing');
-        assert.equal(await page.evaluate('!!document.querySelector("#main-container .ant-table")'), false, 'ordinary table is not reused as the tailored route');
+        assert.equal(await page.evaluate('Array.from(document.querySelectorAll("#main-container .ant-table")).every(table=>!!table.closest("[data-tailored-native]"))'), true, 'the route renders its own native pricing table');
         assert.equal(state.requests.length, 1);
         await delay(550); assert.equal(state.requests.length, 1, 'React render does not trigger repeated fetches');
         if (process.env.TAILORED_SCREENSHOT_DIR) {
             await page.select(1, 'finite_total'); await page.ref(1, 'month_price'); await page.ref(1, 'quarter_price');
             await page.select(2, 'finite_total'); await page.ref(2, 'month_price'); await page.select(3, 'unlimited_fup'); await page.preview();
             fs.mkdirSync(process.env.TAILORED_SCREENSHOT_DIR, { recursive: true });
+            await page.evaluate('window.scrollTo(0,0)');
             const metrics = await cdp.call('Page.getLayoutMetrics', {}, page.sessionId);
             const screenshot = await cdp.call('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { x: 0, y: 0, width: 1440, height: metrics.cssContentSize.height, scale: 1 } }, page.sessionId);
             fs.writeFileSync(path.join(process.env.TAILORED_SCREENSHOT_DIR, `admin-tailored-tab-${language}.png`), Buffer.from(screenshot.data, 'base64'));
@@ -213,11 +222,13 @@ for (const [bundle, language, label] of [['umi-fa.js', 'fa', 'دست‌دوز'],
     });
 }
 
-test('mounts only inside its dedicated route host; unsafe names remain text', async () => {
+test('the Umi route owns native React controls and escapes unsafe tariff names', async () => {
     const page = await openPage();
     assert.equal(await page.evaluate('document.querySelectorAll("#doctor-tailored-pricing").length'), 1);
-    assert.equal(await page.evaluate('!!document.querySelector("#existing-plans")'), true);
-    assert.equal(await page.evaluate('document.querySelector("#doctor-tailored-pricing").parentElement.id'), 'doctor-tailored-host');
+    assert.equal(await page.evaluate('!!document.querySelector("#main-container [data-tailored-native].block.block-rounded")'), true);
+    assert.equal(await page.evaluate('!!document.querySelector("#doctor-tailored-host") || !!window.__doctorTailoredAdmin'), false);
+    assert.equal(await page.evaluate('document.querySelectorAll("[data-tailored-native] select,[data-tailored-native] .dtp-button").length'), 0);
+    assert.equal(await page.evaluate('!!document.querySelector("[data-classification]").closest(".ant-select") && document.querySelector("[data-enabled]").classList.contains("ant-switch") && document.querySelector("[data-action=save]").classList.contains("ant-btn")'), true);
     assert.equal(await page.evaluate('!!document.querySelector("#doctor-tailored-pricing img") || !!window.pwned'), false);
     assert.equal(state.requests.length, 1); assert.equal(state.requests[0].authorization, 'test-admin');
     assert.equal(await page.evaluate('document.querySelector("[data-action=save]").disabled'), true);
@@ -231,7 +242,7 @@ test('explicit tariff-period selection excludes unlimited and monthly-reset tari
     await page.select(3, 'unlimited_fup'); await page.select(4, 'finite_total');
     assert.equal(await page.evaluate('document.querySelector("[data-reference=\\"3:month_price\\"]").disabled'), true);
     assert.equal(await page.evaluate('document.querySelector("[data-reference=\\"4:month_price\\"]").disabled'), true);
-    assert.equal(await page.evaluate('document.querySelector("[data-reference=\\"1:quarter_price\\"]").checked'), false);
+    assert.equal(await page.evaluate('document.querySelector("[data-reference=\\"1:quarter_price\\"]").getAttribute("aria-checked")==="true"'), false);
     await page.preview();
     assert.deepEqual(state.requests.at(-1).body.configuration.references, [{ plan_id: 1, period: 'month_price' }]);
     assert.equal(state.requests.filter(r => r.action === 'save').length, 0); assert.equal(state.configuration.enabled, false);
@@ -262,10 +273,10 @@ test('interactive volume/time curves use server base, display comma Toman and co
     await page.select(1, 'finite_total'); await page.ref(1, 'month_price'); await page.preview();
     assert.match(await page.evaluate('document.querySelector(".dtp-price").textContent'), /\$1\.4900.*298,000/);
     assert.equal(await page.evaluate('document.querySelectorAll(".dtp-reference").length'), 2);
-    await page.evaluate('(()=>{const s=document.querySelector("[data-slider=volume]");s.value=200;s.dispatchEvent(new Event("input",{bubbles:true}));})()');
+    await page.slide('volume', 200);
     assert.match(await page.evaluate('document.querySelector(".dtp-price").textContent'), /200 GB.*\$3\.0625.*612,000/);
     assert.equal(await page.evaluate('document.querySelectorAll(".dtp-reference").length'), 1);
-    await page.evaluate('(()=>{const s=document.querySelector("[data-currency]");s.value="toman";s.dispatchEvent(new Event("change",{bubbles:true}));})()');
+    await page.selectOption('[data-currency]', 'toman');
     assert.match(await page.evaluate('document.querySelector(".dtp-chart").textContent'), /Toman/);
     assert.ok(await page.evaluate('Array.from(document.querySelectorAll(".dtp-chart text")).every(n=>n.getBBox().width>0 && getComputedStyle(n).fontFamily.includes("Tahoma"))'));
     assert.equal(state.requests.length, 2, 'local chart exploration makes no new API call');
@@ -287,7 +298,7 @@ test('conflicts retain the draft and block preview/save until explicit reload', 
     await page.select(1, 'finite_total'); await page.ref(1, 'month_price'); await page.preview();
     state.mode = 'conflict'; await page.click('[data-action="save"]');
     await page.wait('document.querySelector(".dtp-error") && document.querySelector(".dtp-error").textContent.includes("changed elsewhere")');
-    assert.equal(await page.evaluate('document.querySelector("[data-reference=\\"1:month_price\\"]").checked'), true);
+    assert.equal(await page.evaluate('document.querySelector("[data-reference=\\"1:month_price\\"]").getAttribute("aria-checked")==="true"'), true);
     assert.equal(await page.evaluate('document.querySelector("[data-action=save]").disabled && document.querySelector("[data-action=preview]").disabled'), true);
     await delay(650); assert.equal(state.requests.filter(r => r.action === 'save').length, 1, 'no automatic mutation retry');
     await page.click('.dtp-actions button:last-of-type');
@@ -295,15 +306,15 @@ test('conflicts retain the draft and block preview/save until explicit reload', 
     assert.equal(await page.evaluate('document.querySelector("[data-action=preview]").disabled'), true);
     state.mode = ''; await page.click('.dtp-toolbar button');
     await page.wait('!document.querySelector(".dtp-error")');
-    assert.equal(await page.evaluate('document.querySelector("[data-reference=\\"1:month_price\\"]").checked'), false);
+    assert.equal(await page.evaluate('document.querySelector("[data-reference=\\"1:month_price\\"]").getAttribute("aria-checked")==="true"'), false);
     await page.close();
 });
 
-test('React replacement of the owned route host remounts the editor and draft without extra fetches', async () => {
+test('native controlled edits preserve the draft across page updates without extra fetches', async () => {
     const page = await openPage(); await page.select(1, 'finite_total'); await page.ref(1, 'month_price');
-    await page.evaluate('(()=>{const host=document.querySelector("#doctor-tailored-host");const replacement=document.createElement("div");replacement.id="doctor-tailored-host";host.replaceWith(replacement);})()');
-    await page.wait('document.querySelector("#doctor-tailored-pricing") && document.querySelector("#doctor-tailored-host")');
-    assert.equal(await page.evaluate('document.querySelector("[data-reference=\\"1:month_price\\"]").checked'), true);
+    await page.click('[data-enabled]');
+    await page.select(2, 'finite_total');
+    assert.equal(await page.evaluate('document.querySelector("[data-reference=\\"1:month_price\\"]").getAttribute("aria-checked")==="true"'), true);
     assert.equal(state.requests.length, 1);
     await page.close();
 });
@@ -317,7 +328,7 @@ test('route transitions discard stale in-flight previews and remount only on the
     state.hold(); state.mode = ''; await delay(100);
     assert.equal(await page.evaluate('!!document.querySelector("#doctor-tailored-pricing")'), false);
     await page.evaluate('location.hash="/tailored-pricing"'); await page.wait('document.querySelector("[data-classification]")');
-    assert.equal(await page.evaluate('document.querySelector("[data-reference=\\"1:month_price\\"]").checked'), false);
+    assert.equal(await page.evaluate('document.querySelector("[data-reference=\\"1:month_price\\"]").getAttribute("aria-checked")==="true"'), false);
     assert.equal(state.requests.filter(r => r.action === 'save').length, 0);
     await page.close();
 });
@@ -325,7 +336,7 @@ test('route transitions discard stale in-flight previews and remount only on the
 test('changed authorization never submits the previous admin draft and drops the old response', async () => {
     const page = await openPage(); await page.select(1, 'finite_total'); await page.ref(1, 'month_price'); await page.preview();
     await page.evaluate('localStorage.setItem("authorization","new-admin");document.querySelector("[data-action=save]").click()');
-    await page.wait('document.querySelector("[data-classification]") && document.querySelector("[data-classification]").value==="unknown"');
+    await page.wait('document.querySelector("[data-classification] .ant-select-selection-selected-value") && document.querySelector("[data-classification] .ant-select-selection-selected-value").textContent.includes("Unclassified")');
     assert.equal(state.requests.filter(r => r.action === 'save').length, 0);
     assert.equal(state.requests.at(-1).authorization, 'new-admin');
     state.mode = 'hold-preview'; await page.select(1, 'finite_total'); await page.ref(1, 'month_price'); await page.click('[data-action="preview"]');
@@ -369,7 +380,7 @@ test('rounded-zero Toman curve remains finite for a valid low-price source and o
     state.exchangeRate = 60000;
     state.candidates = [{ plan_id: 1, plan_name: 'Finite low-price tariff', volume_gb: 1024, quota_type: 'unknown', cohort: { group_id: 1, device_limit: 3, speed_limit: 100, reset_traffic_method: 2 }, prices: { year_price: 0.10 } }];
     const page = await openPage(); await page.select(1, 'finite_total'); await page.ref(1, 'year_price'); await page.preview();
-    await page.evaluate('(()=>{const v=document.querySelector("[data-quantity=volume]");v.value="1";v.dispatchEvent(new Event("change",{bubbles:true}));const c=document.querySelector("[data-currency]");c.value="toman";c.dispatchEvent(new Event("change",{bubbles:true}));})()');
+    await page.quantity('volume', 1); await page.selectOption('[data-currency]', 'toman');
     assert.equal(await page.evaluate('Array.from(document.querySelectorAll(".dtp-chart *")).some(n=>Array.from(n.attributes).some(a=>/NaN|Infinity/.test(a.value)))'), false);
     assert.equal(await page.evaluate('document.querySelectorAll(".dtp-line").length'), 2);
 });
@@ -388,12 +399,13 @@ test('Persian UI uses readable SVG text, Persian integer inputs and saved/draft 
     const page = await openPage('fa'); await page.select(1, 'finite_total'); await page.ref(1, 'month_price'); await page.ref(1, 'quarter_price');
     await page.select(2, 'finite_total'); await page.ref(2, 'month_price'); await page.select(3, 'unlimited_fup'); await page.preview();
     assert.equal(await page.evaluate('document.querySelector("#doctor-tailored-pricing").dir'), 'rtl');
-    assert.match(await page.evaluate('document.querySelector("h2").textContent'), /تعرفه دست‌دوز/);
-    await page.evaluate('(()=>{const v=document.querySelector("[data-quantity=volume]");v.value="۲۰۰";v.dispatchEvent(new Event("change",{bubbles:true}));})()');
+    assert.match(await page.evaluate('document.querySelector("#doctor-tailored-pricing h2").textContent'), /تعرفه دست‌دوز/);
+    await page.quantity('volume', '۲۰۰');
     assert.match(await page.evaluate('document.querySelector(".dtp-price").textContent'), /200 GB.*612,000/);
     assert.ok(await page.evaluate('Array.from(document.querySelectorAll(".dtp-chart text")).every(n=>n.getBBox().width>0)'));
     if (process.env.TAILORED_SCREENSHOT_DIR) {
         fs.mkdirSync(process.env.TAILORED_SCREENSHOT_DIR, { recursive: true });
+        await page.evaluate('window.scrollTo(0,0)');
         const metrics = await cdp.call('Page.getLayoutMetrics', {}, page.sessionId);
         const screenshot = await cdp.call('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { x: 0, y: 0, width: 1440, height: metrics.cssContentSize.height, scale: 1 } }, page.sessionId);
         fs.writeFileSync(path.join(process.env.TAILORED_SCREENSHOT_DIR, 'admin-tailored-fa.png'), Buffer.from(screenshot.data, 'base64'));
@@ -408,9 +420,40 @@ test('English full editor can be captured as an actual browser preview', async (
     assert.equal(await page.evaluate('document.querySelectorAll(".dtp-fit tbody tr").length'), 3);
     if (process.env.TAILORED_SCREENSHOT_DIR) {
         fs.mkdirSync(process.env.TAILORED_SCREENSHOT_DIR, { recursive: true });
+        await page.evaluate('window.scrollTo(0,0)');
         const metrics = await cdp.call('Page.getLayoutMetrics', {}, page.sessionId);
         const screenshot = await cdp.call('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { x: 0, y: 0, width: 1440, height: metrics.cssContentSize.height, scale: 1 } }, page.sessionId);
         fs.writeFileSync(path.join(process.env.TAILORED_SCREENSHOT_DIR, 'admin-tailored-en.png'), Buffer.from(screenshot.data, 'base64'));
     }
     await page.close();
+});
+
+test('invalid and fractional quantities keep the last valid price and show native input guidance', async () => {
+    const page = await openPage('fa'); await page.select(1, 'finite_total'); await page.ref(1, 'month_price'); await page.preview();
+    const price = await page.evaluate('document.querySelector(".dtp-price").textContent');
+    for (const invalid of ['۰', '۱۰۲۵', '2.5', '']) {
+        await page.quantity('volume', invalid);
+        assert.equal(await page.evaluate('document.querySelector("[data-quantity=volume]").getAttribute("aria-invalid")'), 'true');
+        assert.equal(await page.evaluate('document.querySelector(".dtp-price").textContent'), price);
+        assert.match(await page.evaluate('document.querySelector(".dtp-controls [role=alert]").textContent'), /۱۰۲۴/);
+    }
+    await page.quantity('volume', '٢٠٠');
+    assert.equal(await page.evaluate('document.querySelector("[data-quantity=volume]").getAttribute("aria-invalid")'), 'false');
+    assert.match(await page.evaluate('document.querySelector(".dtp-price").textContent'), /200 GB.*612,000/);
+    assert.equal(state.requests.length, 2, 'quantity exploration never changes the saved prices');
+});
+
+test('Persian tailored page fits mobile, with native scrollable tables and guided quantity controls', async () => {
+    const page = await openPage('fa', '/tailored-pricing', 'test-admin', {viewport: {width: 390, height: 844}});
+    await page.select(1, 'finite_total'); await page.ref(1, 'month_price'); await page.preview();
+    const geometry = await page.evaluate('(()=>{const root=document.querySelector("[data-tailored-native]"),box=root.getBoundingClientRect();return {width:innerWidth,scroll:document.documentElement.scrollWidth,left:box.left,right:box.right,table:!!root.querySelector(".ant-table-scroll"),figures:Array.from(root.querySelectorAll(".dtp-chart")).map(e=>e.getBoundingClientRect().width),inputs:Array.from(root.querySelectorAll("[data-quantity]")).map(e=>({native:e.classList.contains("ant-input"),guide:!!document.getElementById(e.getAttribute("aria-describedby"))}))};})()');
+    assert.ok(geometry.scroll <= geometry.width + 2, JSON.stringify(geometry));
+    assert.ok(geometry.left >= -2 && geometry.right <= geometry.width + 2, JSON.stringify(geometry));
+    assert.ok(geometry.table && geometry.figures.length === 2 && geometry.figures.every(width => width > 100 && width < 390), JSON.stringify(geometry));
+    assert.ok(geometry.inputs.length === 2 && geometry.inputs.every(input => input.native && input.guide));
+    if (process.env.TAILORED_SCREENSHOT_DIR) {
+        await page.evaluate('document.querySelector(".dtp-model").scrollIntoView({block:"start"})');
+        const screenshot = await cdp.call('Page.captureScreenshot', {format:'png', captureBeyondViewport:false}, page.sessionId);
+        fs.writeFileSync(path.join(process.env.TAILORED_SCREENSHOT_DIR, 'admin-tailored-mobile-fa.png'), Buffer.from(screenshot.data, 'base64'));
+    }
 });

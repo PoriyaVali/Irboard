@@ -5,7 +5,7 @@
     <link rel="stylesheet" href="/assets/admin/components.chunk.css?v={{$version}}">
     <link rel="stylesheet" href="/assets/admin/umi.css?v={{$version}}">
     <link rel="stylesheet" href="/assets/admin/custom.css?v={{$version}}">
-    <link rel="stylesheet" href="/assets/admin/tailored-pricing.css?v={{$version}}-2">
+    <link rel="stylesheet" href="/assets/admin/tailored-pricing.css?v={{$version}}-native-umi-1">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no">
     <title>{{$title}}</title>
@@ -43,9 +43,8 @@
     // so a genuinely different umi-fa.js build would still be picked up.
     window.adminLang = localStorage.getItem('admin_lang') || 'fa';
     var umiFile = window.adminLang === 'fa' ? 'umi-fa.js' : 'umi.js';
-    document.write('<script src="/assets/admin/' + umiFile + '?v={{$version}}-node-protocols-4"><\/script>');
+    document.write('<script src="/assets/admin/' + umiFile + '?v={{$version}}-native-admin-forms-1"><\/script>');
 </script>
-<script src="/assets/admin/tailored-pricing.js?v={{$version}}-2"></script>
 </body>
 
 </html>

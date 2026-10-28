@@ -293,7 +293,24 @@ class MihomoNodesTest extends TestCase
 
     public function testBrowserMetadataMatchesTheProtectedBackendCatalog(): void
     {
-        $this->assertSame(Outbound::catalog(), json_decode(file_get_contents(base_path('tests/Fixtures/MihomoCatalog.json')), true));
+        $this->assertSame(\App\Protocols\Mihomo\AdminForm::catalog(Outbound::catalog()), json_decode(file_get_contents(base_path('tests/Fixtures/MihomoCatalog.json')), true));
+        $this->withHeaders($this->auth())->getJson($this->path())->assertOk()
+            ->assertJsonPath('data.protocols.http.form.defaults.managed', true)
+            ->assertJsonPath('data.protocols.http.form.defaults.tls', true);
+    }
+
+    public function testReadingNewNodeDefaultsDoesNotConvertAnExistingExternalNode(): void
+    {
+        $this->withHeaders($this->auth());
+        $this->postJson($this->path('http', 'save'), $this->node('http', ['managed' => false, 'tls' => false]))->assertOk();
+        $model = Registry::model('http');
+        $before = $model::first()->toArray();
+        $this->getJson($this->path())->assertOk()
+            ->assertJsonPath('data.protocols.http.form.defaults.managed', true)
+            ->assertJsonPath('data.protocols.http.form.defaults.tls', true);
+        $this->assertSame($before, $model::first()->toArray());
+        $this->assertFalse($model::first()->managed);
+        $this->assertFalse($model::first()->tls);
     }
 
     public function testChangingParentOptionsCannotInvalidateAnExistingRelay(): void

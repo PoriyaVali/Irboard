@@ -12156,7 +12156,8 @@
         t["a"] = u
     },
     "3XVG": function(e, t, n) {
-        "use strict";
+        "use strict";/*__INH_REQUIRE_START__*/
+        var irNativeNodeHelp = n("irboard/native-node-help").default;/*__INH_REQUIRE_END__*/
         n("bbsP");
         var r = n("/wGt")
           , i = (n("+L6B"),
@@ -12235,7 +12236,7 @@
             }
             render() {
                 var e = this.state.settings.servers;
-                return d.a.createElement(d.a.Fragment, null, d.a.createElement("div", {
+                return /*__INH_WRAP_OPEN_START__*/irNativeNodeHelp(d.a,/*__INH_WRAP_OPEN_END__*/d.a.createElement(d.a.Fragment, null, d.a.createElement("div", {
                     className: "form-group"
                 }, d.a.createElement("label", null, "DNSجدول سرورها"), e.map((e,t)=>{
                     var n;
@@ -12256,19 +12257,19 @@
                     }, d.a.createElement("label", null, "DNSآدرس سرور"), d.a.createElement(s["a"], {
                         placeholder: "وارد کنیدDNSآدرس سرور",
                         value: e.address,
-                        onChange: e=>this.changeServer(t, "address", e.target.value)
+                        /*__INH_FIELD_START__*/"data-node-field":"address",/*__INH_FIELD_END__*/onChange: e=>this.changeServer(t, "address", e.target.value)
                     })), d.a.createElement("div", {
                         className: "form-group col-md-3 col-xs-12"
                     }, d.a.createElement("label", null, "پورت"), d.a.createElement(s["a"], {
                         type: "number",
                         placeholder: "پورت",
                         value: e.port,
-                        onChange: e=>this.changeServer(t, "port", parseInt(e.target.value))
+                        /*__INH_FIELD_START__*/"data-node-field":"port",/*__INH_FIELD_END__*/onChange: e=>this.changeServer(t, "port", parseInt(e.target.value))
                     }))), d.a.createElement("div", {
                         className: "form-group"
                     }, d.a.createElement("label", null, "دامنه"), d.a.createElement(s["a"].TextArea, {
                         rows: 5,
-                        onChange: e=>this.changeServer(t, "domains", e.target.value),
+                        /*__INH_FIELD_START__*/"data-node-field":"domains",/*__INH_FIELD_END__*/onChange: e=>this.changeServer(t, "domains", e.target.value),
                         value: null === (n = e.domains) || void 0 === n ? void 0 : n.join("\n"),
                         placeholder: "\u202b\u0644\u06cc\u0633\u062a \u062f\u0627\u0645\u0646\u0647\u200c\u0647\u0627. \u062f\u0627\u0645\u0646\u0647\u200c\u0647\u0627\u06cc \u0645\u0648\u062c\u0648\u062f \u062f\u0631 \u0627\u06cc\u0646 \u0644\u06cc\u0633\u062a \u0628\u0627 \u0627\u0648\u0644\u0648\u06cc\u062a \u0627\u0632 \u0627\u06cc\u0646 \u0633\u0631\u0648\u0631 \u0627\u0633\u062a\u0639\u0644\u0627\u0645 \u0645\u06cc\u200c\u0634\u0648\u0646\u062f. \u0647\u0631 \u062e\u0637 \u06cc\u06a9 \u0645\u0648\u0631\u062f\u202c"
                     })))
@@ -12279,7 +12280,7 @@
                         width: "100%"
                     },
                     onClick: ()=>this.addServer()
-                }, "افزودن"))))
+                }, "افزودن"))))/*__INH_WRAP_CLOSE_START__*/,"dns",this)/*__INH_WRAP_CLOSE_END__*/
             }
         }
         class v extends d.a.Component {
@@ -12307,19 +12308,19 @@
                 var e = this.state.settings
                   , t = e.domain
                   , n = e.protocol;
-                return d.a.createElement(d.a.Fragment, null, d.a.createElement("div", {
+                return /*__INH_WRAP_OPEN_START__*/irNativeNodeHelp(d.a,/*__INH_WRAP_OPEN_END__*/d.a.createElement(d.a.Fragment, null, d.a.createElement("div", {
                     className: "form-group"
                 }, d.a.createElement("label", null, "فیلتر دامنه"), d.a.createElement(s["a"].TextArea, {
                     value: t && t.join("\n"),
-                    onChange: e=>this.change("domain", e.target.value),
+                    /*__INH_FIELD_START__*/"data-node-field":"domain",/*__INH_FIELD_END__*/onChange: e=>this.change("domain", e.target.value),
                     rows: 5
                 })), d.a.createElement("div", {
                     className: "form-group"
                 }, d.a.createElement("label", null, "فیلتر پروتکل"), d.a.createElement(s["a"].TextArea, {
                     value: n && n.join("\n"),
-                    onChange: e=>this.change("protocol", e.target.value),
+                    /*__INH_FIELD_START__*/"data-node-field":"protocol",/*__INH_FIELD_END__*/onChange: e=>this.change("protocol", e.target.value),
                     rows: 5
-                })))
+                })))/*__INH_WRAP_CLOSE_START__*/,"rules",this)/*__INH_WRAP_CLOSE_END__*/
             }
         }
         n("BoS7");
@@ -12348,18 +12349,18 @@
                 var e = this.state.settings
                   , t = e.serverName
                   , n = e.allowInsecure;
-                return d.a.createElement(d.a.Fragment, null, d.a.createElement("div", null, d.a.createElement("div", {
+                return /*__INH_WRAP_OPEN_START__*/irNativeNodeHelp(d.a,/*__INH_WRAP_OPEN_END__*/d.a.createElement(d.a.Fragment, null, d.a.createElement("div", null, d.a.createElement("div", {
                     className: "form-group"
                 }, d.a.createElement("label", null, "Server Name"), d.a.createElement(s["a"], {
                     value: t,
-                    onChange: e=>this.change("serverName", e.target.value),
+                    /*__INH_FIELD_START__*/"data-node-field":"serverName",/*__INH_FIELD_END__*/onChange: e=>this.change("serverName", e.target.value),
                     placeholder: "اگر استفاده نمی‌کنید خالی بگذارید"
                 })), d.a.createElement("div", {
                     className: "form-group"
                 }, d.a.createElement("label", null, "Allow Insecure"), d.a.createElement("div", null, d.a.createElement(y["a"], {
                     checked: parseInt(n),
-                    onChange: e=>this.change("allowInsecure", e ? "1" : "0")
-                })))))
+                    /*__INH_FIELD_START__*/"data-node-field":"allowInsecure",/*__INH_FIELD_END__*/onChange: e=>this.change("allowInsecure", e ? "1" : "0")
+                })))))/*__INH_WRAP_CLOSE_START__*/,"tls",this)/*__INH_WRAP_CLOSE_END__*/
             }
         }
         var w = n("lc5D")
@@ -12491,7 +12492,7 @@
                         showGutter: !0,
                         highlightActiveLine: !0,
                         value: t || "",
-                        onChange: e=>this.formChange("networkSettings", e),
+                        /*__INH_FIELD_START__*/"data-node-field":"networkSettings",/*__INH_FIELD_END__*/onChange: e=>this.formChange("networkSettings", e),
                         setOptions: {
                             enableBasicAutocompletion: !1,
                             enableLiveAutocompletion: !1,
@@ -12504,17 +12505,17 @@
                 case "ruleSettings":
                     return d.a.createElement(v, {
                         settings: n,
-                        onChange: e=>this.changeServer("ruleSettings", e)
+                        /*__INH_FIELD_START__*/"data-node-field":"ruleSettings",/*__INH_FIELD_END__*/onChange: e=>this.changeServer("ruleSettings", e)
                     });
                 case "tlsSettings":
                     return d.a.createElement(b, {
                         settings: r,
-                        onChange: e=>this.changeServer("tlsSettings", e)
+                        /*__INH_FIELD_START__*/"data-node-field":"tlsSettings",/*__INH_FIELD_END__*/onChange: e=>this.changeServer("tlsSettings", e)
                     });
                 case "dnsSettings":
                     return d.a.createElement(g, {
                         settings: i,
-                        onChange: e=>this.changeServer("dnsSettings", e)
+                        /*__INH_FIELD_START__*/"data-node-field":"dnsSettings",/*__INH_FIELD_END__*/onChange: e=>this.changeServer("dnsSettings", e)
                     })
                 }
             }
@@ -12532,7 +12533,7 @@
                   , n = this.props.serverManage.servers
                   , c = this.props.serverGroup.groups
                   , u = this.props.serverRoute.routes;
-                return d.a.createElement(d.a.Fragment, null, d.a.cloneElement(this.props.children, {
+                return /*__INH_WRAP_OPEN_START__*/irNativeNodeHelp(d.a,/*__INH_WRAP_OPEN_END__*/d.a.createElement(d.a.Fragment, null, d.a.cloneElement(this.props.children, {
                     onClick: ()=>this.onShow()
                 }), d.a.createElement(r["a"], {
                     id: "server",
@@ -12548,14 +12549,14 @@
                 }, d.a.createElement("label", null, "نام نود"), d.a.createElement(s["a"], {
                     placeholder: "\u202b\u0646\u0627\u0645 \u0646\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f\u202c",
                     value: e.name,
-                    onChange: e=>this.formChange("name", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"name",/*__INH_FIELD_END__*/onChange: e=>this.formChange("name", e.target.value)
                 })), d.a.createElement("div", {
                     className: "form-group col-4"
                 }, d.a.createElement("label", null, "ضریب"), d.a.createElement(s["a"], {
                     addonAfter: "x",
                     placeholder: "\u202b\u0636\u0631\u06cc\u0628 \u0646\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f\u202c",
                     value: e.rate,
-                    onChange: e=>this.formChange("rate", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"rate",/*__INH_FIELD_END__*/onChange: e=>this.formChange("rate", e.target.value)
                 }))), d.a.createElement("div", {
                     className: "form-group"
                 }, d.a.createElement("label", null, "برچسب نود"), d.a.createElement(a["a"], {
@@ -12565,7 +12566,7 @@
                         width: "100%"
                     },
                     placeholder: "\u202b\u0628\u0639\u062f \u0627\u0632 \u0648\u0631\u0648\u062f Enter \u0628\u0632\u0646\u06cc\u062f \u062a\u0627 \u0628\u0631\u0686\u0633\u0628 \u0627\u0636\u0627\u0641\u0647 \u0634\u0648\u062f\u202c",
-                    onChange: e=>this.formChange("tags", e.length > 0 ? e : null)
+                    /*__INH_FIELD_START__*/"data-node-field":"tags",/*__INH_FIELD_END__*/onChange: e=>this.formChange("tags", e.length > 0 ? e : null)
                 })), d.a.createElement("div", {
                     className: "form-group"
                 }, d.a.createElement("label", null, "گروه دسترسی ", d.a.createElement(_["a"], null, d.a.createElement("a", {
@@ -12577,7 +12578,7 @@
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("group_id", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"group_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("group_id", e)
                 }, c.map(e=>{
                     return d.a.createElement(a["a"].Option, {
                         key: e.id
@@ -12590,7 +12591,7 @@
                 }, d.a.createElement("label", null, "آدرس نود"), d.a.createElement(s["a"], {
                     placeholder: "\u202b\u0622\u062f\u0631\u0633 \u0627\u062a\u0635\u0627\u0644 \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f\u202c",
                     value: e.host,
-                    onChange: e=>this.formChange("host", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"host",/*__INH_FIELD_END__*/onChange: e=>this.formChange("host", e.target.value)
                 })), d.a.createElement("div", {
                     className: "form-group col-md-4 col-xs-12"
                 }, d.a.createElement("label", null, "TLS ", d.a.createElement("a", {
@@ -12602,7 +12603,7 @@
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("tls", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"tls",/*__INH_FIELD_END__*/onChange: e=>this.formChange("tls", e)
                 }, d.a.createElement(a["a"].Option, {
                     key: 0,
                     value: 0
@@ -12616,7 +12617,7 @@
                 }, d.a.createElement("label", null, "پورت اتصال"), d.a.createElement(s["a"], {
                     placeholder: "\u202b\u067e\u0648\u0631\u062a \u0627\u062a\u0635\u0627\u0644 \u06a9\u0627\u0631\u0628\u0631\u202c",
                     value: e.port,
-                    onChange: e=>{
+                    /*__INH_FIELD_START__*/"data-node-field":"port",/*__INH_FIELD_END__*/onChange: e=>{
                         this.formChange("port", e.target.value)
                     }
                 })), d.a.createElement("div", {
@@ -12624,7 +12625,7 @@
                 }, d.a.createElement("label", null, "پورت سرویس"), d.a.createElement(s["a"], {
                     placeholder: "غیرNATهمان پورت اتصال",
                     value: e.server_port,
-                    onChange: e=>this.formChange("server_port", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"server_port",/*__INH_FIELD_END__*/onChange: e=>this.formChange("server_port", e.target.value)
                 }))), d.a.createElement("div", {
                     className: "row"
                 }, d.a.createElement("div", {
@@ -12638,7 +12639,7 @@
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("network", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"network",/*__INH_FIELD_END__*/onChange: e=>this.formChange("network", e)
                 }, d.a.createElement(a["a"].Option, {
                     value: "tcp"
                 }, "TCP"), d.a.createElement(a["a"].Option, {
@@ -12663,7 +12664,7 @@
                     type: "read"
                 })))), d.a.createElement(a["a"], {
                     value: e.parent_id || "",
-                    onChange: e=>this.formChange("parent_id", e),
+                    /*__INH_FIELD_START__*/"data-node-field":"parent_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("parent_id", e),
                     style: {
                         width: "100%"
                     }
@@ -12685,7 +12686,7 @@
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("route_id", e.length > 0 ? e : null)
+                    /*__INH_FIELD_START__*/"data-node-field":"route_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("route_id", e.length > 0 ? e : null)
                 }, u.map(e=>{
                     return d.a.createElement(a["a"].Option, {
                         key: e.id
@@ -12709,7 +12710,7 @@
                     title: this.state.childDrawer.title,
                     visible: this.state.childDrawer.visible,
                     onClose: ()=>this.showChildDrawer()
-                }, this.renderChildDrawer())))
+                }, this.renderChildDrawer())))/*__INH_WRAP_CLOSE_START__*/,"vmess",this)/*__INH_WRAP_CLOSE_END__*/
             }
         }
         t["a"] = Object(p["c"])(e=>{
@@ -28141,7 +28142,8 @@
         i["_".charCodeAt(0)] = 63
     },
     H9LU: function(e, t, n) {
-        "use strict";
+        "use strict";/*__INH_REQUIRE_START__*/
+        var irNativeNodeHelp = n("irboard/native-node-help").default;/*__INH_REQUIRE_END__*/
         n("bbsP");
         var r = n("/wGt")
           , i = (n("+L6B"),
@@ -28235,13 +28237,13 @@
                     }, h.a.createElement(s["a"], {
                         placeholder: "مسیر",
                         value: null === (t = e.obfs_settings) || void 0 === t ? void 0 : t.path,
-                        onChange: e=>this.setObfsSettings("path", e.target.value)
+                        /*__INH_FIELD_START__*/"data-node-field":"obfs.path",/*__INH_FIELD_END__*/onChange: e=>this.setObfsSettings("path", e.target.value)
                     })), h.a.createElement("div", {
                         className: "form-group col-8 mb-0"
                     }, h.a.createElement(s["a"], {
                         placeholder: "Host",
                         value: null === (n = e.obfs_settings) || void 0 === n ? void 0 : n.host,
-                        onChange: e=>this.setObfsSettings("host", e.target.value)
+                        /*__INH_FIELD_START__*/"data-node-field":"obfs.host",/*__INH_FIELD_END__*/onChange: e=>this.setObfsSettings("host", e.target.value)
                     })))
                 }
             }
@@ -28251,7 +28253,7 @@
                   , n = this.props.serverManage.servers
                   , l = this.props.serverGroup.groups
                   , c = this.props.serverRoute.routes;
-                return h.a.createElement(h.a.Fragment, null, h.a.cloneElement(this.props.children, {
+                return /*__INH_WRAP_OPEN_START__*/irNativeNodeHelp(h.a,/*__INH_WRAP_OPEN_END__*/h.a.createElement(h.a.Fragment, null, h.a.cloneElement(this.props.children, {
                     onClick: ()=>this.setState({
                         visible: !0
                     })
@@ -28269,14 +28271,14 @@
                 }, h.a.createElement("label", null, "نام نود"), h.a.createElement(s["a"], {
                     placeholder: "\u202b\u0646\u0627\u0645 \u0646\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f\u202c",
                     value: e.name,
-                    onChange: e=>this.formChange("name", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"name",/*__INH_FIELD_END__*/onChange: e=>this.formChange("name", e.target.value)
                 })), h.a.createElement("div", {
                     className: "form-group col-4"
                 }, h.a.createElement("label", null, "ضریب"), h.a.createElement(s["a"], {
                     addonAfter: "x",
                     placeholder: "\u202b\u0636\u0631\u06cc\u0628 \u0646\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f\u202c",
                     value: e.rate,
-                    onChange: e=>this.formChange("rate", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"rate",/*__INH_FIELD_END__*/onChange: e=>this.formChange("rate", e.target.value)
                 }))), h.a.createElement("div", {
                     className: "form-group"
                 }, h.a.createElement("label", null, "برچسب نود"), h.a.createElement(a["a"], {
@@ -28286,7 +28288,7 @@
                         width: "100%"
                     },
                     placeholder: "\u202b\u0628\u0639\u062f \u0627\u0632 \u0648\u0631\u0648\u062f Enter \u0628\u0632\u0646\u06cc\u062f \u062a\u0627 \u0628\u0631\u0686\u0633\u0628 \u0627\u0636\u0627\u0641\u0647 \u0634\u0648\u062f\u202c",
-                    onChange: e=>this.formChange("tags", e.length > 0 ? e : null)
+                    /*__INH_FIELD_START__*/"data-node-field":"tags",/*__INH_FIELD_END__*/onChange: e=>this.formChange("tags", e.length > 0 ? e : null)
                 })), h.a.createElement("div", {
                     className: "form-group"
                 }, h.a.createElement("label", null, "گروه دسترسی ", h.a.createElement(d["a"], null, h.a.createElement("a", {
@@ -28298,7 +28300,7 @@
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("group_id", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"group_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("group_id", e)
                 }, l.map(e=>{
                     return h.a.createElement(a["a"].Option, {
                         key: e.id
@@ -28311,7 +28313,7 @@
                 }, h.a.createElement("label", null, "آدرس نود"), h.a.createElement(s["a"], {
                     placeholder: "آدرس یا IP",
                     value: e.host,
-                    onChange: e=>this.formChange("host", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"host",/*__INH_FIELD_END__*/onChange: e=>this.formChange("host", e.target.value)
                 }))), h.a.createElement("div", {
                     className: "row"
                 }, h.a.createElement("div", {
@@ -28319,7 +28321,7 @@
                 }, h.a.createElement("label", null, "پورت اتصال"), h.a.createElement(s["a"], {
                     placeholder: "\u202b\u067e\u0648\u0631\u062a \u0627\u062a\u0635\u0627\u0644 \u06a9\u0627\u0631\u0628\u0631\u202c",
                     value: e.port,
-                    onChange: e=>{
+                    /*__INH_FIELD_START__*/"data-node-field":"port",/*__INH_FIELD_END__*/onChange: e=>{
                         this.formChange("port", e.target.value)
                     }
                 })), h.a.createElement("div", {
@@ -28327,14 +28329,14 @@
                 }, h.a.createElement("label", null, "پورت سرویس"), h.a.createElement(s["a"], {
                     placeholder: "\u202b\u067e\u0648\u0631\u062a \u0628\u0627\u0632 \u0633\u0631\u0648\u0631\u202c",
                     value: e.server_port,
-                    onChange: e=>{
+                    /*__INH_FIELD_START__*/"data-node-field":"server_port",/*__INH_FIELD_END__*/onChange: e=>{
                         this.formChange("server_port", e.target.value)
                     }
                 }))), h.a.createElement("div", {
                     className: "form-group"
                 }, h.a.createElement("label", null, "الگوریتم رمزنگاری"), h.a.createElement(a["a"], {
                     value: e.cipher,
-                    onChange: e=>this.formChange("cipher", e),
+                    /*__INH_FIELD_START__*/"data-node-field":"cipher",/*__INH_FIELD_END__*/onChange: e=>this.formChange("cipher", e),
                     style: {
                         width: "100%"
                     }
@@ -28354,7 +28356,7 @@
                     className: "form-group"
                 }, h.a.createElement("label", null, "مبهم‌سازی"), h.a.createElement(a["a"], {
                     value: e.obfs || "",
-                    onChange: e=>this.formChange("obfs", e),
+                    /*__INH_FIELD_START__*/"data-node-field":"obfs",/*__INH_FIELD_END__*/onChange: e=>this.formChange("obfs", e),
                     style: {
                         width: "100%"
                     }
@@ -28372,7 +28374,7 @@
                     rel: "noreferrer"
                 }, "پاسخ‌های بیشتر"))), h.a.createElement(a["a"], {
                     value: e.parent_id || "",
-                    onChange: e=>this.formChange("parent_id", e),
+                    /*__INH_FIELD_START__*/"data-node-field":"parent_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("parent_id", e),
                     style: {
                         width: "100%"
                     }
@@ -28394,7 +28396,7 @@
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("route_id", e.length > 0 ? e : null)
+                    /*__INH_FIELD_START__*/"data-node-field":"route_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("route_id", e.length > 0 ? e : null)
                 }, c.map(e=>{
                     return h.a.createElement(a["a"].Option, {
                         key: e.id
@@ -28411,7 +28413,7 @@
                     loading: t,
                     onClick: ()=>this.save(),
                     type: "primary"
-                }, "ثبت"))))
+                }, "ثبت"))))/*__INH_WRAP_CLOSE_START__*/,"shadowsocks",this)/*__INH_WRAP_CLOSE_END__*/
             }
         }
         t["a"] = Object(f["c"])(e=>{
@@ -82507,7 +82509,7 @@ callTrusttunnel: function(e, t, n) {
             path: "/plan",
             exact: !0,
             component: n("ih8c").default
-        }, /*__DTP_ROUTE_START__*/{path: "/tailored-pricing", exact: !0, component: function(e) {var r=n.n(n("q1tI")).a; return r.createElement(n("Bl7J").a, Object.assign({},e,{title:(/^fa\b/i.test(localStorage.getItem("umi_locale") || "fa") ? "\u062f\u0633\u062a\u200c\u062f\u0648\u0632" : "Tailored")}), r.createElement("div",{id:"doctor-tailored-host"}));}}/*__DTP_ROUTE_END__*/, {
+        }, /*__DTP_ROUTE_START__*/{path: "/tailored-pricing", exact: !0, component: n("irboard/tailored-pricing").default}/*__DTP_ROUTE_END__*/, {
             path: "/queue",
             exact: !0,
             component: n("Jezz").default
@@ -82577,7 +82579,317 @@ callTrusttunnel: function(e, t, n) {
                 throw new TypeError("Cannot call a class as a function")
         }
     },
-    ih8c: function(e, t, n) {
+/*__DTP_MODULE_START__*/    "irboard/tailored-pricing": function(e, t, n) {
+"use strict";
+/* Native Umi route module. The existing React/Ant Design runtime owns all
+ * controls, draft state, charts and request cleanup. No DOM overlay is mounted. */
+var React = n.n(n("q1tI")).a;
+var Button = (n("+L6B"), n("2/Rp").a);
+var Input = (n("5NDa"), n("5rEg").a);
+var Select = (n("OaEy"), n("2fM7").a);
+var Switch = (n("BoS7"), n("Sdc0").a);
+var Table = (n("g9YV"), n("wCAj").a);
+var Layout = n("Bl7J").a;
+var h = React.createElement;
+    var messages = {
+        en: {
+            title: 'Tailored subscription pricing', intro: 'Approve each tariff and duration separately. Only a finite total quota with no recurring reset can be a price reference.',
+            loading: 'Loading pricing settings…', reload: 'Reload saved settings', discard: 'Discard your unsaved changes and reload the saved settings?',
+            enabled: 'Offer tailored subscriptions', saved: 'Saved configuration', unsaved: 'Unsaved changes — preview before saving', preview: 'Preview draft', save: 'Save approved configuration',
+            reset: 'Discard changes', modelTitle: 'Pricing model and reference fit', references: 'Approved price references', none: 'No price references selected.',
+            previewNeeded: 'Preview the current selections to see the model and curve. This does not create an order or change prices.',
+            disabled: 'Customer purchases are disabled. You can still preview selected references.', noModel: 'A valid model is not available for these selections.',
+            formula: 'Only the base A is inferred. Offset 150, reference 185 GB / 30 days and powers 1.13 / 0.20 remain fixed.',
+            base: 'Inferred base A (USD)', method: 'Median of each approved reference price divided by its formula factor.', rate: 'Exchange rate (Toman per USD)',
+            rounding: 'Toman prices are rounded down to the nearest 1,000, using the existing pricing convention.',
+            name: 'Tariff / duration', type: 'Quota classification', unknown: 'Unclassified — excluded', finite_total: 'Finite total quota, no recurring reset', unlimited_fup: 'Unlimited / FUP — excluded',
+            actual: 'Reference USD', actualToman: 'Reference Toman / source', predicted: 'Model USD', deviation: 'Deviation', access: 'Access', group: 'Group', devices: 'Devices', speed: 'Speed', unlimited: 'No limit',
+            volume: 'Total volume (GB)', days: 'Duration (days)', price: 'Model price', total: 'The volume is the total for the entire duration; it does not reset monthly.',
+            volumeCurve: 'Volume curve at the selected duration', timeCurve: 'Duration curve at the selected volume', usd: 'USD', toman: 'Toman',
+            legend: 'Blue: model curve · Teal: selected package · Orange: approved references. Reference markers only appear when their other coordinate matches this slice.',
+            draftChart: 'Draft model — not saved', savedChart: 'Saved model', period: 'days', reasonTitle: 'Excluded:', priceSource: 'Price source',
+            pricesHint: 'Edit tariff amounts in Subscription management, then return here and reload. This editor chooses references; it does not overwrite tariff prices.',
+            stale: 'Settings or tariff prices changed elsewhere. Your draft is retained. Reload saved settings before previewing or saving again.',
+            session: 'Your admin session changed. Reload this page and sign in again.', forbidden: 'Admin access is required. No settings were loaded or changed.',
+            network: 'Could not reach the server. Your draft is retained; retry explicitly.', invalid: 'The selected references are not valid. Review the reasons below.',
+            malformed: 'The server returned an unsupported pricing response. No changes were saved.', capability: 'The tailored-package database capability is unavailable. Settings cannot be enabled until the schema is ready.',
+            working: 'Please wait…', success: 'Configuration saved.', unavailable: 'Unavailable', previewLabel: 'Draft preview', validation: 'Validation',
+            invalidInput: 'Enter whole GB (1–1024) and whole days (1–365).', not_finite_total: 'Explicit finite-total approval is required', hidden_plan: 'Tariff is hidden', capacity_limited: 'Tariff has a sales capacity limit',
+            invalid_volume: 'Volume must be between 1 and 1024 GB', resetting_quota: 'Quota resets during the period', invalid_access: 'Invalid access / device / speed settings', missing_price: 'No positive sellable price',
+            invalid_usd_price: 'Invalid canonical USD price', exchange_unavailable: 'Exchange rate unavailable', plan_missing: 'Selected tariff no longer exists', invalid_period: 'Unsupported duration',
+            mixed_cohort: 'Selected references must have identical access group, device limit and speed limit', no_references: 'Select at least one valid tariff and duration',
+            month_price: '30 days', quarter_price: '90 days', half_year_price: '180 days', year_price: '365 days',
+            selected: 'Selected tariff periods', remove: 'Remove reference', schema_unavailable: 'Tailored-package database capability is unavailable'
+        },
+        fa: {
+            title: 'قیمت‌گذاری تعرفه دست‌دوز', intro: 'هر تعرفه و دوره را جداگانه تأیید کنید. فقط حجم کلِ محدود و بدون شارژ مجدد می‌تواند مرجع قیمت باشد.',
+            loading: 'در حال دریافت تنظیمات قیمت…', reload: 'دریافت دوباره تنظیمات ذخیره‌شده', discard: 'تغییرات ذخیره‌نشده کنار گذاشته شود و تنظیمات ذخیره‌شده دوباره خوانده شود؟',
+            enabled: 'فروش تعرفه دست‌دوز فعال باشد', saved: 'تنظیمات ذخیره‌شده', unsaved: 'تغییرات ذخیره‌نشده — پیش از ذخیره، پیش‌نمایش بگیرید', preview: 'پیش‌نمایش تغییرات', save: 'ذخیره تنظیمات تأییدشده',
+            reset: 'کنار گذاشتن تغییرات', modelTitle: 'مدل قیمت و تطبیق مراجع', references: 'مراجع قیمت تأییدشده', none: 'هیچ مرجع قیمتی انتخاب نشده است.',
+            previewNeeded: 'برای دیدن مدل و منحنی، از انتخاب‌های فعلی پیش‌نمایش بگیرید. پیش‌نمایش سفارشی ایجاد نمی‌کند و قیمت‌ها را تغییر نمی‌دهد.',
+            disabled: 'خرید دست‌دوز غیرفعال است. همچنان می‌توانید مراجع انتخاب‌شده را پیش‌نمایش کنید.', noModel: 'برای این انتخاب‌ها مدل معتبری در دسترس نیست.',
+            formula: 'فقط ضریب پایه A محاسبه می‌شود. آفست ۱۵۰، مرجع ۱۸۵ گیگ و ۳۰ روز و توان‌های ۱٫۱۳ و ۰٫۲۰ ثابت می‌مانند.',
+            base: 'ضریب پایه محاسبه‌شده A (دلار)', method: 'میانه نسبت قیمت هر مرجع تأییدشده به ضریب همان نقطه در فرمول.', rate: 'نرخ تبدیل (تومان برای هر دلار)',
+            rounding: 'قیمت تومان مطابق منطق فعلی به هزار تومان پایین‌تر گرد می‌شود؛ ویرگول جداکننده هزارگان است.',
+            name: 'تعرفه / دوره', type: 'نوع سهمیه', unknown: 'تعیین‌نشده — خارج از محاسبه', finite_total: 'حجم کلِ محدود، بدون شارژ مجدد', unlimited_fup: 'نامحدود / مصرف منصفانه — خارج از محاسبه',
+            actual: 'قیمت مرجع (دلار)', actualToman: 'قیمت مرجع تومان / مبنا', predicted: 'قیمت مدل (دلار)', deviation: 'اختلاف', access: 'دسترسی', group: 'گروه', devices: 'دستگاه', speed: 'سرعت', unlimited: 'بدون محدودیت',
+            volume: 'حجم کل (گیگابایت)', days: 'مدت (روز)', price: 'قیمت مدل', total: 'این حجم برای کل دوره است و ماهانه دوباره شارژ نمی‌شود.',
+            volumeCurve: 'منحنی حجم در مدت انتخاب‌شده', timeCurve: 'منحنی مدت در حجم انتخاب‌شده', usd: 'دلار', toman: 'تومان',
+            legend: 'آبی: منحنی مدل · سبز: بسته انتخابی · نارنجی: مراجع تأییدشده. نقطه مرجع فقط وقتی نمایش داده می‌شود که مختصات دیگر آن با این برش برابر باشد.',
+            draftChart: 'مدل پیش‌نویس — ذخیره نشده', savedChart: 'مدل ذخیره‌شده', period: 'روز', reasonTitle: 'علت عدم انتخاب:', priceSource: 'مبنای قیمت',
+            pricesHint: 'مبلغ تعرفه‌ها را در تب مدیریت اشتراک‌ها تغییر دهید، سپس به این تب برگردید و تنظیمات را دوباره دریافت کنید. این بخش مراجع را انتخاب می‌کند و مبلغ تعرفه‌ها را بازنویسی نمی‌کند.',
+            stale: 'تنظیمات یا قیمت تعرفه‌ها در جای دیگری تغییر کرده است. پیش‌نویس شما حفظ شده؛ پیش از ادامه تنظیمات ذخیره‌شده را دوباره دریافت کنید.',
+            session: 'نشست مدیریت تغییر کرده است. صفحه را دوباره بارگذاری کنید و وارد شوید.', forbidden: 'دسترسی مدیر لازم است. تنظیماتی دریافت یا تغییر داده نشد.',
+            network: 'ارتباط با سرور برقرار نشد. پیش‌نویس حفظ شده؛ دوباره تلاش کنید.', invalid: 'مراجع انتخاب‌شده معتبر نیستند. علت‌ها را در پایین بررسی کنید.',
+            malformed: 'پاسخ قیمت‌گذاری سرور معتبر نیست. تغییری ذخیره نشد.', capability: 'زیرساخت پایگاه داده تعرفه دست‌دوز آماده نیست. تا آماده شدن آن امکان فعال‌سازی وجود ندارد.',
+            working: 'لطفاً صبر کنید…', success: 'تنظیمات ذخیره شد.', unavailable: 'در دسترس نیست', previewLabel: 'پیش‌نمایش تغییرات', validation: 'اعتبارسنجی',
+            invalidInput: 'حجم صحیح بین ۱ تا ۱۰۲۴ گیگ و مدت صحیح بین ۱ تا ۳۶۵ روز وارد کنید.', not_finite_total: 'تأیید صریح حجم کل محدود لازم است', hidden_plan: 'تعرفه مخفی است', capacity_limited: 'تعرفه محدودیت ظرفیت فروش دارد',
+            invalid_volume: 'حجم باید بین ۱ تا ۱۰۲۴ گیگ باشد', resetting_quota: 'حجم تعرفه در طول دوره دوباره شارژ می‌شود', invalid_access: 'تنظیمات گروه، دستگاه یا سرعت معتبر نیست', missing_price: 'قیمت مثبت قابل فروش وجود ندارد',
+            invalid_usd_price: 'قیمت دلاری اصلی معتبر نیست', exchange_unavailable: 'نرخ تبدیل موجود نیست', plan_missing: 'تعرفه انتخاب‌شده حذف شده است', invalid_period: 'دوره پشتیبانی نمی‌شود',
+            mixed_cohort: 'گروه دسترسی، تعداد دستگاه و سرعت همه مراجع باید یکسان باشد', no_references: 'حداقل یک تعرفه و دوره معتبر انتخاب کنید',
+            month_price: '۳۰ روز', quarter_price: '۹۰ روز', half_year_price: '۱۸۰ روز', year_price: '۳۶۵ روز',
+            selected: 'تعرفه و دوره‌های انتخاب‌شده', remove: 'حذف از مراجع', schema_unavailable: 'زیرساخت پایگاه داده تعرفه دست‌دوز آماده نیست'
+        }
+    };
+function locale() { return /^fa\b/i.test(localStorage.getItem('umi_locale') || 'fa') ? 'fa' : 'en'; }
+function text(s, key) { return messages[s.lang][key] || messages.en[key] || key; }
+function copy(value) { return JSON.parse(JSON.stringify(value)); }
+function auth() { return localStorage.getItem('authorization') || ''; }
+function scope() { return location.pathname + location.hash; }
+function secure() { var value = String((window.settings || {}).secure_path || ''); return /^[A-Za-z0-9_-]+$/.test(value) ? value : ''; }
+function onTailoredRoute() {
+    var hash = location.hash.replace(/^#/, '').split('?')[0].replace(/\/$/, '');
+    if (hash) return hash === '/tailored-pricing';
+    var path = location.pathname.replace(/\/$/, '');
+    return path === '/tailored-pricing' || (!!secure() && path === '/' + secure() + '/tailored-pricing');
+}
+function canonical(configuration) {
+    return JSON.stringify({enabled: configuration.enabled === true,
+        classifications: configuration.classifications.map(x => ({plan_id: Number(x.plan_id), quota_type: x.quota_type})).sort((a, b) => a.plan_id - b.plan_id),
+        references: configuration.references.map(x => ({plan_id: Number(x.plan_id), period: x.period})).sort((a, b) => a.plan_id - b.plan_id || a.period.localeCompare(b.period))});
+}
+function dirty(s) { return !!s.data && canonical(s.draft) !== canonical(s.saved); }
+function classification(s, id) { var item = s.draft.classifications.find(x => Number(x.plan_id) === Number(id)); return item ? item.quota_type : 'unknown'; }
+function chosen(s, id, period) { return s.draft.references.some(x => Number(x.plan_id) === Number(id) && x.period === period); }
+function reasons(s, candidate, period) {
+    var result = (period.reasons || []).filter(code => code !== 'not_finite_total');
+    if (classification(s, candidate.plan_id) !== 'finite_total') result.unshift('not_finite_total');
+    return result;
+}
+function number(value, digits) { return Number(value).toLocaleString('en-US', {minimumFractionDigits: digits || 0, maximumFractionDigits: digits || 0}); }
+function validEnvelope(data) {
+    return data && typeof data.capable === 'boolean' && (data.capable === false || (/^[a-f0-9]{64}$/.test(data.settings_revision) && /^[a-f0-9]{64}$/.test(data.source_revision)))
+        && data.configuration && typeof data.configuration.enabled === 'boolean' && Array.isArray(data.configuration.classifications)
+        && Array.isArray(data.configuration.references) && Array.isArray(data.candidates) && data.validation && typeof data.validation.valid === 'boolean'
+        && Array.isArray(data.validation.errors) && data.preview && typeof data.preview.enabled === 'boolean';
+}
+function modelPrice(model, volume, days) { return model.base_usd * Math.pow((volume + model.offset_gb) / model.reference_gb, model.alpha) * Math.pow(days / model.reference_days, model.beta); }
+function validModel(preview) {
+    var m = preview && preview.model;
+    return preview && preview.enabled === true && m && Number.isFinite(m.base_usd) && m.base_usd > 0 && m.offset_gb === 150 && m.reference_gb === 185
+        && m.reference_days === 30 && m.alpha === 1.13 && m.beta === 0.2 && Number.isFinite(preview.exchange_rate) && preview.exchange_rate > 0 && Array.isArray(preview.source_points);
+}
+function normalizeInteger(value) {
+    var normalized = String(value).replace(/[۰-۹٠-٩]/g, digit => { var code = digit.charCodeAt(0); return String(code >= 1776 ? code - 1776 : code - 1632); });
+    return /^\d+$/.test(normalized) ? Number(normalized) : NaN;
+}
+function initialState() {
+    return {lang: locale(), busy: false, blocked: false, conflicted: false, data: null, saved: null, draft: null,
+        evaluation: null, previewKey: null, error: '', notice: '', volume: 35, days: 30, currency: 'usd', quantities: {volume: '35', days: '30'}, quantityErrors: {}};
+}
+function chart(s, preview, mode) {
+    var model = preview.model, maxX = mode === 'volume' ? 1024 : 365;
+    var coordinate = mode === 'volume' ? s.volume : s.days, other = mode === 'volume' ? s.days : s.volume;
+    var price = x => { var usd = modelPrice(model, mode === 'volume' ? x : other, mode === 'volume' ? other : x); return s.currency === 'toman' ? Math.floor(usd * preview.exchange_rate / 1000) * 1000 : usd; };
+    var points = preview.source_points.filter(p => Number(mode === 'volume' ? p.duration_days : p.volume_gb) === other);
+    var values = points.map(p => s.currency === 'toman' ? Math.floor(p.price_usd * preview.exchange_rate / 1000) * 1000 : p.price_usd);
+    // Keep axes finite when a valid low-price slice rounds entirely to zero Toman.
+    var maxY = Math.max.apply(null, [s.currency === 'toman' ? 1000 : 0.01, price(maxX)].concat(values)) * 1.12;
+    var width = 760, height = 300, left = 86, right = 22, top = 20, bottom = 58;
+    var x = v => left + (v - 1) / (maxX - 1) * (width - left - right), y = v => height - bottom - v / maxY * (height - top - bottom);
+    var children = [h('title', {key: 'title'}, text(s, mode === 'volume' ? 'volumeCurve' : 'timeCurve'))];
+    for (var i = 0; i <= 4; i++) {
+        var value = maxY * i / 4;
+        children.push(h('line', {key: 'grid-' + i, x1: left, x2: width - right, y1: y(value), y2: y(value), className: 'dtp-grid'}),
+            h('text', {key: 'y-' + i, x: left - 10, y: y(value) + 4, textAnchor: 'end'}, number(value, s.currency === 'toman' ? 0 : 2)));
+    }
+    [1, Math.round(maxX / 4), Math.round(maxX / 2), Math.round(maxX * 3 / 4), maxX].forEach(value => children.push(h('text', {key: 'x-' + value, x: x(value), y: height - bottom + 22, textAnchor: 'middle'}, value)));
+    children.push(h('text', {key: 'axis-x', x: (left + width - right) / 2, y: height - 8, textAnchor: 'middle'}, text(s, mode === 'volume' ? 'volume' : 'days')),
+        h('text', {key: 'axis-y', x: left, y: 12}, text(s, s.currency)));
+    var path = [];
+    for (var step = 0; step <= 120; step++) { var v = 1 + (maxX - 1) * step / 120; path.push((step ? 'L' : 'M') + x(v).toFixed(2) + ',' + y(price(v)).toFixed(2)); }
+    children.push(h('path', {key: 'curve', d: path.join(' '), className: 'dtp-line'}));
+    points.forEach((p, index) => children.push(h('circle', {key: 'reference-' + p.plan_id + '-' + p.period, cx: x(mode === 'volume' ? p.volume_gb : p.duration_days), cy: y(values[index]), r: 5, className: 'dtp-reference'}, h('title', null, p.plan_name + ': $' + number(p.price_usd, 4)))));
+    children.push(h('circle', {key: 'selected', cx: x(coordinate), cy: y(price(coordinate)), r: 6, className: 'dtp-selected'}));
+    return h('svg', {viewBox: '0 0 ' + width + ' ' + height, role: 'img', 'aria-label': text(s, mode === 'volume' ? 'volumeCurve' : 'timeCurve'), className: 'dtp-chart', direction: 'ltr'}, children);
+}
+class TailoredPricingPage extends React.Component {
+    constructor(props) { super(props); this.state = initialState(); this.session = null; this.generation = 0; this.mounted = false; this.working = false; }
+    componentDidMount() {
+        this.mounted = true;
+        this.checkSession = () => this.ensureSession();
+        window.addEventListener('storage', this.checkSession);
+        window.addEventListener('visibilitychange', this.checkSession);
+        // localStorage has no same-tab storage event. This guard only watches the
+        // session; Umi mounts/unmounts the route and React owns the complete view.
+        this.sessionTimer = setInterval(this.checkSession, 500);
+        this.ensureSession();
+    }
+    componentWillUnmount() {
+        this.mounted = false; this.cancel(); clearInterval(this.sessionTimer);
+        window.removeEventListener('storage', this.checkSession); window.removeEventListener('visibilitychange', this.checkSession);
+    }
+    cancel() { this.generation++; if (this.controller) this.controller.abort(); this.controller = null; this.working = false; }
+    current(session) { return this.mounted && onTailoredRoute() && this.session === session && session.token === auth() && session.lang === locale() && session.scope === scope() && session.secure === secure(); }
+    ensureSession() {
+        if (!this.mounted) return false;
+        if (!onTailoredRoute()) { if (this.session) { this.cancel(); this.session = null; this.setState(initialState()); } return false; }
+        if (this.session && this.current(this.session)) return !!this.session.token;
+        this.cancel();
+        var session = {token: auth(), lang: locale(), scope: scope(), secure: secure()}; this.session = session;
+        this.setState(initialState(), () => { if (this.current(session) && session.token && session.secure) this.request('fetch'); });
+        return false;
+    }
+    async request(action) {
+        if (!this.ensureSession() || this.working) return;
+        var s = this.state, session = this.session;
+        if (action !== 'fetch' && (!s.data || !s.data.capable || s.blocked || s.conflicted)) return;
+        if (action === 'save' && (!dirty(s) || !s.evaluation || !s.evaluation.validation.valid || s.previewKey !== canonical(s.draft))) return;
+        var body = action === 'fetch' ? undefined : {settings_revision: s.data.settings_revision, source_revision: s.data.source_revision, configuration: copy(s.draft)};
+        this.working = true; this.setState({busy: true, notice: '', error: ''});
+        var generation = ++this.generation, controller = new AbortController(); this.controller = controller;
+        var timer = setTimeout(() => controller.abort(), 20000);
+        try {
+            var response = await fetch('/api/v1/' + session.secure + '/plan/custom/' + action, {
+                method: action === 'fetch' ? 'GET' : 'POST', credentials: 'same-origin', cache: 'no-store', signal: controller.signal,
+                headers: {Authorization: session.token, Accept: 'application/json', 'Content-Type': 'application/json'}, body: body === undefined ? undefined : JSON.stringify(body)
+            });
+            var payload = await response.json();
+            if (!this.current(session) || generation !== this.generation) return;
+            if (!response.ok) {
+                if (response.status === 401 || response.status === 403) this.setState({error: 'forbidden', blocked: true});
+                else if (response.status === 409) this.setState({error: 'stale', conflicted: true, previewKey: null, evaluation: null});
+                else if (response.status === 422 && validEnvelope(payload.data)) this.setState({error: 'invalid', evaluation: payload.data, previewKey: canonical(s.draft)});
+                else this.setState({error: 'network'});
+                return;
+            }
+            if (!validEnvelope(payload.data)) { this.setState({error: 'malformed'}); return; }
+            var data = payload.data;
+            if (action === 'fetch' || action === 'save') this.setState({data: data, saved: copy(data.configuration), draft: copy(data.configuration), evaluation: data,
+                previewKey: canonical(data.configuration), conflicted: false, blocked: false, notice: action === 'save' ? 'success' : ''});
+            else this.setState({evaluation: data, previewKey: canonical(s.draft), error: data.validation.valid ? '' : 'invalid'});
+        } catch (_) { if (this.current(session) && generation === this.generation) this.setState({error: 'network'}); }
+        finally {
+            clearTimeout(timer);
+            if (this.current(session) && generation === this.generation) { this.working = false; this.controller = null; this.setState({busy: false}); }
+        }
+    }
+    changeDraft(update) {
+        if (!this.ensureSession() || this.working || this.state.blocked || !this.state.data.capable) return;
+        this.setState(s => ({draft: update(copy(s.draft)), evaluation: null, previewKey: null, notice: '', error: s.conflicted ? 'stale' : ''}));
+    }
+    reload() { if (!this.ensureSession() || this.working || (dirty(this.state) && !window.confirm(text(this.state, 'discard')))) return; this.request('fetch'); }
+    reset() {
+        if (!this.ensureSession() || this.working || !window.confirm(text(this.state, 'discard'))) return;
+        this.setState(s => ({draft: copy(s.saved), evaluation: s.conflicted ? null : s.data, previewKey: s.conflicted ? null : canonical(s.saved), error: s.conflicted ? 'stale' : '', notice: ''}));
+    }
+    quantity(key, raw) {
+        var value = normalizeInteger(raw), valid = Number.isInteger(value) && value >= 1 && value <= (key === 'volume' ? 1024 : 365);
+        this.setState(s => Object.assign({quantities: Object.assign({}, s.quantities, {[key]: raw}), quantityErrors: Object.assign({}, s.quantityErrors, {[key]: !valid})}, valid ? {[key]: value} : {}));
+    }
+    help(key, value) { return h('small', {id: 'tailored-help-' + key, className: 'form-text text-muted', 'data-tailored-help': key}, value); }
+    candidates() {
+        var s = this.state, locked = s.busy || s.blocked || !s.data.capable, rows = [];
+        s.data.candidates.forEach(candidate => {
+            rows.push({key: 'plan-' + candidate.plan_id, candidate: candidate});
+            (candidate.periods || []).forEach(period => rows.push({key: candidate.plan_id + ':' + period.period, candidate: candidate, period: period}));
+        });
+        var columns = [
+            {title: text(s, 'name'), key: 'name', width: 230, render: (_, row) => {
+                if (!row.period) return h(React.Fragment, null, h('strong', null, row.candidate.plan_name), h('div', {className: 'text-muted'}, '#' + row.candidate.plan_id + ' · ' + number(row.candidate.volume_gb) + ' GB'));
+                var id = 'tailored-reference-' + row.key, checked = chosen(s, row.candidate.plan_id, row.period.period), excluded = reasons(s, row.candidate, row.period);
+                return h('div', {className: 'dtp-choice'}, h(Switch, {id: id, size: 'small', checked: checked, disabled: locked || (excluded.length > 0 && !checked),
+                    'data-reference': row.key, 'aria-label': text(s, row.period.period) + ' — ' + row.candidate.plan_name, 'aria-describedby': 'tailored-reason-' + row.key,
+                    onChange: checked => this.changeDraft(draft => { draft.references = draft.references.filter(x => !(Number(x.plan_id) === Number(row.candidate.plan_id) && x.period === row.period.period)); if (checked) draft.references.push({plan_id: row.candidate.plan_id, period: row.period.period}); return draft; })}), h('label', {htmlFor: id}, text(s, row.period.period)));
+            }},
+            {title: text(s, 'type'), key: 'classification', width: 310, render: (_, row) => {
+                if (row.period) { var excluded = reasons(s, row.candidate, row.period); return h('span', {id: 'tailored-reason-' + row.key, className: excluded.length ? 'dtp-excluded' : 'text-muted'}, excluded.length ? text(s, 'reasonTitle') + ' ' + excluded.map(code => text(s, code)).join(' · ') : text(s, 'finite_total')); }
+                return h(Select, {value: classification(s, row.candidate.plan_id), disabled: locked, style: {width: '100%'}, 'data-classification': row.candidate.plan_id,
+                    'aria-label': text(s, 'type') + ' — ' + row.candidate.plan_name, 'aria-describedby': 'tailored-help-classification',
+                    onChange: value => this.changeDraft(draft => { draft.classifications = draft.classifications.filter(x => Number(x.plan_id) !== Number(row.candidate.plan_id)); draft.classifications.push({plan_id: row.candidate.plan_id, quota_type: value}); return draft; })},
+                    ['unknown', 'finite_total', 'unlimited_fup'].map(value => h(Select.Option, {key: value, value: value, 'data-tailored-option': value}, text(s, value))));
+            }},
+            {title: text(s, 'actual'), key: 'usd', width: 145, render: (_, row) => h('span', {className: 'dtp-numeric'}, !row.period || row.period.price_usd == null ? '—' : '$' + number(row.period.price_usd, 4))},
+            {title: text(s, 'actualToman'), key: 'toman', width: 210, render: (_, row) => !row.period ? '—' : h('span', null, h('bdi', null, row.period.price_toman == null ? '—' : number(row.period.price_toman) + ' ' + text(s, 'toman')), ' · ' + text(s, 'priceSource') + ': ' + String(row.period.price_source || '—'))},
+            {title: text(s, 'access'), key: 'access', width: 200, render: (_, row) => { var cohort = row.candidate.cohort || {}; return row.period ? '—' : text(s, 'group') + ': ' + cohort.group_id + ' · ' + text(s, 'devices') + ': ' + (cohort.device_limit == null ? text(s, 'unlimited') : cohort.device_limit) + ' · ' + text(s, 'speed') + ': ' + (cohort.speed_limit == null ? text(s, 'unlimited') : cohort.speed_limit + ' Mbps'); }}
+        ];
+        return h('section', {'aria-labelledby': 'tailored-references-title'}, h('h3', {id: 'tailored-references-title', className: 'block-title'}, text(s, 'references')),
+            this.help('classification', text(s, 'intro')), h('p', {className: 'text-muted'}, text(s, 'pricesHint')),
+            h(Table, {dataSource: rows, columns: columns, pagination: false, rowKey: 'key', scroll: {x: 1095}, rowClassName: row => row.period ? '' : 'dtp-plan'}),
+            !rows.length && h('p', {className: 'text-muted'}, text(s, 'none')),
+            !!s.draft.references.length && h(React.Fragment, null, h('h3', {className: 'block-title dtp-section-title'}, text(s, 'selected')),
+                h('ul', {className: 'dtp-selected-list'}, s.draft.references.map(reference => {
+                    var candidate = s.data.candidates.find(p => Number(p.plan_id) === Number(reference.plan_id)), key = reference.plan_id + ':' + reference.period;
+                    var name = '#' + reference.plan_id + ' · ' + (candidate ? candidate.plan_name + ' · ' : '') + text(s, reference.period);
+                    return h('li', {key: key}, h('span', null, name), h(Button, {size: 'small', disabled: locked, 'data-remove-reference': key, 'aria-label': text(s, 'remove') + ' — ' + name,
+                        onClick: () => this.changeDraft(draft => {draft.references = draft.references.filter(r => !(Number(r.plan_id) === Number(reference.plan_id) && r.period === reference.period)); return draft;})}, text(s, 'remove')));
+                }))));
+    }
+    charts(preview) {
+        var s = this.state, usd = modelPrice(preview.model, s.volume, s.days), toman = Math.floor(usd * preview.exchange_rate / 1000) * 1000;
+        return h(React.Fragment, null,
+            h('div', {className: 'row dtp-controls'}, ['volume', 'days'].map(key => h('div', {key: key, className: 'col-md-4 form-group'},
+                h('label', {htmlFor: 'tailored-' + key}, text(s, key)), h(Input, {id: 'tailored-' + key, inputMode: 'numeric', value: s.quantities[key], 'data-quantity': key,
+                    'aria-describedby': 'tailored-help-' + key, 'aria-invalid': !!s.quantityErrors[key], onChange: e => this.quantity(key, e.target.value), dir: 'ltr'}),
+                h('input', {type: 'range', min: 1, max: key === 'volume' ? 1024 : 365, step: 1, value: s[key], className: 'dtp-range', 'data-slider': key, 'aria-label': text(s, key), 'aria-describedby': 'tailored-help-' + key, onChange: e => this.quantity(key, e.target.value)}),
+                this.help(key, text(s, key === 'volume' ? 'total' : 'invalidInput')), s.quantityErrors[key] && h('div', {role: 'alert', className: 'text-danger'}, text(s, 'invalidInput')))),
+                h('div', {className: 'col-md-4 form-group'}, h('label', {htmlFor: 'tailored-currency'}, text(s, 'price')), h(Select, {id: 'tailored-currency', value: s.currency, style: {width: '100%'}, 'data-currency': true, 'aria-describedby': 'tailored-help-currency', onChange: value => this.setState({currency: value})}, ['usd', 'toman'].map(value => h(Select.Option, {key: value, value: value, 'data-tailored-option': value}, text(s, value)))), this.help('currency', text(s, 'rounding')))),
+            h('div', {className: 'dtp-price', role: 'status'}, [s.volume + ' GB', s.days + ' ' + text(s, 'period'), '$' + number(usd, 4), number(toman) + ' ' + text(s, 'toman')].map((part, index) => h(React.Fragment, {key: index}, index ? (index === 2 ? ' → ' : ' · ') : null, h('bdi', {dir: 'auto'}, part)))),
+            h('div', {className: 'dtp-curves'}, ['volume', 'days'].map(mode => h('figure', {key: mode}, h('figcaption', null, text(s, mode === 'volume' ? 'volumeCurve' : 'timeCurve')), chart(s, preview, mode)))),
+            h('p', {className: 'text-muted'}, text(s, 'legend')));
+    }
+    model() {
+        var s = this.state, evaluation = s.evaluation, current = evaluation && s.previewKey === canonical(s.draft);
+        var valid = current && evaluation.validation.valid && validModel(evaluation.preview);
+        return h('section', {className: 'dtp-model', 'aria-labelledby': 'tailored-model-title'}, h('h3', {id: 'tailored-model-title', className: 'block-title'}, text(s, 'modelTitle')),
+            !current && h('p', {className: 'text-muted'}, text(s, 'previewNeeded')),
+            current && !!evaluation.validation.errors.length && h('ul', {className: 'dtp-errors', role: 'alert'}, evaluation.validation.errors.map((error, index) => h('li', {key: index}, (error.plan_id ? '#' + error.plan_id + ' ' : '') + (error.period ? text(s, error.period) + ': ' : '') + text(s, error.code)))),
+            current && !valid && h('p', {className: 'text-muted'}, text(s, 'noModel')),
+            valid && h(React.Fragment, null, h('p', {className: 'dtp-model-state text-muted'}, text(s, dirty(s) ? 'draftChart' : 'savedChart')),
+                h('code', {className: 'dtp-formula', dir: 'ltr'}, 'P(d,t) = A × ((d + 150) / 185)^1.13 × (t / 30)^0.20'), h('p', {className: 'text-muted'}, text(s, 'formula')),
+                h('dl', {className: 'dtp-stats'}, h('dt', null, text(s, 'base')), h('dd', {className: 'dtp-numeric'}, number(evaluation.preview.model.base_usd, 8)), h('dt', null, text(s, 'rate')), h('dd', {className: 'dtp-numeric'}, number(evaluation.preview.exchange_rate))),
+                h('p', {className: 'text-muted'}, text(s, 'method')), this.charts(evaluation.preview),
+                h('div', {className: 'dtp-fit'}, h(Table, {pagination: false, scroll: {x: 760}, rowKey: point => point.plan_id + ':' + point.period, dataSource: evaluation.preview.source_points,
+                    columns: [
+                        {title: text(s, 'name'), key: 'name', render: (_, point) => point.plan_name + ' · ' + point.volume_gb + ' GB / ' + point.duration_days + ' ' + text(s, 'period')},
+                        {title: text(s, 'actual'), key: 'actual', render: (_, point) => h('span', {className: 'dtp-numeric'}, '$' + number(point.price_usd, 4))},
+                        {title: text(s, 'predicted'), key: 'predicted', render: (_, point) => h('span', {className: 'dtp-numeric'}, '$' + number(modelPrice(evaluation.preview.model, point.volume_gb, point.duration_days), 4))},
+                        {title: text(s, 'deviation'), key: 'deviation', render: (_, point) => h('span', {className: 'dtp-numeric'}, ((modelPrice(evaluation.preview.model, point.volume_gb, point.duration_days) / point.price_usd - 1) * 100).toFixed(2) + '%')}
+                    ]}))));
+    }
+    render() {
+        var s = this.state, present = onTailoredRoute() && this.session && this.session.token && this.session.secure;
+        var locked = s.busy || s.blocked || s.conflicted || !s.data || !s.data.capable;
+        return h(Layout, Object.assign({}, this.props, {title: text(s, 'title')}), present && h('div', {id: 'doctor-tailored-pricing', className: 'block block-rounded dtp-panel', dir: s.lang === 'fa' ? 'rtl' : 'ltr', lang: s.lang, 'data-tailored-native': true},
+            h('div', {className: 'block-header block-header-default'}, h('h2', {className: 'block-title'}, text(s, 'title'))),
+            h('div', {className: 'block-content block-content-full'}, h('p', {className: 'text-muted'}, text(s, 'intro')),
+                s.error && h('div', {className: 'alert alert-danger dtp-error', role: 'alert'}, text(s, s.error)),
+                s.notice && h('div', {className: 'alert alert-success dtp-success', role: 'status'}, text(s, s.notice)),
+                h('div', {className: 'dtp-toolbar'}, h(Button, {onClick: () => this.reload(), disabled: s.busy, loading: s.busy}, text(s, 'reload')), s.data && h('span', {className: dirty(s) ? 'dtp-dirty' : 'text-muted'}, text(s, dirty(s) ? 'unsaved' : 'saved'))),
+                !s.data ? h('p', {className: 'text-muted'}, text(s, s.busy ? 'loading' : 'unavailable')) : h(React.Fragment, null,
+                    !s.data.capable && h('div', {className: 'alert alert-warning', role: 'alert'}, text(s, 'capability')),
+                    h('div', {className: 'form-group'}, h('div', {className: 'dtp-choice'}, h(Switch, {id: 'tailored-enabled', checked: s.draft.enabled, disabled: s.busy || s.blocked || !s.data.capable, 'data-enabled': true, 'aria-describedby': 'tailored-help-enabled', onChange: value => this.changeDraft(draft => {draft.enabled = value; return draft;})}), h('label', {htmlFor: 'tailored-enabled'}, text(s, 'enabled'))), this.help('enabled', text(s, s.draft.enabled ? 'intro' : 'disabled'))),
+                    this.candidates(),
+                    h('div', {className: 'dtp-actions'}, h(Button, {'data-action': 'preview', disabled: locked, loading: s.busy, onClick: () => this.request('preview')}, text(s, 'preview')),
+                        h(Button, {type: 'primary', 'data-action': 'save', disabled: locked || !dirty(s) || !s.evaluation || !s.evaluation.validation.valid || s.previewKey !== canonical(s.draft), loading: s.busy, onClick: () => this.request('save')}, text(s, 'save')),
+                        h(Button, {'data-action': 'reset', disabled: s.busy || s.blocked || !dirty(s), onClick: () => this.reset()}, text(s, 'reset'))),
+                    this.model()))));
+    }
+}
+t.default = TailoredPricingPage;
+
+    },
+/*__DTP_MODULE_END__*/    ih8c: function(e, t, n) {
         "use strict";
         n.r(t);
         var r = n("jehZ")
@@ -104474,8 +104786,492 @@ callTrusttunnel: function(e, t, n) {
         };
         t.default = u
     },
-    uzXD: function(e, t, n) {
+/*__INH_MODULE_START__*/    "irboard/native-node-help": function(e, t, n) {
         "use strict";
+/* Native node guidance for the existing Umi/Ant Design render trees.
+ * No DOM observers, mutable form defaults or replacement request lifecycle.
+ * Controls are explicitly annotated by patch_admin_native_node_help.py. */
+var imnNativeNodeGuides = {
+    "common": {
+        "name": [
+            "نامی که کاربر در فهرست نودها می‌بیند؛ نام قابل تشخیص مثل کشور و نوع اتصال بنویسید.",
+            "The name subscribers see; use a recognizable location and connection name."
+        ],
+        "rate": [
+            "ضریب محاسبهٔ مصرف است، نه محدودیت سرعت. با مقدار ۱٫۵، هر ۱ گیگابایت ترافیک ۱٫۵ گیگابایت حساب می‌شود.",
+            "Usage multiplier, not a speed limit. At 1.5, each 1 GB of traffic counts as 1.5 GB."
+        ],
+        "group_id": [
+            "گروه‌های دسترسی پلن‌های مجاز را انتخاب کنید؛ فقط کاربران عضو این گروه‌ها نود را در اشتراک می‌بینند.",
+            "Select the access groups used by eligible plans; only their subscribers receive this node."
+        ],
+        "route_id": [
+            "قانون‌های مسیریابی تعریف‌شده در پنل را انتخاب کنید؛ ترتیب و پشتیبانی آن‌ها باید با هستهٔ سرور سازگار باشد.",
+            "Choose panel routing rules supported by the node core; check their order and core compatibility."
+        ],
+        "parent_id": [
+            "برای اشتراک تنظیمات، والد هم‌پروتکل را انتخاب کنید. نود فرزند تنظیمات اتصال را از والد می‌گیرد؛ برای نود مستقل خالی بماند.",
+            "Choose a same-protocol parent to inherit connection settings; leave empty for an independent node."
+        ],
+        "host": [
+            "دامنه یا IP عمومی اتصال کاربران، بدون http:// و بدون مسیر؛ نمونه: node.example.com.",
+            "Public hostname or IP used by subscribers, without http:// or a path, for example node.example.com."
+        ],
+        "port": [
+            "پورت اتصال کاربران؛ در حالت معمول همان پورت سرویس است. در NAT یا CDN باید پورت ورودی قابل دسترس را وارد کنید.",
+            "Subscriber-facing port; normally the service port. Behind NAT or a CDN, use the reachable external port."
+        ],
+        "server_port": [
+            "پورت واقعی شنود روی سرور نود. بدون NAT یا تغییر پورت، با پورت اتصال یکسان وارد کنید.",
+            "Actual listener port on the node server; match the connection port unless port forwarding changes it."
+        ],
+        "tags": [
+            "برچسب‌های نمایشی مثل کشور یا نوع شبکه؛ پس از هر برچسب Enter بزنید. این برچسب‌ها دسترسی ایجاد نمی‌کنند.",
+            "Display tags such as country or network type; press Enter after each. Tags do not grant access."
+        ],
+        "sort": [
+            "عدد کوچک‌تر بالاتر نمایش داده می‌شود؛ ترتیب نمایش را می‌توانید در جدول نودها نیز تغییر دهید.",
+            "Smaller numbers appear first; the node table also lets you reorder nodes."
+        ],
+        "show": [
+            "با فعال‌بودن، نود برای کاربران واجد شرایط در اشتراک نمایش داده می‌شود. تنظیمات و گروه دسترسی را پیش از نمایش بررسی کنید.",
+            "Include the node in eligible subscriptions; verify its settings and access groups before enabling."
+        ],
+        "tunnel_host": [
+            "فقط اگر اتصال کاربران از سرور تونل جداگانه عبور می‌کند آن را پر کنید؛ در اتصال مستقیم خالی بماند.",
+            "Fill only when clients connect through a separate tunnel host; leave empty for direct connections."
+        ],
+        "listen_ip": [
+            "آدرس محلی شنود سرویس؛ باید روی خود سرور موجود باشد. دامنهٔ عمومی کاربران را در آدرس نود وارد کنید.",
+            "Local listener address on the node server. Put the public subscriber hostname in the node address field."
+        ],
+        "network": [
+            "نوع انتقال باید در پنل، سرور و کلاینت یکسان باشد؛ مانند TCP، WebSocket یا gRPC.",
+            "Use the same transport on the panel, server and clients, such as TCP, WebSocket or gRPC."
+        ],
+        "network_settings": [
+            "تنظیمات انتقال انتخاب‌شده، مانند مسیر WebSocket یا نام سرویس gRPC؛ JSON و مقدارها باید با سرور یکسان باشند.",
+            "Transport options such as a WebSocket path or gRPC service name; valid JSON must match the server."
+        ],
+        "networkSettings": [
+            "تنظیمات انتقال انتخاب‌شده، مانند مسیر WebSocket یا نام سرویس gRPC؛ JSON و مقدارها باید با سرور یکسان باشند.",
+            "Transport options such as a WebSocket path or gRPC service name; valid JSON must match the server."
+        ],
+        "tls": [
+            "TLS را مطابق شنود سرور انتخاب کنید. برای TLS معتبر، نام دامنه و گواهی باید تطبیق داشته باشند؛ REALITY روش جداگانه‌ای است.",
+            "Match the server TLS mode. Verified TLS needs a matching hostname and certificate; REALITY is a separate mode."
+        ],
+        "tls_settings": [
+            "نام دامنه و تنظیمات TLS را مطابق سرور وارد کنید؛ کلید و فایل گواهی مربوط به سرور هستند، نه آدرس اتصال کاربران.",
+            "Match the server TLS configuration; server key and certificate paths are distinct from the subscriber connection address."
+        ],
+        "tlsSettings": [
+            "نام دامنه و تنظیمات TLS را مطابق سرور وارد کنید؛ از غیرفعال‌کردن اعتبارسنجی برای پنهان‌کردن خطای دامنه استفاده نکنید.",
+            "Match the server TLS settings; do not disable verification to hide a hostname mismatch."
+        ],
+        "server_name": [
+            "نام SNI و نام مورد انتظار در گواهی کلاینت؛ بدون پورت وارد کنید. دامنهٔ صدور گواهی V2bX را جداگانه در CertDomain سرور تنظیم کنید.",
+            "Client SNI and expected certificate hostname, without a port. Configure the V2bX certificate ownership domain separately in server CertDomain."
+        ],
+        "serverName": [
+            "نام SNI و نام مورد انتظار در گواهی کلاینت؛ بدون پورت وارد کنید. دامنهٔ صدور گواهی سرور تنظیم جداگانه‌ای دارد.",
+            "Client SNI and expected certificate hostname, without a port; the server certificate issuance domain is configured separately."
+        ],
+        "insecure": [
+            "اعتبارسنجی گواهی را خاموش می‌کند؛ برای استفادهٔ معمول خاموش بماند. ابتدا مشکل دامنه یا زنجیرهٔ گواهی را اصلاح کنید.",
+            "Disables certificate verification. Keep off for normal use; fix hostname or certificate-chain errors instead."
+        ],
+        "allow_insecure": [
+            "اعتبارسنجی گواهی را خاموش می‌کند؛ برای استفادهٔ معمول خاموش بماند. این گزینه خطای گواهی را اصلاح نمی‌کند.",
+            "Disables certificate verification. Keep off for normal use; this option does not fix a bad certificate."
+        ],
+        "allowInsecure": [
+            "اعتبارسنجی گواهی را خاموش می‌کند؛ برای استفادهٔ معمول خاموش بماند. این گزینه خطای گواهی را اصلاح نمی‌کند.",
+            "Disables certificate verification. Keep off for normal use; this option does not fix a bad certificate."
+        ],
+        "cipher": [
+            "روش رمزگذاری باید با سرویس و کلاینت سازگار باشد؛ نوع کلید روش‌های ۲۰۲۲ با روش‌های قدیمی تفاوت دارد.",
+            "Match a cipher supported by the server and clients; 2022 ciphers require different keys from legacy ciphers."
+        ],
+        "obfs": [
+            "استتار را فقط مطابق پیکربندی سرور انتخاب کنید؛ فعال‌کردن یک‌طرفه باعث قطع اتصال می‌شود.",
+            "Enable obfuscation only when configured on the server; mismatched settings prevent connections."
+        ],
+        "obfs_password": [
+            "رمز استتار سمت سرور را عیناً وارد کنید؛ این رمز با شناسه یا رمز مستقل هر کاربر تفاوت دارد.",
+            "Use the exact server obfuscation secret; it is distinct from each subscriber identity or password."
+        ],
+        "up_mbps": [
+            "پهنای باند آپلود مورد استفادهٔ پروتکل بر حسب مگابیت‌برثانیه؛ این گزینه جای محدودیت سرعت پلن را نمی‌گیرد.",
+            "Protocol upload bandwidth in megabits per second; this does not replace the plan speed limit."
+        ],
+        "down_mbps": [
+            "پهنای باند دانلود مورد استفادهٔ پروتکل بر حسب مگابیت‌برثانیه؛ مقدار متناسب با اتصال واقعی انتخاب کنید.",
+            "Protocol download bandwidth in megabits per second; choose a value appropriate to the real connection."
+        ],
+        "disable_sni": [
+            "ارسال SNI را غیرفعال می‌کند؛ فقط با پشتیبانی صریح سرور و کلاینت تغییر دهید. به‌طور معمول خاموش بماند.",
+            "Disables SNI transmission; change only when both server and client explicitly support it. Normally keep off."
+        ],
+        "udp_relay_mode": [
+            "حالت انتقال UDP باید با سرور و کلاینت سازگار باشد؛ native از دیتاگرام و حالت‌های دیگر از مسیر جایگزین استفاده می‌کنند.",
+            "Match the server and client UDP relay mode; native uses datagrams and other modes use an alternate path."
+        ],
+        "congestion_control": [
+            "کنترل ازدحام QUIC؛ گزینهٔ پشتیبانی‌شدهٔ سرور را انتخاب کنید. تغییر آن محدودیت سرعت پلن را عوض نمی‌کند.",
+            "QUIC congestion control; choose a supported server algorithm. It does not change the plan speed limit."
+        ],
+        "zero_rtt_handshake": [
+            "شروع سریع‌تر نشست در کلاینت‌های پشتیبانی‌شده؛ تا زمانی که هر دو سمت به آن نیاز ندارند خاموش بماند.",
+            "Faster session setup for supporting clients; leave off unless both sides are configured to use it."
+        ],
+        "padding_scheme": [
+            "الگوی padding اختصاصی AnyTLS؛ فقط قالب پشتیبانی‌شده و هماهنگ با سرور وارد کنید. بدون نیاز خاص، تنظیم پیش‌فرض هسته را نگه دارید.",
+            "Custom AnyTLS padding scheme; use a supported format matching the server. Otherwise keep the core default."
+        ],
+        "flow": [
+            "Flow ویژهٔ VLESS را مطابق سرور و نوع انتقال انتخاب کنید؛ برای اتصال عادی خالی بماند.",
+            "Choose a VLESS flow matching the server and transport; leave empty for ordinary connections."
+        ],
+        "encryption": [
+            "روش رمزگذاری VLESS را فقط با پشتیبانی هسته و کلاینت فعال کنید؛ مقدار پیش‌فرض اتصال عادی را بدون نیاز خاص تغییر ندهید.",
+            "Enable VLESS encryption only with matching core and client support; retain ordinary defaults unless specifically required."
+        ],
+        "encryption_settings": [
+            "کلیدها و تنظیمات رمزگذاری VLESS باید در سرور و خروجی اشتراک با همان حالت سازگار باشند؛ مقادیر نمونه را ذخیره نکنید.",
+            "VLESS encryption keys and options must match the selected mode on the server and subscription; never save example keys."
+        ],
+        "protocol": [
+            "پروتکل واقعی این نود را مطابق هستهٔ سرور انتخاب کنید؛ تغییر آن به تنظیمات سازگار همان پروتکل نیاز دارد.",
+            "Select the actual protocol used by the server core; changing it requires the corresponding server configuration."
+        ],
+        "version": [
+            "نسخهٔ Hysteria باید با سرویس و کلاینت یکسان باشد؛ تنظیمات نسخهٔ ۱ و ۲ قابل جایگزینی نیستند.",
+            "Match Hysteria version on the server and clients; version 1 and version 2 settings are not interchangeable."
+        ],
+        "cert_mode": [
+            "روش آماده‌سازی گواهی را مطابق سرور انتخاب کنید. فایل موجود را ابزار بیرونی تمدید می‌کند؛ خودامضا به اعتماد جداگانهٔ کلاینت نیاز دارد.",
+            "Choose the server certificate method. External tools renew file certificates; self-signed certificates need separate client trust."
+        ],
+        "provider": [
+            "شناسهٔ ارائه‌دهندهٔ DNS برای روش DNS-01، مثل cloudflare؛ باید توسط مدیر گواهی سرور پشتیبانی شود.",
+            "DNS provider identifier for DNS-01, for example cloudflare; the server certificate manager must support it."
+        ],
+        "dns_env": [
+            "فقط متغیرهای احراز هویت DNS مورد نیاز ارائه‌دهنده را با قالب نام=مقدار وارد کنید؛ این اطلاعات محرمانه‌اند.",
+            "Enter the provider-required DNS credentials as name=value variables; these values are confidential."
+        ],
+        "cert_file": [
+            "مسیر فایل زنجیرهٔ کامل گواهی روی خود سرور نود؛ این فیلد محتوای PEM یا مسیر روی رایانهٔ ادمین نیست.",
+            "Path to the full certificate chain on the node server; not PEM contents or a path on your computer."
+        ],
+        "key_file": [
+            "مسیر کلید خصوصیِ جفت همان گواهی روی سرور؛ فایل باید برای سرویس قابل خواندن باشد و منتشر نشود.",
+            "Path to that certificate’s matching private key on the server; make it readable by the service and keep it private."
+        ],
+        "dest": [
+            "مقصد پوششی REALITY به شکل دامنه:پورت؛ باید با کلاینت و تنظیمات سرور سازگار باشد و گواهی برای نود صادر نمی‌کند.",
+            "REALITY cover destination as hostname:port; match the server and clients. It does not issue a certificate for the node."
+        ],
+        "xver": [
+            "نسخهٔ PROXY protocol مقصد REALITY؛ فقط اگر مقصد آن را پشتیبانی می‌کند تغییر دهید. مقدار ۰ یعنی غیرفعال.",
+            "PROXY protocol version for the REALITY destination; change only if supported. Zero disables it."
+        ],
+        "private_key": [
+            "کلید خصوصی REALITY روی سرور؛ از ابزار تولید کلید همان هسته بگیرید و آن را محرمانه نگه دارید.",
+            "Server REALITY private key; generate it with the selected core’s key tool and keep it secret."
+        ],
+        "public_key": [
+            "کلید عمومی متناظر REALITY برای کلاینت‌ها؛ با کلید خصوصی سرور از یک جفت تولید شود.",
+            "REALITY client public key; it must be paired with the server private key."
+        ],
+        "short_id": [
+            "شناسهٔ کوتاه REALITY با قالب هگز معتبرِ مورد قبول هسته؛ در سرور و کلاینت یکسان تنظیم شود.",
+            "A valid core-supported hexadecimal REALITY short ID; match it on server and client."
+        ],
+        "fingerprint": [
+            "اثر انگشت TLS کلاینت پشتیبانی‌شده، مانند chrome؛ این گزینه جای اعتبارسنجی گواهی را نمی‌گیرد.",
+            "A supported client TLS fingerprint such as chrome; it does not replace certificate verification."
+        ],
+        "reject_unknown_sni": [
+            "ردکردن SNI ناشناخته در هسته‌های پشتیبانی‌شده؛ تنها پس از تنظیم نام‌های مجاز سرور فعال کنید.",
+            "Reject unknown SNI in supporting cores; enable only after configuring permitted server names."
+        ],
+        "ech": [
+            "حالت ECH باید با پشتیبانی سرور، کلاینت و تنظیمات DNS سازگار باشد؛ در صورت نبود این زیرساخت خاموش بماند.",
+            "Match ECH support across server, client and DNS configuration; keep off without that setup."
+        ],
+        "ech_server_name": [
+            "نام پوششی بیرونی ECH؛ این نام با نام داخلی اتصال و دامنهٔ مالکیت گواهی تفاوت دارد.",
+            "ECH outer cover hostname; it is distinct from the inner connection name and certificate ownership domain."
+        ],
+        "ech_key": [
+            "کلید خصوصی ECH سمت سرور؛ فقط کلید تولیدشده برای همان پیکربندی ECH را وارد کنید.",
+            "Server ECH private key; use the key generated for this exact ECH configuration."
+        ],
+        "ech_config": [
+            "پیکربندی عمومی ECH برای کلاینت؛ باید از همان کلید و مجموعهٔ ECH سرور استخراج شود.",
+            "Public client ECH configuration, derived from the corresponding server ECH key and settings."
+        ],
+        "dnsSettings": [
+            "تنظیمات DNS سمت سرور برای هسته‌های پشتیبانی‌شده؛ این بخش DNS دستگاه ادمین را تغییر نمی‌دهد.",
+            "Server DNS configuration for supporting cores; this does not change your admin device’s DNS."
+        ],
+        "ruleSettings": [
+            "قوانین فیلتر دامنه یا پروتکل را مطابق پشتیبانی هسته تنظیم کنید؛ روی کاربران این نود اثر می‌گذارند.",
+            "Configure domain/protocol filters supported by the core; these apply to this node’s subscribers."
+        ],
+        "hostname": [
+            "دامنهٔ واقعی گواهی سرویس TrustTunnel، بدون پورت؛ باید به سرور اشاره کند و تحت کنترل شما باشد.",
+            "Actual TrustTunnel certificate hostname, without a port; it must point to the server and be under your control."
+        ],
+        "cert_type": [
+            "روش گواهی TrustTunnel را مطابق سرور تعیین کنید. خودامضا به اعتماد جداگانهٔ کلاینت نیاز دارد؛ گواهی آماده را ابزار بیرونی تمدید می‌کند.",
+            "Choose the TrustTunnel certificate method. Self-signed needs client trust; external tools renew provided certificates."
+        ],
+        "acme_email": [
+            "ایمیل معتبر مالک دامنه برای حساب ACME؛ برای دریافت پیام‌های مربوط به گواهی از ایمیل در دسترس استفاده کنید.",
+            "Valid domain-owner email for the ACME account; use an address you can access for certificate notices."
+        ],
+        "cert_chain_path": [
+            "مسیر زنجیرهٔ گواهی TrustTunnel روی سرور؛ گواهی باید برای دامنهٔ سرویس معتبر باشد.",
+            "TrustTunnel certificate-chain path on the server; the certificate must be valid for the service hostname."
+        ],
+        "cert_key_path": [
+            "مسیر کلید خصوصیِ متناظر زنجیرهٔ گواهی روی سرور؛ محتوای کلید را در این فیلد نچسبانید.",
+            "Path to the matching private key on the server; do not paste private-key contents here."
+        ],
+        "custom_sni": [
+            "SNI ارسالی کلاینت TrustTunnel؛ معمولاً خالی بماند تا نام دامنهٔ گواهی استفاده شود. این گزینه دامنهٔ صدور را تغییر نمی‌دهد.",
+            "TrustTunnel client SNI; normally leave empty to use the certificate hostname. It does not change the issuance domain."
+        ],
+        "client_random_prefix": [
+            "فیلتر پیشوند ClientHello برای کلاینت‌های سازگار؛ رمز عبور یا شناسهٔ کاربر نیست و جای احراز هویت را نمی‌گیرد.",
+            "ClientHello-prefix filter for supporting clients; it is not a user password or identity and does not replace authentication."
+        ],
+        "upstream_protocol": [
+            "انتقال TrustTunnel مطابق پشتیبانی شبکه و کلاینت؛ HTTP/3 به دسترسی UDP نیاز دارد.",
+            "TrustTunnel transport matching client/network support; HTTP/3 requires reachable UDP."
+        ],
+        "anti_dpi": [
+            "قابلیت ضد DPI اختصاصی کلاینت TrustTunnel؛ فقط با کلاینت پشتیبانی‌شده فعال کنید.",
+            "TrustTunnel client anti-DPI option; enable only for a supporting client."
+        ],
+        "has_ipv6": [
+            "فقط اگر مسیر IPv6 سرویس واقعاً قابل استفاده است فعال کنید؛ داشتن رکورد DNS به‌تنهایی کافی نیست.",
+            "Enable only when the service IPv6 path actually works; a DNS record alone is insufficient."
+        ],
+        "dns_upstreams": [
+            "DNSهای بالادستی TrustTunnel را طبق قالب پشتیبانی‌شده وارد کنید؛ هر مقدار باید از شبکهٔ سرویس قابل دسترس باشد.",
+            "Enter TrustTunnel DNS upstreams in a supported format; each must be reachable from the service network."
+        ],
+        "encryption_method": [
+            "روش رمزگذاری MDNS باید در سرور و کلاینت یکسان باشد. ChaCha20-Poly1305 و AES-GCM احراز اصالت دارند؛ XOR یا بدون رمز برای استفادهٔ عادی مناسب نیستند.",
+            "Match MDNS encryption on server and client. ChaCha20-Poly1305 and AES-GCM authenticate traffic; XOR/none are unsuitable for normal use."
+        ],
+        "encryption_key": [
+            "کلید انتقال MDNS را مطابق سرور وارد کنید؛ خالی‌بودن هنگام ذخیره کلید تازه می‌سازد، پس برای حفظ نود موجود کلید آن را پاک نکنید.",
+            "Match the MDNS transport key to the server; saving an empty field generates a new key, so do not clear an existing key to preserve it."
+        ],
+        "domain": [
+            "دامنه‌ها یا زیردامنه‌های مسیر DNS نود MDNS؛ باید در DNS به‌درستی برای این سرویس واگذار شده باشند.",
+            "MDNS carrier domains/subdomains; their DNS delegation must be configured for this service."
+        ],
+        "obfs.host": [
+            "نام پوششی HTTP obfuscation مطابق سرور؛ آدرس نود را همچنان در فیلد آدرس اتصال نگه دارید.",
+            "HTTP-obfuscation cover host matching the server; keep the actual endpoint in the connection address field."
+        ],
+        "obfs.path": [
+            "مسیر HTTP obfuscation مطابق سرور، با / آغاز شود؛ این مقدار مسیر صفحهٔ پنل نیست.",
+            "Server-matching HTTP-obfuscation path beginning with /; not the panel URL path."
+        ]
+    },
+    "protocols": {
+        "shadowsocks": {
+            "obfs": [
+                "استتار HTTP فقط وقتی سرور Shadowsocks آن را دارد فعال شود؛ بدون پیکربندی سمت سرور «ندارد» بماند.",
+                "Enable HTTP obfuscation only when the Shadowsocks server supports it; otherwise choose none."
+            ]
+        },
+        "vmess": {},
+        "trojan": {},
+        "vless": {},
+        "hysteria": {},
+        "tuic": {},
+        "anytls": {},
+        "mdns": {},
+        "trusttunnel": {},
+        "v2node": {
+            "install_command": [
+                "این دستور از تنظیمات نود ساخته می‌شود و قابل ویرایش نیست. ابتدا دامنه، پورت و پروتکل را بررسی کنید؛ سپس دستور را روی سرور همان نود اجرا کنید، نه روی سرور پنل. اطلاعات دسترسی داخل دستور را منتشر نکنید.",
+                "This read-only command is generated from the node settings. Review the hostname, port and protocol, then run it on that node's server. The panel server does not run it. Keep embedded access credentials private."
+            ]
+        },
+        "dns": {
+            "address": [
+                "نشانی resolver سمت سرور؛ مانند 1.1.1.1 یا قالب DNS پشتیبانی‌شدهٔ هسته، نه دامنهٔ نود.",
+                "Server-side resolver address, such as 1.1.1.1 or a core-supported DNS URL, not the node hostname."
+            ],
+            "port": [
+                "پورت همان resolver؛ برای DNS معمولی غالباً ۵۳ است و باید با سرویس انتخاب‌شده سازگار باشد.",
+                "Port of this resolver; conventional DNS usually uses 53. Match the selected resolver service."
+            ],
+            "domains": [
+                "محدودهٔ دامنه‌های استفاده‌کننده از این resolver؛ هر خط یک مورد طبق قالب قانون DNS همان هسته.",
+                "Domains using this resolver; one core-supported DNS domain rule per line."
+            ]
+        },
+        "rules": {
+            "domain": [
+                "دامنه‌های هدف قانون فیلتر؛ هر خط یک مورد با قالب پشتیبانی‌شدهٔ هسته. اثر قانون را پیش از نمایش نود بررسی کنید.",
+                "Filter target domains, one core-supported pattern per line; check the rule’s effect before publishing the node."
+            ],
+            "protocol": [
+                "پروتکل‌های هدف فیلتر؛ هر خط یک مورد از نام‌های شناخته‌شدهٔ هسته. این بخش پروتکل اتصال نود را تغییر نمی‌دهد.",
+                "Filter target protocols, one core-recognized name per line; this does not change the node connection protocol."
+            ]
+        },
+        "tls": {},
+        "encryption": {
+            "mode": [
+                "حالت رمزگذاری VLESS مطابق سرور و کلاینت؛ تغییر حالت به کلیدها و تنظیمات سازگار همان حالت نیاز دارد.",
+                "VLESS encryption mode matching server and client; each mode requires compatible keys and options."
+            ],
+            "rtt": [
+                "نوع راه‌اندازی نشست رمزگذاری VLESS؛ گزینهٔ پشتیبانی‌شدهٔ هر دو سمت را انتخاب کنید.",
+                "VLESS encrypted-session setup mode; choose a value supported by both endpoints."
+            ],
+            "ticket": [
+                "مدت اعتبار ticket مطابق هسته، مانند 600s؛ قالب و بازه باید توسط سرور و کلاینت پشتیبانی شود.",
+                "Core-supported ticket lifetime, such as 600s; match the format and range on server and client."
+            ],
+            "server_padding": [
+                "الگوی padding سمت سرور؛ فقط قالب پشتیبانی‌شدهٔ این حالت را وارد کنید و بدون نیاز خاص خالی بگذارید.",
+                "Server padding scheme; use the selected mode’s supported format and otherwise leave empty."
+            ],
+            "client_padding": [
+                "الگوی padding سمت کلاینت؛ باید با قابلیت‌های همان حالت رمزگذاری سازگار باشد.",
+                "Client padding scheme, compatible with the selected encryption mode."
+            ],
+            "private_key": [
+                "کلید خصوصی همان حالت رمزگذاری VLESS؛ با ابزار همان هسته تولید شود و با کلید TLS یا REALITY جایگزین نشود.",
+                "Private key for the selected VLESS encryption mode; generate with its core tool, not a TLS or REALITY key."
+            ],
+            "password": [
+                "مقدار رمز یا کلید عمومی بخش کلاینت باید با تنظیمات همین حالت در سرور متناظر باشد؛ از مقدار نمونه استفاده نکنید.",
+                "The client password/public value must correspond to this server encryption mode; do not use example values."
+            ]
+        }
+    },
+    "intro": {
+        "shadowsocks": [
+            "رمزگذاری، استتار و پورت‌ها باید با سرویس Shadowsocks سرور یکسان باشند.",
+            "Match the cipher, obfuscation and ports to the Shadowsocks server."
+        ],
+        "vmess": [
+            "تنظیمات انتقال و TLS باید در سرور و اشتراک VMess یکسان باشند.",
+            "Match VMess transport and TLS settings on the server and subscription."
+        ],
+        "vless": [
+            "پروتکل VLESS، انتقال، TLS/REALITY و Flow را هماهنگ با هستهٔ سرور تنظیم کنید.",
+            "Coordinate VLESS transport, TLS/REALITY and flow with the server core."
+        ],
+        "trojan": [
+            "Trojan به تنظیمات معتبر TLS و نام دامنهٔ سازگار با سرور نیاز دارد.",
+            "Trojan needs valid TLS settings and a hostname matching the server."
+        ],
+        "hysteria": [
+            "نسخه و گزینه‌های Hysteria را مطابق سرور انتخاب کنید؛ مسیر UDP باید قابل دسترس باشد.",
+            "Match Hysteria version and options to the server and ensure UDP is reachable."
+        ],
+        "tuic": [
+            "برای TUIC، دامنهٔ معتبر TLS و مسیر UDP قابل دسترس لازم است.",
+            "TUIC requires a valid TLS hostname and reachable UDP."
+        ],
+        "anytls": [
+            "AnyTLS به TLS معتبر نیاز دارد؛ الگوی padding اختیاری را فقط هماهنگ با سرور تغییر دهید.",
+            "AnyTLS requires verified TLS; change optional padding only to match the server."
+        ],
+        "mdns": [
+            "این بخش برای نود MasterDnsVPN و مسیرهای DNS آن است؛ دامنه‌های واگذار‌شده و کلید انتقال را مطابق سرور تنظیم کنید.",
+            "Configure MasterDnsVPN carrier domains and transport encryption to match the server."
+        ],
+        "trusttunnel": [
+            "نام دامنهٔ گواهی، روش گواهی و انتقال TrustTunnel باید با endpoint سرور مطابقت داشته باشند.",
+            "Match the certificate hostname, certificate method and transport to the TrustTunnel server endpoint."
+        ],
+        "v2node": [
+            "نوع پروتکل و گزینه‌های متناظر آن را مطابق هستهٔ سرور انتخاب کنید؛ آدرس اتصال و آدرس محلی شنود نقش متفاوتی دارند.",
+            "Select the server protocol and matching options; the public connection address differs from the local listener address."
+        ]
+    }
+};
+var imnNativeHelpOwnerIds = new WeakMap();
+var imnNativeHelpSequence = 0;
+function imnNativeHelp(React, tree, protocol, owner) {
+    var locale = 'fa';
+    try { locale = localStorage.getItem('umi_locale') || 'fa'; } catch (_) {}
+    var language = /^fa/i.test(locale) ? 0 : 1;
+    var number = owner && imnNativeHelpOwnerIds.get(owner);
+    if (!number) { number = ++imnNativeHelpSequence; if (owner) imnNativeHelpOwnerIds.set(owner, number); }
+    var prefix = 'native-node-help-' + number + '-';
+    var specific = imnNativeNodeGuides.protocols[protocol] || {};
+    var introduced = false;
+    var occurrences = Object.create(null);
+    function guide(field) { return specific[field] || imnNativeNodeGuides.common[field]; }
+    function group(element) { return React.isValidElement(element) && /(?:^|\s)form-group(?:\s|$)/.test(element.props.className || ''); }
+    function marked(children, result) {
+        React.Children.forEach(children, function (child) {
+            if (!React.isValidElement(child) || group(child)) return;
+            var field = child.props['data-node-field'];
+            if (field && guide(field)) result.push({field: field, id: child.props['data-native-node-help-id']});
+            marked(child.props.children, result);
+        });
+    }
+    function list(children) { return Array.isArray(children) ? children.slice() : children == null ? [] : [children]; }
+    function map(children, visit) { return Array.isArray(children) ? children.map(function (child) { return map(child, visit); }) : visit(children); }
+    function help(field, id) {
+        return React.createElement('small', {
+            key: id, id: id,
+            className: 'form-text text-muted', dir: language === 0 ? 'rtl' : 'ltr', lang: language === 0 ? 'fa' : 'en', 'data-native-node-help': field
+        }, guide(field)[language]);
+    }
+    function walk(element, inGroup) {
+        if (!React.isValidElement(element)) return element;
+        var isGroup = group(element), field = element.props['data-node-field'];
+        var addIntro = !introduced && element.props.id === 'server' && imnNativeNodeGuides.intro[protocol];
+        if (addIntro) introduced = true;
+        var children = map(element.props.children, function (child) { return walk(child, inGroup || isGroup); });
+        var props = {};
+        if (field && guide(field)) {
+            var described = element.props['aria-describedby'];
+            var occurrence = occurrences[field] = (occurrences[field] || 0) + 1;
+            var id = prefix + field.replace(/[^a-zA-Z0-9_-]/g, '-') + '-' + occurrence;
+            props['data-native-node-help-id'] = id;
+            props['aria-describedby'] = described ? described + ' ' + id : id;
+        }
+        if (isGroup) {
+            var fields = []; marked(children, fields);
+            if (fields.length) children = list(children).concat(fields.map(function (item) { return help(item.field, item.id); }));
+        }
+        if (addIntro) {
+            children = [React.createElement('p', {
+                key: 'node-guide-intro', className: 'text-muted', role: 'note', dir: language === 0 ? 'rtl' : 'ltr', lang: language === 0 ? 'fa' : 'en',
+                'data-native-node-intro': protocol, 'data-native-node-protocol': protocol
+            }, imnNativeNodeGuides.intro[protocol][language])].concat(list(children));
+        }
+        var result = React.cloneElement(element, props, children);
+        if (field && guide(field) && !inGroup && !isGroup) return React.createElement(React.Fragment, null, result, help(field, props['data-native-node-help-id']));
+        return result;
+    }
+    return walk(tree, false);
+}
+
+        t.default = imnNativeHelp;
+    },
+/*__INH_MODULE_END__*/    uzXD: function(e, t, n) {
+        "use strict";/*__INH_REQUIRE_START__*/
+        var irNativeNodeHelp = n("irboard/native-node-help").default;/*__INH_REQUIRE_END__*/
         n.r(t);
         var r = n("jehZ")
           , i = n.n(r)
@@ -104590,7 +105386,7 @@ callTrusttunnel: function(e, t, n) {
                   , n = this.props.serverManage.servers
                   , r = this.props.serverGroup.groups
                   , i = this.props.serverRoute.routes;
-                return y.a.createElement(y.a.Fragment, null, y.a.cloneElement(this.props.children, {
+                return /*__INH_WRAP_OPEN_START__*/irNativeNodeHelp(y.a,/*__INH_WRAP_OPEN_END__*/y.a.createElement(y.a.Fragment, null, y.a.cloneElement(this.props.children, {
                     onClick: ()=>this.setState({
                         visible: !0
                     })
@@ -104608,14 +105404,14 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "نام نود"), y.a.createElement(s["a"], {
                     placeholder: "\u202b\u0646\u0627\u0645 \u0646\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f\u202c",
                     value: e.name,
-                    onChange: e=>this.formChange("name", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"name",/*__INH_FIELD_END__*/onChange: e=>this.formChange("name", e.target.value)
                 })), y.a.createElement("div", {
                     className: "form-group col-4"
                 }, y.a.createElement("label", null, "ضریب"), y.a.createElement(s["a"], {
                     addonAfter: "x",
                     placeholder: "\u202b\u0636\u0631\u06cc\u0628 \u0646\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f\u202c",
                     value: e.rate,
-                    onChange: e=>this.formChange("rate", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"rate",/*__INH_FIELD_END__*/onChange: e=>this.formChange("rate", e.target.value)
                 }))), y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "برچسب نود"), y.a.createElement(N["a"], {
@@ -104625,7 +105421,7 @@ callTrusttunnel: function(e, t, n) {
                         width: "100%"
                     },
                     placeholder: "\u202b\u0628\u0639\u062f \u0627\u0632 \u0648\u0631\u0648\u062f Enter \u0628\u0632\u0646\u06cc\u062f \u062a\u0627 \u0628\u0631\u0686\u0633\u0628 \u0627\u0636\u0627\u0641\u0647 \u0634\u0648\u062f\u202c",
-                    onChange: e=>this.formChange("tags", e.length > 0 ? e : null)
+                    /*__INH_FIELD_START__*/"data-node-field":"tags",/*__INH_FIELD_END__*/onChange: e=>this.formChange("tags", e.length > 0 ? e : null)
                 })), y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "گروه دسترسی ", y.a.createElement(B["a"], null, y.a.createElement("a", {
@@ -104637,7 +105433,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("group_id", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"group_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("group_id", e)
                 }, r.map(e=>{
                     return y.a.createElement(N["a"].Option, {
                         key: e.id
@@ -104652,7 +105448,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("version", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"version",/*__INH_FIELD_END__*/onChange: e=>this.formChange("version", e)
                 }, y.a.createElement(N["a"].Option, {
                     key: 0,
                     value: 1
@@ -104666,13 +105462,13 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "آدرس نود"), y.a.createElement(s["a"], {
                     placeholder: "آدرس یا IP",
                     value: e.host,
-                    onChange: e=>this.formChange("host", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"host",/*__INH_FIELD_END__*/onChange: e=>this.formChange("host", e.target.value)
                 }))), y.a.createElement("div", {
                     className: "form-group col-md-12 col-xs-12"
                 }, y.a.createElement("label", null, "\u0622\u062f\u0631\u0633 \u062a\u0627\u0646\u0644 (\u0627\u062e\u062a\u06cc\u0627\u0631\u06cc)"), y.a.createElement(s["a"], {
                     placeholder: "\u062e\u0627\u0644\u06cc \u0628\u06af\u0630\u0627\u0631\u06cc\u062f \u0627\u06af\u0631 \u062a\u0627\u0646\u0644 \u0646\u062f\u0627\u0631\u06cc\u062f",
                     value: e.tunnel_host || "",
-                    onChange: e=>this.formChange("tunnel_host", e.target.value || null)
+                    /*__INH_FIELD_START__*/"data-node-field":"tunnel_host",/*__INH_FIELD_END__*/onChange: e=>this.formChange("tunnel_host", e.target.value || null)
                 })), y.a.createElement("div", {
                     className: "row"
                 }, y.a.createElement("div", {
@@ -104680,7 +105476,7 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "پورت اتصال"), y.a.createElement(s["a"], {
                     placeholder: "\u202b\u067e\u0648\u0631\u062a \u0627\u062a\u0635\u0627\u0644 \u06a9\u0627\u0631\u0628\u0631\u202c",
                     value: e.port,
-                    onChange: e=>{
+                    /*__INH_FIELD_START__*/"data-node-field":"port",/*__INH_FIELD_END__*/onChange: e=>{
                         this.formChange("port", e.target.value)
                     }
                 })), y.a.createElement("div", {
@@ -104688,7 +105484,7 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "پورت سرویس"), y.a.createElement(s["a"], {
                     placeholder: "\u202b\u067e\u0648\u0631\u062a \u0628\u0627\u0632 \u0633\u0631\u0648\u0631\u202c",
                     value: e.server_port,
-                    onChange: e=>{
+                    /*__INH_FIELD_START__*/"data-node-field":"server_port",/*__INH_FIELD_END__*/onChange: e=>{
                         this.formChange("server_port", e.target.value)
                     }
                 })), y.a.createElement("div", {
@@ -104704,7 +105500,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("insecure", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"insecure",/*__INH_FIELD_END__*/onChange: e=>this.formChange("insecure", e)
                 }, y.a.createElement(N["a"].Option, {
                     key: 0,
                     value: 0
@@ -104716,7 +105512,7 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "\u202b\u0646\u0634\u0627\u0646\u06af\u0631 \u0646\u0627\u0645 \u0633\u0631\u0648\u0631\u202c(sni)"), y.a.createElement(s["a"], {
                     placeholder: "\u202b\u0628\u0631\u0627\u06cc \u062a\u0623\u06cc\u06cc\u062f \u06af\u0648\u0627\u0647\u06cc \u0632\u0645\u0627\u0646\u06cc \u06a9\u0647 \u0622\u062f\u0631\u0633 \u0646\u0648\u062f \u0628\u0627 \u06af\u0648\u0627\u0647\u06cc \u0645\u0637\u0627\u0628\u0642\u062a \u0646\u062f\u0627\u0631\u062f \u0627\u0633\u062a\u0641\u0627\u062f\u0647 \u0645\u06cc\u200c\u0634\u0648\u062f\u202c",
                     value: e.server_name,
-                    onChange: e=>this.formChange("server_name", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"server_name",/*__INH_FIELD_END__*/onChange: e=>this.formChange("server_name", e.target.value)
                 })), y.a.createElement("div", {
                     className: "row"
                 }, (parseInt(e.version) == 1) && y.a.createElement("div", {
@@ -104726,7 +105522,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("obfs", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"obfs",/*__INH_FIELD_END__*/onChange: e=>this.formChange("obfs", e)
                 }, y.a.createElement(N["a"].Option, {
                     key: 0,
                     value: null
@@ -104738,7 +105534,7 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "رمز مبهم‌سازیobfsParam"), y.a.createElement(s["a"], {
                     value: e.obfs_password,
                     placeholder: "\u202b\u062e\u0627\u0644\u06cc \u0628\u06af\u0630\u0627\u0631\u06cc\u062f \u062a\u0627 \u062e\u0648\u062f\u06a9\u0627\u0631 \u062a\u0648\u0644\u06cc\u062f \u0634\u0648\u062f\u202c",
-                    onChange: e=>this.formChange("obfs_password", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"obfs_password",/*__INH_FIELD_END__*/onChange: e=>this.formChange("obfs_password", e.target.value)
                 })), (parseInt(e.version) == 2) && y.a.createElement("div", {
                     className: "form-group col-md-6 col-xs-12"
                 }, y.a.createElement("label", null, "روش مبهم‌سازیobfs"), y.a.createElement(N["a"], {
@@ -104746,7 +105542,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("obfs", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"obfs",/*__INH_FIELD_END__*/onChange: e=>this.formChange("obfs", e)
                 }, y.a.createElement(N["a"].Option, {
                     key: 0,
                     value: null
@@ -104758,21 +105554,21 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "رمز مبهم‌سازیobfs_password"), y.a.createElement(s["a"], {
                     value: e.obfs_password,
                     placeholder: "\u202b\u062e\u0627\u0644\u06cc \u0628\u06af\u0630\u0627\u0631\u06cc\u062f \u062a\u0627 \u062e\u0648\u062f\u06a9\u0627\u0631 \u062a\u0648\u0644\u06cc\u062f \u0634\u0648\u062f\u202c",
-                    onChange: e=>this.formChange("obfs_password", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"obfs_password",/*__INH_FIELD_END__*/onChange: e=>this.formChange("obfs_password", e.target.value)
                 }))), y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "پهنای باند آپلود"), y.a.createElement(s["a"], {
                     addonAfter: "Mbps",
                     placeholder: "\u202b\u067e\u0647\u0646\u0627\u06cc \u0628\u0627\u0646\u062f \u0627\u0631\u0633\u0627\u0644 \u0633\u0631\u0648\u0631\u202c,خالی بگذارید یا مقدار0استفاده ازBBR",
                     value: e.up_mbps,
-                    onChange: e=>this.formChange("up_mbps", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"up_mbps",/*__INH_FIELD_END__*/onChange: e=>this.formChange("up_mbps", e.target.value)
                 })), y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "پهنای باند دانلود"), y.a.createElement(s["a"], {
                     addonAfter: "Mbps",
                     placeholder: "\u202b\u067e\u0647\u0646\u0627\u06cc \u0628\u0627\u0646\u062f \u062f\u0631\u06cc\u0627\u0641\u062a \u0633\u0631\u0648\u0631\u202c,خالی بگذارید یا مقدار0استفاده ازBBR",
                     value: e.down_mbps,
-                    onChange: e=>this.formChange("down_mbps", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"down_mbps",/*__INH_FIELD_END__*/onChange: e=>this.formChange("down_mbps", e.target.value)
                 })), y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, y.a.createElement(u["a"], {
@@ -104783,7 +105579,7 @@ callTrusttunnel: function(e, t, n) {
                     rel: "noreferrer"
                 }, "پاسخ‌های بیشتر"))), y.a.createElement(N["a"], {
                     value: e.parent_id || "",
-                    onChange: e=>this.formChange("parent_id", e),
+                    /*__INH_FIELD_START__*/"data-node-field":"parent_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("parent_id", e),
                     style: {
                         width: "100%"
                     }
@@ -104805,7 +105601,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("route_id", e.length > 0 ? e : null)
+                    /*__INH_FIELD_START__*/"data-node-field":"route_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("route_id", e.length > 0 ? e : null)
                 }, i.map(e=>{
                     return y.a.createElement(N["a"].Option, {
                         key: e.id
@@ -104822,7 +105618,7 @@ callTrusttunnel: function(e, t, n) {
                     loading: t,
                     onClick: ()=>this.save(),
                     type: "primary"
-                }, "ثبت"))))
+                }, "ثبت"))))/*__INH_WRAP_CLOSE_START__*/,"hysteria",this)/*__INH_WRAP_CLOSE_END__*/
             }
         }
         var W = Object(_["c"])(e=>{
@@ -104879,11 +105675,11 @@ callTrusttunnel: function(e, t, n) {
                   , fp = e.fingerprint
                   , tls = this.state.tls
                   , cert_apply = this.state.cert_apply;
-                return y.a.createElement(y.a.Fragment, null, y.a.createElement("div", null, y.a.createElement("div", {
+                return /*__INH_WRAP_OPEN_START__*/irNativeNodeHelp(y.a,/*__INH_WRAP_OPEN_END__*/y.a.createElement(y.a.Fragment, null, y.a.createElement("div", null, y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "Server Name(SNI)"), y.a.createElement(s["a"], {
                     value: t,
-                    onChange: e=>this.change("server_name", e.target.value),
+                    /*__INH_FIELD_START__*/"data-node-field":"server_name",/*__INH_FIELD_END__*/onChange: e=>this.change("server_name", e.target.value),
                     placeholder: tls == 2 ? "REALITY\u202b\u0627\u0644\u0632\u0627\u0645\u06cc\u060c \u0628\u0627\u06cc\u062f \u0628\u0627 \u0628\u06a9\u200c\u0627\u0646\u062f \u06cc\u06a9\u0633\u0627\u0646 \u0628\u0627\u0634\u062f\u202c" : ""
                 })), tls == 1 && cert_apply && y.a.createElement("div", {
                     className: "form-group"
@@ -104892,7 +105688,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.change("cert_mode", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"cert_mode",/*__INH_FIELD_END__*/onChange: e=>this.change("cert_mode", e)
                 }, y.a.createElement(N["a"].Option, {
                     value: "self"
                 }, "خودامضا"), y.a.createElement(N["a"].Option, {
@@ -104910,37 +105706,37 @@ callTrusttunnel: function(e, t, n) {
                 },
                 "راهنمای تکمیل")), y.a.createElement(s["a"], {
                     value: e.provider,
-                    onChange: e=>this.change("provider", e.target.value),
+                    /*__INH_FIELD_START__*/"data-node-field":"provider",/*__INH_FIELD_END__*/onChange: e=>this.change("provider", e.target.value),
                     placeholder: "قالب نوشتنcloudflare"
                 })), e.cert_mode == "dns" && cert_apply && y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "DNS env"), y.a.createElement(s["a"], {
                     value: e.dns_env,
-                    onChange: e=>this.change("dns_env", e.target.value),
+                    /*__INH_FIELD_START__*/"data-node-field":"dns_env",/*__INH_FIELD_END__*/onChange: e=>this.change("dns_env", e.target.value),
                     placeholder: "قالب نوشتنCF_DNS_API_TOKEN=xxxxxxxبرای چند مورد با کاما جدا کنید"
                 })), tls == 1 && e.cert_mode != "none" && cert_apply && y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "\u202b\u0622\u062f\u0631\u0633 \u0641\u0627\u06cc\u0644 \u06a9\u0644\u06cc\u062f \u0639\u0645\u0648\u0645\u06cc \u06af\u0648\u0627\u0647\u06cc\u202cCert File Path"), y.a.createElement(s["a"], {
                     value: e.cert_file,
-                    onChange: e=>this.change("cert_file", e.target.value),
+                    /*__INH_FIELD_START__*/"data-node-field":"cert_file",/*__INH_FIELD_END__*/onChange: e=>this.change("cert_file", e.target.value),
                     placeholder: "خالی بگذارید در/etc/v2node/\u202b\u062a\u0648\u0644\u06cc\u062f \u062e\u0648\u062f\u06a9\u0627\u0631 \u062f\u0627\u06cc\u0631\u06a9\u062a\u0648\u0631\u06cc\u202c"
                 })), tls == 1 && e.cert_mode != "none" && cert_apply && y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "\u202b\u0622\u062f\u0631\u0633 \u0641\u0627\u06cc\u0644 \u06a9\u0644\u06cc\u062f \u062e\u0635\u0648\u0635\u06cc \u06af\u0648\u0627\u0647\u06cc\u202cKey File Path"), y.a.createElement(s["a"], {
                     value: e.key_file,
-                    onChange: e=>this.change("key_file", e.target.value),
+                    /*__INH_FIELD_START__*/"data-node-field":"key_file",/*__INH_FIELD_END__*/onChange: e=>this.change("key_file", e.target.value),
                     placeholder: "خالی بگذارید در/etc/v2node/\u202b\u062a\u0648\u0644\u06cc\u062f \u062e\u0648\u062f\u06a9\u0627\u0631 \u062f\u0627\u06cc\u0631\u06a9\u062a\u0648\u0631\u06cc\u202c"
                 })), tls == 2 && y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "Server Address"), y.a.createElement(s["a"], {
                     value: ds,
-                    onChange: e=>this.change("dest", e.target.value),
+                    /*__INH_FIELD_START__*/"data-node-field":"dest",/*__INH_FIELD_END__*/onChange: e=>this.change("dest", e.target.value),
                     placeholder: "REALITYآدرس مقصد، پیش‌فرضSNI"
                 })), tls == 2 && y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "Server Port"), y.a.createElement(s["a"], {
                     value: pt,
-                    onChange: e=>this.change("server_port", e.target.value),
+                    /*__INH_FIELD_START__*/"data-node-field":"server_port",/*__INH_FIELD_END__*/onChange: e=>this.change("server_port", e.target.value),
                     placeholder: "REALITYپورت مقصد,پیش‌فرض443"
                 })), tls == 2 && y.a.createElement("div", {
                     className: "form-group"
@@ -104949,7 +105745,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.change("xver", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"xver",/*__INH_FIELD_END__*/onChange: e=>this.change("xver", e)
                 }, y.a.createElement(N["a"].Option, {
                     key: 0,
                     value: 0
@@ -104963,19 +105759,19 @@ callTrusttunnel: function(e, t, n) {
                     className: "form-group"
                 }, y.a.createElement("label", null, "Private Key"), y.a.createElement(s["a"], {
                     value: pv,
-                    onChange: e=>this.change("private_key", e.target.value),
+                    /*__INH_FIELD_START__*/"data-node-field":"private_key",/*__INH_FIELD_END__*/onChange: e=>this.change("private_key", e.target.value),
                     placeholder: "\u202b\u062e\u0627\u0644\u06cc \u0628\u06af\u0630\u0627\u0631\u06cc\u062f \u062a\u0627 \u062e\u0648\u062f\u06a9\u0627\u0631 \u062a\u0648\u0644\u06cc\u062f \u0634\u0648\u062f\u202c"
                 })), tls == 2 && y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "Public Key"), y.a.createElement(s["a"], {
                     value: pb,
-                    onChange: e=>this.change("public_key", e.target.value),
+                    /*__INH_FIELD_START__*/"data-node-field":"public_key",/*__INH_FIELD_END__*/onChange: e=>this.change("public_key", e.target.value),
                     placeholder: "\u202b\u062e\u0627\u0644\u06cc \u0628\u06af\u0630\u0627\u0631\u06cc\u062f \u062a\u0627 \u062e\u0648\u062f\u06a9\u0627\u0631 \u062a\u0648\u0644\u06cc\u062f \u0634\u0648\u062f\u202c"
                 })), tls == 2 && y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "ShortId"), y.a.createElement(s["a"], {
                     value: sd,
-                    onChange: e=>this.change("short_id", e.target.value),
+                    /*__INH_FIELD_START__*/"data-node-field":"short_id",/*__INH_FIELD_END__*/onChange: e=>this.change("short_id", e.target.value),
                     placeholder: "\u202b\u062e\u0627\u0644\u06cc \u0628\u06af\u0630\u0627\u0631\u06cc\u062f \u062a\u0627 \u062e\u0648\u062f\u06a9\u0627\u0631 \u062a\u0648\u0644\u06cc\u062f \u0634\u0648\u062f\u202c"
                 })), y.a.createElement("div", {
                     className: "form-group"
@@ -104984,7 +105780,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.change("fingerprint", e),
+                    /*__INH_FIELD_START__*/"data-node-field":"fingerprint",/*__INH_FIELD_END__*/onChange: e=>this.change("fingerprint", e),
                     placeholder: "TLSاثرانگشت پیش‌فرضChrome"
                 }, y.a.createElement(N["a"].Option, {
                     key: 0,
@@ -105014,13 +105810,13 @@ callTrusttunnel: function(e, t, n) {
                     className: "form-group"
                 }, y.a.createElement("label", null, "Reject unknown sni"), y.a.createElement("div", null, y.a.createElement(f["a"], {
                     checked: parseInt(e.reject_unknown_sni),
-                    onChange: e=>this.change("reject_unknown_sni", e ? "1" : "0")
+                    /*__INH_FIELD_START__*/"data-node-field":"reject_unknown_sni",/*__INH_FIELD_END__*/onChange: e=>this.change("reject_unknown_sni", e ? "1" : "0")
                 }))), y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "Allow Insecure"), y.a.createElement("div", null, y.a.createElement(f["a"], {
                     checked: parseInt(n),
-                    onChange: e=>this.change("allow_insecure", e ? "1" : "0")
-                }))), y.a.createElement("div", { className: "form-group" }, y.a.createElement("label", null, "ECH (Encrypted Client Hello)"), y.a.createElement(N["a"], { value: e.ech || "", style: { width: "100%" }, onChange: e=>this.change("ech", e), placeholder: "حالت ECH را انتخاب کنید" }, y.a.createElement(N["a"].Option, { key: 0, value: "" }, "بدون"), y.a.createElement(N["a"].Option, { key: 1, value: "cloudflare" }, "Cloudflare"), y.a.createElement(N["a"].Option, { key: 2, value: "custom" }, "SNI سفارشی"))), e.ech === "cloudflare" && y.a.createElement("div", { className: "form-group", style: { background: "#f6ffed", padding: "8px 12px", borderRadius: "4px", border: "1px solid #b7eb8f" } }, y.a.createElement("span", { style: { color: "#52c41a" } }, "✓ ECH توسط Cloudflare میزبانی می‌شود؛ کلیدها خودکار مدیریت می‌شوند و کلاینت پیکربندی را از DNS می‌گیرد؛ سرور نیازی به تنظیم ندارد")), e.ech === "custom" && y.a.createElement("div", { className: "form-group" }, y.a.createElement("label", null, "ECH Server Name (دامنه‌ی پوششی / SNI بیرونی)"), y.a.createElement(s["a"], { value: e.ech_server_name || "", onChange: e=>this.change("ech_server_name", e.target.value), placeholder: "الزامی" })), e.ech === "custom" && y.a.createElement("div", { className: "form-group" }, y.a.createElement("label", null, "ECH Key (کلید خصوصی سرور)"), y.a.createElement(s["a"], { value: e.ech_key || "", onChange: e=>this.change("ech_key", e.target.value), placeholder: "خالی = ساخت خودکار" })), e.ech === "custom" && y.a.createElement("div", { className: "form-group" }, y.a.createElement("label", null, "ECH Config (پیکربندی کلاینت)"), y.a.createElement(s["a"], { value: e.ech_config || "", onChange: e=>this.change("ech_config", e.target.value), placeholder: "خالی = ساخت خودکار" }))))
+                    /*__INH_FIELD_START__*/"data-node-field":"allow_insecure",/*__INH_FIELD_END__*/onChange: e=>this.change("allow_insecure", e ? "1" : "0")
+                }))), y.a.createElement("div", { className: "form-group" }, y.a.createElement("label", null, "ECH (Encrypted Client Hello)"), y.a.createElement(N["a"], { value: e.ech || "", style: { width: "100%" }, /*__INH_FIELD_START__*/"data-node-field":"ech",/*__INH_FIELD_END__*/onChange: e=>this.change("ech", e), placeholder: "حالت ECH را انتخاب کنید" }, y.a.createElement(N["a"].Option, { key: 0, value: "" }, "بدون"), y.a.createElement(N["a"].Option, { key: 1, value: "cloudflare" }, "Cloudflare"), y.a.createElement(N["a"].Option, { key: 2, value: "custom" }, "SNI سفارشی"))), e.ech === "cloudflare" && y.a.createElement("div", { className: "form-group", style: { background: "#f6ffed", padding: "8px 12px", borderRadius: "4px", border: "1px solid #b7eb8f" } }, y.a.createElement("span", { style: { color: "#52c41a" } }, "✓ ECH توسط Cloudflare میزبانی می‌شود؛ کلیدها خودکار مدیریت می‌شوند و کلاینت پیکربندی را از DNS می‌گیرد؛ سرور نیازی به تنظیم ندارد")), e.ech === "custom" && y.a.createElement("div", { className: "form-group" }, y.a.createElement("label", null, "ECH Server Name (دامنه‌ی پوششی / SNI بیرونی)"), y.a.createElement(s["a"], { value: e.ech_server_name || "", /*__INH_FIELD_START__*/"data-node-field":"ech_server_name",/*__INH_FIELD_END__*/onChange: e=>this.change("ech_server_name", e.target.value), placeholder: "الزامی" })), e.ech === "custom" && y.a.createElement("div", { className: "form-group" }, y.a.createElement("label", null, "ECH Key (کلید خصوصی سرور)"), y.a.createElement(s["a"], { value: e.ech_key || "", /*__INH_FIELD_START__*/"data-node-field":"ech_key",/*__INH_FIELD_END__*/onChange: e=>this.change("ech_key", e.target.value), placeholder: "خالی = ساخت خودکار" })), e.ech === "custom" && y.a.createElement("div", { className: "form-group" }, y.a.createElement("label", null, "ECH Config (پیکربندی کلاینت)"), y.a.createElement(s["a"], { value: e.ech_config || "", /*__INH_FIELD_START__*/"data-node-field":"ech_config",/*__INH_FIELD_END__*/onChange: e=>this.change("ech_config", e.target.value), placeholder: "خالی = ساخت خودکار" }))))/*__INH_WRAP_CLOSE_START__*/,"tls",this)/*__INH_WRAP_CLOSE_END__*/
             }
         }
         class EncryptionSettings extends y.a.Component {
@@ -105060,14 +105856,14 @@ callTrusttunnel: function(e, t, n) {
                   , pv = e.private_key
                   , pwd = e.password
                   , encryption = this.props.encryption;
-                return y.a.createElement(y.a.Fragment, null, y.a.createElement("div", null, y.a.createElement("div", {
+                return /*__INH_WRAP_OPEN_START__*/irNativeNodeHelp(y.a,/*__INH_WRAP_OPEN_END__*/y.a.createElement(y.a.Fragment, null, y.a.createElement("div", null, y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "Mode"), y.a.createElement(N["a"], {
                     value: m,
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.change("mode", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"mode",/*__INH_FIELD_END__*/onChange: e=>this.change("mode", e)
                 }, y.a.createElement(N["a"].Option, {
                     key: 0,
                     value: "native"
@@ -105086,7 +105882,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.change("rtt", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"rtt",/*__INH_FIELD_END__*/onChange: e=>this.change("rtt", e)
                 }, y.a.createElement(N["a"].Option, {
                     key: 0,
                     value: "0rtt"
@@ -105097,33 +105893,33 @@ callTrusttunnel: function(e, t, n) {
                     className: "form-group col-md-6 col-xs-12"
                 }, y.a.createElement("label", null, "Ticket time"), y.a.createElement(s["a"], {
                     value: tt,
-                    onChange: e=>this.change("ticket", e.target.value),
+                    /*__INH_FIELD_START__*/"data-node-field":"ticket",/*__INH_FIELD_END__*/onChange: e=>this.change("ticket", e.target.value),
                     placeholder: "حداکثر زمان مجاز"
                 }))), y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "Server Padding"), y.a.createElement(s["a"], {
                     value: sp,
-                    onChange: e=>this.change("server_padding", e.target.value),
+                    /*__INH_FIELD_START__*/"data-node-field":"server_padding",/*__INH_FIELD_END__*/onChange: e=>this.change("server_padding", e.target.value),
                     placeholder: "\u202b\u062e\u0627\u0644\u06cc \u0628\u06af\u0630\u0627\u0631\u06cc\u062f \u0628\u0631\u0627\u06cc \u0645\u0642\u062f\u0627\u0631 \u067e\u06cc\u0634\u200c\u0641\u0631\u0636\u202c100-111-1111.75-0-111.50-0-3333"
                 })), y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "Private Key"), y.a.createElement(s["a"], {
                     value: pv,
-                    onChange: e=>this.change("private_key", e.target.value),
+                    /*__INH_FIELD_START__*/"data-node-field":"private_key",/*__INH_FIELD_END__*/onChange: e=>this.change("private_key", e.target.value),
                     placeholder: "\u202b\u062e\u0627\u0644\u06cc \u0628\u06af\u0630\u0627\u0631\u06cc\u062f \u062a\u0627 \u062e\u0648\u062f\u06a9\u0627\u0631 \u062a\u0648\u0644\u06cc\u062f \u0634\u0648\u062f. \u0628\u0631\u0627\u06cc \u0631\u0645\u0632\u0646\u06af\u0627\u0631\u06cc \u0645\u0642\u0627\u0648\u0645 \u06a9\u0648\u0627\u0646\u062a\u0648\u0645\u06cc \u062e\u0648\u062f\u062a\u0627\u0646 \u062c\u0627\u06cc\u06af\u0632\u06cc\u0646 \u06a9\u0646\u06cc\u062f\u202c"
                 })), y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "Client Padding"), y.a.createElement(s["a"], {
                     value: cp,
-                    onChange: e=>this.change("client_padding", e.target.value),
+                    /*__INH_FIELD_START__*/"data-node-field":"client_padding",/*__INH_FIELD_END__*/onChange: e=>this.change("client_padding", e.target.value),
                     placeholder: "\u202b\u062e\u0627\u0644\u06cc \u0628\u06af\u0630\u0627\u0631\u06cc\u062f \u0628\u0631\u0627\u06cc \u0645\u0642\u062f\u0627\u0631 \u067e\u06cc\u0634\u200c\u0641\u0631\u0636\u202c100-111-1111.75-0-111.50-0-3333"
                 })), y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "Password"), y.a.createElement(s["a"], {
                     value: pwd,
-                    onChange: e=>this.change("password", e.target.value),
+                    /*__INH_FIELD_START__*/"data-node-field":"password",/*__INH_FIELD_END__*/onChange: e=>this.change("password", e.target.value),
                     placeholder: "\u202b\u062e\u0627\u0644\u06cc \u0628\u06af\u0630\u0627\u0631\u06cc\u062f \u062a\u0627 \u062e\u0648\u062f\u06a9\u0627\u0631 \u062a\u0648\u0644\u06cc\u062f \u0634\u0648\u062f. \u0628\u0631\u0627\u06cc \u0631\u0645\u0632\u0646\u06af\u0627\u0631\u06cc \u0645\u0642\u0627\u0648\u0645 \u06a9\u0648\u0627\u0646\u062a\u0648\u0645\u06cc \u062e\u0648\u062f\u062a\u0627\u0646 \u062c\u0627\u06cc\u06af\u0632\u06cc\u0646 \u06a9\u0646\u06cc\u062f\u202c"
-                }))))
+                }))))/*__INH_WRAP_CLOSE_START__*/,"encryption",this)/*__INH_WRAP_CLOSE_END__*/
             }
         }
         class z extends y.a.Component {
@@ -105251,7 +106047,7 @@ callTrusttunnel: function(e, t, n) {
                         showGutter: !0,
                         highlightActiveLine: !0,
                         value: t || "",
-                        onChange: e=>this.formChange("network_settings", e),
+                        /*__INH_FIELD_START__*/"data-node-field":"network_settings",/*__INH_FIELD_END__*/onChange: e=>this.formChange("network_settings", e),
                         setOptions: {
                             enableBasicAutocompletion: !1,
                             enableLiveAutocompletion: !1,
@@ -105265,12 +106061,12 @@ callTrusttunnel: function(e, t, n) {
                     return y.a.createElement(U, {
                         settings: n,
                         tls: e.tls,
-                        onChange: e=>this.changeServer("tls_settings", e)
+                        /*__INH_FIELD_START__*/"data-node-field":"tls_settings",/*__INH_FIELD_END__*/onChange: e=>this.changeServer("tls_settings", e)
                     })
                 case "encryption_settings":
                     return y.a.createElement(EncryptionSettings, {
                         settings: enc,
-                        onChange: e=>this.changeServer("encryption_settings", e)
+                        /*__INH_FIELD_START__*/"data-node-field":"encryption_settings",/*__INH_FIELD_END__*/onChange: e=>this.changeServer("encryption_settings", e)
                     })
                 }
             }
@@ -105288,7 +106084,7 @@ callTrusttunnel: function(e, t, n) {
                   , n = this.props.serverManage.servers
                   , r = this.props.serverGroup.groups
                   , i = this.props.serverRoute.routes;
-                return y.a.createElement(y.a.Fragment, null, y.a.cloneElement(this.props.children, {
+                return /*__INH_WRAP_OPEN_START__*/irNativeNodeHelp(y.a,/*__INH_WRAP_OPEN_END__*/y.a.createElement(y.a.Fragment, null, y.a.cloneElement(this.props.children, {
                     onClick: ()=>this.onShow()
                 }), y.a.createElement(R["a"], {
                     id: "server",
@@ -105304,14 +106100,14 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "نام نود"), y.a.createElement(s["a"], {
                     placeholder: "\u202b\u0646\u0627\u0645 \u0646\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f\u202c",
                     value: e.name,
-                    onChange: e=>this.formChange("name", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"name",/*__INH_FIELD_END__*/onChange: e=>this.formChange("name", e.target.value)
                 })), y.a.createElement("div", {
                     className: "form-group col-4"
                 }, y.a.createElement("label", null, "ضریب"), y.a.createElement(s["a"], {
                     addonAfter: "x",
                     placeholder: "\u202b\u0636\u0631\u06cc\u0628 \u0646\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f\u202c",
                     value: e.rate,
-                    onChange: e=>this.formChange("rate", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"rate",/*__INH_FIELD_END__*/onChange: e=>this.formChange("rate", e.target.value)
                 }))), y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "برچسب نود"), y.a.createElement(N["a"], {
@@ -105321,7 +106117,7 @@ callTrusttunnel: function(e, t, n) {
                         width: "100%"
                     },
                     placeholder: "\u202b\u0628\u0639\u062f \u0627\u0632 \u0648\u0631\u0648\u062f Enter \u0628\u0632\u0646\u06cc\u062f \u062a\u0627 \u0628\u0631\u0686\u0633\u0628 \u0627\u0636\u0627\u0641\u0647 \u0634\u0648\u062f\u202c",
-                    onChange: e=>this.formChange("tags", e.length > 0 ? e : null)
+                    /*__INH_FIELD_START__*/"data-node-field":"tags",/*__INH_FIELD_END__*/onChange: e=>this.formChange("tags", e.length > 0 ? e : null)
                 })), y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "گروه دسترسی ", y.a.createElement(B["a"], null, y.a.createElement("a", {
@@ -105333,7 +106129,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("group_id", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"group_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("group_id", e)
                 }, r.map(e=>{
                     return y.a.createElement(N["a"].Option, {
                         key: e.id
@@ -105346,13 +106142,13 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "آدرس نود"), y.a.createElement(s["a"], {
                     placeholder: "\u202b\u0622\u062f\u0631\u0633 \u0627\u062a\u0635\u0627\u0644 \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f\u202c",
                     value: e.host,
-                    onChange: e=>this.formChange("host", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"host",/*__INH_FIELD_END__*/onChange: e=>this.formChange("host", e.target.value)
                 })), y.a.createElement("div", {
                     className: "form-group col-md-12 col-xs-12"
                 }, y.a.createElement("label", null, "\u0622\u062f\u0631\u0633 \u062a\u0627\u0646\u0644 (\u0627\u062e\u062a\u06cc\u0627\u0631\u06cc)"), y.a.createElement(s["a"], {
                     placeholder: "\u062e\u0627\u0644\u06cc \u0628\u06af\u0630\u0627\u0631\u06cc\u062f \u0627\u06af\u0631 \u062a\u0627\u0646\u0644 \u0646\u062f\u0627\u0631\u06cc\u062f",
                     value: e.tunnel_host || "",
-                    onChange: e=>this.formChange("tunnel_host", e.target.value || null)
+                    /*__INH_FIELD_START__*/"data-node-field":"tunnel_host",/*__INH_FIELD_END__*/onChange: e=>this.formChange("tunnel_host", e.target.value || null)
                 }))), y.a.createElement("div", {
                     className: "row"
                 }, y.a.createElement("div", {
@@ -105365,7 +106161,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("tls", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"tls",/*__INH_FIELD_END__*/onChange: e=>this.formChange("tls", e)
                 }, y.a.createElement(N["a"].Option, {
                     key: 0,
                     value: 0
@@ -105382,7 +106178,7 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "پورت اتصال"), y.a.createElement(s["a"], {
                     placeholder: "\u202b\u067e\u0648\u0631\u062a \u0627\u062a\u0635\u0627\u0644 \u06a9\u0627\u0631\u0628\u0631\u202c",
                     value: e.port,
-                    onChange: e=>{
+                    /*__INH_FIELD_START__*/"data-node-field":"port",/*__INH_FIELD_END__*/onChange: e=>{
                         this.formChange("port", e.target.value)
                     }
                 })), y.a.createElement("div", {
@@ -105390,7 +106186,7 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "پورت سرویس"), y.a.createElement(s["a"], {
                     placeholder: "غیرNATهمان پورت اتصال",
                     value: e.server_port,
-                    onChange: e=>this.formChange("server_port", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"server_port",/*__INH_FIELD_END__*/onChange: e=>this.formChange("server_port", e.target.value)
                 }))), y.a.createElement("div", {
                     className: "row"
                 }, y.a.createElement("div", {
@@ -105404,7 +106200,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("network", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"network",/*__INH_FIELD_END__*/onChange: e=>this.formChange("network", e)
                 }, y.a.createElement(N["a"].Option, {
                     value: "tcp"
                 }, "TCP"), y.a.createElement(N["a"].Option, {
@@ -105430,7 +106226,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("encryption", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"encryption",/*__INH_FIELD_END__*/onChange: e=>this.formChange("encryption", e)
                 }, y.a.createElement(N["a"].Option, {
                     value: null
                 }, "ندارد"), y.a.createElement(N["a"].Option, {
@@ -105445,7 +106241,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("flow", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"flow",/*__INH_FIELD_END__*/onChange: e=>this.formChange("flow", e)
                 }, y.a.createElement(N["a"].Option, {
                     value: null
                 }, "ندارد"),e.network == "tcp" && y.a.createElement(N["a"].Option, {
@@ -105462,7 +106258,7 @@ callTrusttunnel: function(e, t, n) {
                     type: "read"
                 })))), y.a.createElement(N["a"], {
                     value: e.parent_id || "",
-                    onChange: e=>this.formChange("parent_id", e),
+                    /*__INH_FIELD_START__*/"data-node-field":"parent_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("parent_id", e),
                     style: {
                         width: "100%"
                     }
@@ -105484,7 +106280,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("route_id", e.length > 0 ? e : null)
+                    /*__INH_FIELD_START__*/"data-node-field":"route_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("route_id", e.length > 0 ? e : null)
                 }, i.map(e=>{
                     return y.a.createElement(N["a"].Option, {
                         key: e.id
@@ -105508,7 +106304,7 @@ callTrusttunnel: function(e, t, n) {
                     title: this.state.childDrawer.title,
                     visible: this.state.childDrawer.visible,
                     onClose: ()=>this.showChildDrawer()
-                }, this.renderChildDrawer())))
+                }, this.renderChildDrawer())))/*__INH_WRAP_CLOSE_START__*/,"vless",this)/*__INH_WRAP_CLOSE_END__*/
             }
         }
         var G = Object(_["c"])(e=>{
@@ -105580,7 +106376,7 @@ callTrusttunnel: function(e, t, n) {
                 n = this.props.serverManage.servers,
                 r = this.props.serverGroup.groups,
                 i = this.props.serverRoute.routes;
-                return y.a.createElement(y.a.Fragment, null, y.a.cloneElement(this.props.children, {
+                return /*__INH_WRAP_OPEN_START__*/irNativeNodeHelp(y.a,/*__INH_WRAP_OPEN_END__*/y.a.createElement(y.a.Fragment, null, y.a.cloneElement(this.props.children, {
                     onClick: ()=>this.setState({
                         visible: !0
                     })
@@ -105601,7 +106397,7 @@ callTrusttunnel: function(e, t, n) {
                 y.a.createElement("label", null, "نام نود"), y.a.createElement(s["a"], {
                     placeholder: "\u202b\u0646\u0627\u0645 \u0646\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f\u202c",
                     value: e.name,
-                    onChange: e=>this.formChange("name", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"name",/*__INH_FIELD_END__*/onChange: e=>this.formChange("name", e.target.value)
                 })), y.a.createElement("div", {
                     className: "form-group col-4"
                 },
@@ -105609,7 +106405,7 @@ callTrusttunnel: function(e, t, n) {
                     addonAfter: "x",
                     placeholder: "\u202b\u0636\u0631\u06cc\u0628 \u0646\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f\u202c",
                     value: e.rate,
-                    onChange: e=>this.formChange("rate", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"rate",/*__INH_FIELD_END__*/onChange: e=>this.formChange("rate", e.target.value)
                 }))), y.a.createElement("div", {
                     className: "form-group"
                 },
@@ -105620,7 +106416,7 @@ callTrusttunnel: function(e, t, n) {
                         width: "100%"
                     },
                     placeholder: "\u202b\u0628\u0639\u062f \u0627\u0632 \u0648\u0631\u0648\u062f Enter \u0628\u0632\u0646\u06cc\u062f \u062a\u0627 \u0628\u0631\u0686\u0633\u0628 \u0627\u0636\u0627\u0641\u0647 \u0634\u0648\u062f\u202c",
-                    onChange: e=>this.formChange("tags", e.length > 0 ? e: null)
+                    /*__INH_FIELD_START__*/"data-node-field":"tags",/*__INH_FIELD_END__*/onChange: e=>this.formChange("tags", e.length > 0 ? e: null)
                 })), y.a.createElement("div", {
                     className: "form-group"
                 },
@@ -105634,7 +106430,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("group_id", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"group_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("group_id", e)
                 },
                 r.map(e=>{
                     return y.a.createElement(N["a"].Option, {
@@ -105650,14 +106446,14 @@ callTrusttunnel: function(e, t, n) {
                 y.a.createElement("label", null, "آدرس نود"), y.a.createElement(s["a"], {
                     placeholder: "آدرس یا IP",
                     value: e.host,
-                    onChange: e=>this.formChange("host", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"host",/*__INH_FIELD_END__*/onChange: e=>this.formChange("host", e.target.value)
                 }))), y.a.createElement("div", {
                     className: "form-group col-md-12 col-xs-12"
                 },
                 y.a.createElement("label", null, "\u0622\u062f\u0631\u0633 \u062a\u0627\u0646\u0644 (\u0627\u062e\u062a\u06cc\u0627\u0631\u06cc)"), y.a.createElement(s["a"], {
                     placeholder: "\u062e\u0627\u0644\u06cc \u0628\u06af\u0630\u0627\u0631\u06cc\u062f \u0627\u06af\u0631 \u062a\u0627\u0646\u0644 \u0646\u062f\u0627\u0631\u06cc\u062f",
                     value: e.tunnel_host || "",
-                    onChange: e=>this.formChange("tunnel_host", e.target.value || null)
+                    /*__INH_FIELD_START__*/"data-node-field":"tunnel_host",/*__INH_FIELD_END__*/onChange: e=>this.formChange("tunnel_host", e.target.value || null)
                 })), y.a.createElement("div", {
                     className: "row"
                 },
@@ -105667,7 +106463,7 @@ callTrusttunnel: function(e, t, n) {
                 y.a.createElement("label", null, "پورت اتصال"), y.a.createElement(s["a"], {
                     placeholder: "\u202b\u067e\u0648\u0631\u062a \u0627\u062a\u0635\u0627\u0644 \u06a9\u0627\u0631\u0628\u0631\u202c",
                     value: e.port,
-                    onChange: e=>{
+                    /*__INH_FIELD_START__*/"data-node-field":"port",/*__INH_FIELD_END__*/onChange: e=>{
                         this.formChange("port", e.target.value)
                     }
                 })), y.a.createElement("div", {
@@ -105676,7 +106472,7 @@ callTrusttunnel: function(e, t, n) {
                 y.a.createElement("label", null, "پورت سرویس"), y.a.createElement(s["a"], {
                     placeholder: "\u202b\u067e\u0648\u0631\u062a \u0628\u0627\u0632 \u0633\u0631\u0648\u0631\u202c",
                     value: e.server_port,
-                    onChange: e=>{
+                    /*__INH_FIELD_START__*/"data-node-field":"server_port",/*__INH_FIELD_END__*/onChange: e=>{
                         this.formChange("server_port", e.target.value)
                     }
                 })), y.a.createElement("div", {
@@ -105694,7 +106490,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("insecure", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"insecure",/*__INH_FIELD_END__*/onChange: e=>this.formChange("insecure", e)
                 },
                 y.a.createElement(N["a"].Option, {
                     key: 0,
@@ -105714,7 +106510,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("disable_sni", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"disable_sni",/*__INH_FIELD_END__*/onChange: e=>this.formChange("disable_sni", e)
                 },
                 y.a.createElement(N["a"].Option, {
                     key: 0,
@@ -105732,7 +106528,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("udp_relay_mode", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"udp_relay_mode",/*__INH_FIELD_END__*/onChange: e=>this.formChange("udp_relay_mode", e)
                 },
                 y.a.createElement(N["a"].Option, {
                     key: 0,
@@ -105748,7 +106544,7 @@ callTrusttunnel: function(e, t, n) {
                 y.a.createElement("label", null, "\u202b\u0646\u0634\u0627\u0646\u06af\u0631 \u0646\u0627\u0645 \u0633\u0631\u0648\u0631\u202c(sni)"), y.a.createElement(s["a"], {
                     placeholder: "\u202b\u0628\u0631\u0627\u06cc \u062a\u0623\u06cc\u06cc\u062f \u06af\u0648\u0627\u0647\u06cc \u0632\u0645\u0627\u0646\u06cc \u06a9\u0647 \u0622\u062f\u0631\u0633 \u0646\u0648\u062f \u0628\u0627 \u06af\u0648\u0627\u0647\u06cc \u0645\u0637\u0627\u0628\u0642\u062a \u0646\u062f\u0627\u0631\u062f \u0627\u0633\u062a\u0641\u0627\u062f\u0647 \u0645\u06cc\u200c\u0634\u0648\u062f\u202c",
                     value: e.server_name,
-                    onChange: e=>this.formChange("server_name", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"server_name",/*__INH_FIELD_END__*/onChange: e=>this.formChange("server_name", e.target.value)
                 })), y.a.createElement("div", {
                     className: "row"
                 }, y.a.createElement("div", {
@@ -105759,7 +106555,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("congestion_control", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"congestion_control",/*__INH_FIELD_END__*/onChange: e=>this.formChange("congestion_control", e)
                 },
                 y.a.createElement(N["a"].Option, {
                     key: 0,
@@ -105781,7 +106577,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("zero_rtt_handshake", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"zero_rtt_handshake",/*__INH_FIELD_END__*/onChange: e=>this.formChange("zero_rtt_handshake", e)
                 },
                 y.a.createElement(N["a"].Option, {
                     key: 0,
@@ -105804,7 +106600,7 @@ callTrusttunnel: function(e, t, n) {
                 },
                 "پاسخ‌های بیشتر"))), y.a.createElement(N["a"], {
                     value: e.parent_id || "",
-                    onChange: e=>this.formChange("parent_id", e),
+                    /*__INH_FIELD_START__*/"data-node-field":"parent_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("parent_id", e),
                     style: {
                         width: "100%"
                     }
@@ -105828,7 +106624,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("route_id", e.length > 0 ? e: null)
+                    /*__INH_FIELD_START__*/"data-node-field":"route_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("route_id", e.length > 0 ? e: null)
                 },
                 i.map(e=>{
                     return y.a.createElement(N["a"].Option, {
@@ -105849,7 +106645,7 @@ callTrusttunnel: function(e, t, n) {
                     onClick: ()=>this.save(),
                     type: "primary"
                 },
-                "ثبت"))))
+                "ثبت"))))/*__INH_WRAP_CLOSE_START__*/,"tuic",this)/*__INH_WRAP_CLOSE_END__*/
             }
         }
         var mTuic = Object(_["c"])(e=>{
@@ -105932,7 +106728,7 @@ callTrusttunnel: function(e, t, n) {
                     showGutter: !0,
                     highlightActiveLine: !0,
                     value: t || "",
-                    onChange: e=>this.formChange("padding_scheme", e),
+                    /*__INH_FIELD_START__*/"data-node-field":"padding_scheme",/*__INH_FIELD_END__*/onChange: e=>this.formChange("padding_scheme", e),
                     setOptions: {
                         enableBasicAutocompletion: !1,
                         enableLiveAutocompletion: !1,
@@ -105956,7 +106752,7 @@ callTrusttunnel: function(e, t, n) {
                 n = this.props.serverManage.servers,
                 r = this.props.serverGroup.groups,
                 i = this.props.serverRoute.routes;
-                return y.a.createElement(y.a.Fragment, null, y.a.cloneElement(this.props.children, {
+                return /*__INH_WRAP_OPEN_START__*/irNativeNodeHelp(y.a,/*__INH_WRAP_OPEN_END__*/y.a.createElement(y.a.Fragment, null, y.a.cloneElement(this.props.children, {
                     onClick: ()=>this.setState({
                         visible: !0
                     })
@@ -105977,7 +106773,7 @@ callTrusttunnel: function(e, t, n) {
                 y.a.createElement("label", null, "نام نود"), y.a.createElement(s["a"], {
                     placeholder: "\u202b\u0646\u0627\u0645 \u0646\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f\u202c",
                     value: e.name,
-                    onChange: e=>this.formChange("name", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"name",/*__INH_FIELD_END__*/onChange: e=>this.formChange("name", e.target.value)
                 })), y.a.createElement("div", {
                     className: "form-group col-4"
                 },
@@ -105985,7 +106781,7 @@ callTrusttunnel: function(e, t, n) {
                     addonAfter: "x",
                     placeholder: "\u202b\u0636\u0631\u06cc\u0628 \u0646\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f\u202c",
                     value: e.rate,
-                    onChange: e=>this.formChange("rate", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"rate",/*__INH_FIELD_END__*/onChange: e=>this.formChange("rate", e.target.value)
                 }))), y.a.createElement("div", {
                     className: "form-group"
                 },
@@ -105996,7 +106792,7 @@ callTrusttunnel: function(e, t, n) {
                         width: "100%"
                     },
                     placeholder: "\u202b\u0628\u0639\u062f \u0627\u0632 \u0648\u0631\u0648\u062f Enter \u0628\u0632\u0646\u06cc\u062f \u062a\u0627 \u0628\u0631\u0686\u0633\u0628 \u0627\u0636\u0627\u0641\u0647 \u0634\u0648\u062f\u202c",
-                    onChange: e=>this.formChange("tags", e.length > 0 ? e: null)
+                    /*__INH_FIELD_START__*/"data-node-field":"tags",/*__INH_FIELD_END__*/onChange: e=>this.formChange("tags", e.length > 0 ? e: null)
                 })), y.a.createElement("div", {
                     className: "form-group"
                 },
@@ -106010,7 +106806,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("group_id", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"group_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("group_id", e)
                 },
                 r.map(e=>{
                     return y.a.createElement(N["a"].Option, {
@@ -106026,14 +106822,14 @@ callTrusttunnel: function(e, t, n) {
                 y.a.createElement("label", null, "آدرس نود"), y.a.createElement(s["a"], {
                     placeholder: "آدرس یا IP",
                     value: e.host,
-                    onChange: e=>this.formChange("host", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"host",/*__INH_FIELD_END__*/onChange: e=>this.formChange("host", e.target.value)
                 }))), y.a.createElement("div", {
                     className: "form-group col-md-12 col-xs-12"
                 },
                 y.a.createElement("label", null, "\u0622\u062f\u0631\u0633 \u062a\u0627\u0646\u0644 (\u0627\u062e\u062a\u06cc\u0627\u0631\u06cc)"), y.a.createElement(s["a"], {
                     placeholder: "\u062e\u0627\u0644\u06cc \u0628\u06af\u0630\u0627\u0631\u06cc\u062f \u0627\u06af\u0631 \u062a\u0627\u0646\u0644 \u0646\u062f\u0627\u0631\u06cc\u062f",
                     value: e.tunnel_host || "",
-                    onChange: e=>this.formChange("tunnel_host", e.target.value || null)
+                    /*__INH_FIELD_START__*/"data-node-field":"tunnel_host",/*__INH_FIELD_END__*/onChange: e=>this.formChange("tunnel_host", e.target.value || null)
                 })), y.a.createElement("div", {
                     className: "row"
                 },
@@ -106043,7 +106839,7 @@ callTrusttunnel: function(e, t, n) {
                 y.a.createElement("label", null, "پورت اتصال"), y.a.createElement(s["a"], {
                     placeholder: "\u202b\u067e\u0648\u0631\u062a \u0627\u062a\u0635\u0627\u0644 \u06a9\u0627\u0631\u0628\u0631\u202c",
                     value: e.port,
-                    onChange: e=>{
+                    /*__INH_FIELD_START__*/"data-node-field":"port",/*__INH_FIELD_END__*/onChange: e=>{
                         this.formChange("port", e.target.value)
                     }
                 })), y.a.createElement("div", {
@@ -106052,7 +106848,7 @@ callTrusttunnel: function(e, t, n) {
                 y.a.createElement("label", null, "پورت سرویس"), y.a.createElement(s["a"], {
                     placeholder: "\u202b\u067e\u0648\u0631\u062a \u0628\u0627\u0632 \u0633\u0631\u0648\u0631\u202c",
                     value: e.server_port,
-                    onChange: e=>{
+                    /*__INH_FIELD_START__*/"data-node-field":"server_port",/*__INH_FIELD_END__*/onChange: e=>{
                         this.formChange("server_port", e.target.value)
                     }
                 })), y.a.createElement("div", {
@@ -106070,7 +106866,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("insecure", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"insecure",/*__INH_FIELD_END__*/onChange: e=>this.formChange("insecure", e)
                 },
                 y.a.createElement(N["a"].Option, {
                     key: 0,
@@ -106086,8 +106882,8 @@ callTrusttunnel: function(e, t, n) {
                 y.a.createElement("label", null, "\u202b\u0646\u0634\u0627\u0646\u06af\u0631 \u0646\u0627\u0645 \u0633\u0631\u0648\u0631\u202c(sni)"), y.a.createElement(s["a"], {
                     placeholder: "\u202b\u0628\u0631\u0627\u06cc \u062a\u0623\u06cc\u06cc\u062f \u06af\u0648\u0627\u0647\u06cc \u0632\u0645\u0627\u0646\u06cc \u06a9\u0647 \u0622\u062f\u0631\u0633 \u0646\u0648\u062f \u0628\u0627 \u06af\u0648\u0627\u0647\u06cc \u0645\u0637\u0627\u0628\u0642\u062a \u0646\u062f\u0627\u0631\u062f \u0627\u0633\u062a\u0641\u0627\u062f\u0647 \u0645\u06cc\u200c\u0634\u0648\u062f\u202c",
                     value: e.server_name,
-                    onChange: e=>this.formChange("server_name", e.target.value)
-                })), /*anytls-tls-mode*/y.a.createElement("div",{className:"form-group"},y.a.createElement("label",null,"\u062d\u0627\u0644\u062a TLS"),y.a.createElement(N["a"],{value:2===parseInt(e.tls)?2:1,style:{width:"100%"},onChange:v=>this.formChange("tls",v)},y.a.createElement(N["a"].Option,{key:1,value:1},"TLS \u0645\u0639\u0645\u0648\u0644\u06cc"),y.a.createElement(N["a"].Option,{key:2,value:2},"REALITY"))),2===parseInt(e.tls)&&y.a.createElement("div",{className:"form-group"},y.a.createElement("label",null,"\u0633\u0627\u06cc\u062a \u067e\u0648\u0634\u0634 (REALITY)"),y.a.createElement(s["a"],{placeholder:"cdnjs.cloudflare.com",value:(e.tls_settings||{}).server_name||"",onChange:ev=>this.formChange("tls_settings",I()({},e.tls_settings||{},{server_name:ev.target.value}))}),y.a.createElement("label",{style:{marginTop:8}},"\u067e\u0648\u0631\u062a \u0633\u0627\u06cc\u062a \u067e\u0648\u0634\u0634"),y.a.createElement(s["a"],{placeholder:"443",value:(e.tls_settings||{}).server_port||"",onChange:ev=>this.formChange("tls_settings",I()({},e.tls_settings||{},{server_port:ev.target.value}))}),(e.tls_settings||{}).public_key?y.a.createElement("div",{style:{marginTop:8,fontSize:12,wordBreak:"break-all"}},y.a.createElement("div",null,"public_key: "+(e.tls_settings||{}).public_key),y.a.createElement("div",null,"short_id: "+((e.tls_settings||{}).short_id||""))):y.a.createElement("div",{style:{marginTop:8,fontSize:12,opacity:.7}},"\u06a9\u0644\u06cc\u062f\u0647\u0627 \u067e\u0633 \u0627\u0632 \u0630\u062e\u06cc\u0631\u0647 \u0633\u0627\u062e\u062a\u0647 \u0645\u06cc\u200c\u0634\u0648\u0646\u062f")),2!==parseInt(e.tls)&&y.a.createElement("div",{className:"form-group"},y.a.createElement("label",null,"ECH (\u0631\u0645\u0632\u06af\u0630\u0627\u0631\u06cc \u0646\u0627\u0645 \u0633\u0631\u0648\u0631)"),y.a.createElement(N["a"],{value:(e.tls_settings||{}).ech||"",style:{width:"100%"},onChange:v=>this.formChange("tls_settings",I()({},e.tls_settings||{},{ech:v}))},y.a.createElement(N["a"].Option,{key:0,value:""},"\u062e\u0627\u0645\u0648\u0634"),y.a.createElement(N["a"].Option,{key:1,value:"custom"},"\u0633\u0641\u0627\u0631\u0634\u06cc (\u06a9\u0644\u06cc\u062f \u0631\u0648\u06cc \u0647\u0645\u06cc\u0646 \u0646\u0648\u062f)"),y.a.createElement(N["a"].Option,{key:2,value:"cloudflare"},"\u06a9\u0644\u0627\u062f\u0641\u0644\u0631"))),2!==parseInt(e.tls)&&"custom"===((e.tls_settings||{}).ech||"")&&y.a.createElement("div",{className:"form-group"},y.a.createElement("label",null,"\u062f\u0627\u0645\u0646\u0647\u0654 \u067e\u0648\u0634\u0634 ECH"),y.a.createElement(s["a"],{placeholder:"node.example.com",value:(e.tls_settings||{}).ech_server_name||"",onChange:ev=>this.formChange("tls_settings",I()({},e.tls_settings||{},{ech_server_name:ev.target.value}))}),y.a.createElement("div",{style:{marginTop:6,fontSize:12,opacity:.7}},"\u0628\u0627\u06cc\u062f \u062f\u0627\u0645\u0646\u0647\u200c\u0627\u06cc \u0628\u0627\u0634\u062f \u06a9\u0647 \u06af\u0648\u0627\u0647\u06cc \u0622\u0646 \u0631\u0648\u06cc \u0646\u0648\u062f \u0645\u0648\u062c\u0648\u062f \u0627\u0633\u062a"),(e.tls_settings||{}).ech_config?y.a.createElement("div",{style:{marginTop:6,fontSize:12,color:"#52c41a"}},"\u06a9\u0644\u06cc\u062f ECH \u0633\u0627\u062e\u062a\u0647 \u0634\u062f\u0647 \u0627\u0633\u062a"):y.a.createElement("div",{style:{marginTop:6,fontSize:12,opacity:.7}},"\u06a9\u0644\u06cc\u062f\u0647\u0627 \u067e\u0633 \u0627\u0632 \u0630\u062e\u06cc\u0631\u0647 \u0633\u0627\u062e\u062a\u0647 \u0645\u06cc\u200c\u0634\u0648\u0646\u062f")),/*end-anytls-tls-mode*/y.a.createElement("div", {
+                    /*__INH_FIELD_START__*/"data-node-field":"server_name",/*__INH_FIELD_END__*/onChange: e=>this.formChange("server_name", e.target.value)
+                })), /*anytls-tls-mode*/y.a.createElement("div",{className:"form-group"},y.a.createElement("label",null,"\u062d\u0627\u0644\u062a TLS"),y.a.createElement(N["a"],{value:2===parseInt(e.tls)?2:1,style:{width:"100%"},/*__INH_FIELD_START__*/"data-node-field":"tls",/*__INH_FIELD_END__*/onChange:v=>this.formChange("tls",v)},y.a.createElement(N["a"].Option,{key:1,value:1},"TLS \u0645\u0639\u0645\u0648\u0644\u06cc"),y.a.createElement(N["a"].Option,{key:2,value:2},"REALITY"))),2===parseInt(e.tls)&&y.a.createElement("div",{className:"form-group"},y.a.createElement("label",null,"\u0633\u0627\u06cc\u062a \u067e\u0648\u0634\u0634 (REALITY)"),y.a.createElement(s["a"],{placeholder:"cdnjs.cloudflare.com",value:(e.tls_settings||{}).server_name||"",/*__INH_FIELD_START__*/"data-node-field":"tls_settings",/*__INH_FIELD_END__*/onChange:ev=>this.formChange("tls_settings",I()({},e.tls_settings||{},{server_name:ev.target.value}))}),y.a.createElement("label",{style:{marginTop:8}},"\u067e\u0648\u0631\u062a \u0633\u0627\u06cc\u062a \u067e\u0648\u0634\u0634"),y.a.createElement(s["a"],{placeholder:"443",value:(e.tls_settings||{}).server_port||"",/*__INH_FIELD_START__*/"data-node-field":"tls_settings",/*__INH_FIELD_END__*/onChange:ev=>this.formChange("tls_settings",I()({},e.tls_settings||{},{server_port:ev.target.value}))}),(e.tls_settings||{}).public_key?y.a.createElement("div",{style:{marginTop:8,fontSize:12,wordBreak:"break-all"}},y.a.createElement("div",null,"public_key: "+(e.tls_settings||{}).public_key),y.a.createElement("div",null,"short_id: "+((e.tls_settings||{}).short_id||""))):y.a.createElement("div",{style:{marginTop:8,fontSize:12,opacity:.7}},"\u06a9\u0644\u06cc\u062f\u0647\u0627 \u067e\u0633 \u0627\u0632 \u0630\u062e\u06cc\u0631\u0647 \u0633\u0627\u062e\u062a\u0647 \u0645\u06cc\u200c\u0634\u0648\u0646\u062f")),2!==parseInt(e.tls)&&y.a.createElement("div",{className:"form-group"},y.a.createElement("label",null,"ECH (\u0631\u0645\u0632\u06af\u0630\u0627\u0631\u06cc \u0646\u0627\u0645 \u0633\u0631\u0648\u0631)"),y.a.createElement(N["a"],{value:(e.tls_settings||{}).ech||"",style:{width:"100%"},/*__INH_FIELD_START__*/"data-node-field":"tls_settings",/*__INH_FIELD_END__*/onChange:v=>this.formChange("tls_settings",I()({},e.tls_settings||{},{ech:v}))},y.a.createElement(N["a"].Option,{key:0,value:""},"\u062e\u0627\u0645\u0648\u0634"),y.a.createElement(N["a"].Option,{key:1,value:"custom"},"\u0633\u0641\u0627\u0631\u0634\u06cc (\u06a9\u0644\u06cc\u062f \u0631\u0648\u06cc \u0647\u0645\u06cc\u0646 \u0646\u0648\u062f)"),y.a.createElement(N["a"].Option,{key:2,value:"cloudflare"},"\u06a9\u0644\u0627\u062f\u0641\u0644\u0631"))),2!==parseInt(e.tls)&&"custom"===((e.tls_settings||{}).ech||"")&&y.a.createElement("div",{className:"form-group"},y.a.createElement("label",null,"\u062f\u0627\u0645\u0646\u0647\u0654 \u067e\u0648\u0634\u0634 ECH"),y.a.createElement(s["a"],{placeholder:"node.example.com",value:(e.tls_settings||{}).ech_server_name||"",/*__INH_FIELD_START__*/"data-node-field":"tls_settings",/*__INH_FIELD_END__*/onChange:ev=>this.formChange("tls_settings",I()({},e.tls_settings||{},{ech_server_name:ev.target.value}))}),y.a.createElement("div",{style:{marginTop:6,fontSize:12,opacity:.7}},"\u0628\u0627\u06cc\u062f \u062f\u0627\u0645\u0646\u0647\u200c\u0627\u06cc \u0628\u0627\u0634\u062f \u06a9\u0647 \u06af\u0648\u0627\u0647\u06cc \u0622\u0646 \u0631\u0648\u06cc \u0646\u0648\u062f \u0645\u0648\u062c\u0648\u062f \u0627\u0633\u062a"),(e.tls_settings||{}).ech_config?y.a.createElement("div",{style:{marginTop:6,fontSize:12,color:"#52c41a"}},"\u06a9\u0644\u06cc\u062f ECH \u0633\u0627\u062e\u062a\u0647 \u0634\u062f\u0647 \u0627\u0633\u062a"):y.a.createElement("div",{style:{marginTop:6,fontSize:12,opacity:.7}},"\u06a9\u0644\u06cc\u062f\u0647\u0627 \u067e\u0633 \u0627\u0632 \u0630\u062e\u06cc\u0631\u0647 \u0633\u0627\u062e\u062a\u0647 \u0645\u06cc\u200c\u0634\u0648\u0646\u062f")),/*end-anytls-tls-mode*/y.a.createElement("div", {
                     className: "row"
                 }, y.a.createElement("div", {
                     className: "form-group col-md-12 col-xs-12"
@@ -106107,7 +106903,7 @@ callTrusttunnel: function(e, t, n) {
                 },
                 "پاسخ‌های بیشتر"))), y.a.createElement(N["a"], {
                     value: e.parent_id || "",
-                    onChange: e=>this.formChange("parent_id", e),
+                    /*__INH_FIELD_START__*/"data-node-field":"parent_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("parent_id", e),
                     style: {
                         width: "100%"
                     }
@@ -106131,7 +106927,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("route_id", e.length > 0 ? e: null)
+                    /*__INH_FIELD_START__*/"data-node-field":"route_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("route_id", e.length > 0 ? e: null)
                 },
                 i.map(e=>{
                     return y.a.createElement(N["a"].Option, {
@@ -106159,7 +106955,7 @@ callTrusttunnel: function(e, t, n) {
                     title: this.state.childDrawer.title,
                     visible: this.state.childDrawer.visible,
                     onClose: ()=>this.showChildDrawer()
-                }, this.renderChildDrawer())))
+                }, this.renderChildDrawer())))/*__INH_WRAP_CLOSE_START__*/,"anytls",this)/*__INH_WRAP_CLOSE_END__*/
             }
         }
         var mAnyTLS = Object(_["c"])(e=>{
@@ -106212,7 +107008,7 @@ callTrusttunnel: function(e, t, n) {
                 n = this.props.serverManage.servers,
                 r = this.props.serverGroup.groups,
                 i = this.props.serverRoute.routes;
-                return y.a.createElement(y.a.Fragment, null, y.a.cloneElement(this.props.children, {
+                return /*__INH_WRAP_OPEN_START__*/irNativeNodeHelp(y.a,/*__INH_WRAP_OPEN_END__*/y.a.createElement(y.a.Fragment, null, y.a.cloneElement(this.props.children, {
                     onClick: ()=>this.setState({
                         visible: !0
                     })
@@ -106230,14 +107026,14 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "نام نود"), y.a.createElement(s["a"], {
                     placeholder: "نام نود را وارد کنید",
                     value: e.name,
-                    onChange: e=>this.formChange("name", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"name",/*__INH_FIELD_END__*/onChange: e=>this.formChange("name", e.target.value)
                 })), y.a.createElement("div", {
                     className: "form-group col-4"
                 }, y.a.createElement("label", null, "ضریب"), y.a.createElement(s["a"], {
                     addonAfter: "x",
                     placeholder: "ضریب نود",
                     value: e.rate,
-                    onChange: e=>this.formChange("rate", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"rate",/*__INH_FIELD_END__*/onChange: e=>this.formChange("rate", e.target.value)
                 }))), y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "برچسب نود"), y.a.createElement(N["a"], {
@@ -106247,7 +107043,7 @@ callTrusttunnel: function(e, t, n) {
                         width: "100%"
                     },
                     placeholder: "بعد از ورود Enter بزنید",
-                    onChange: e=>this.formChange("tags", e.length > 0 ? e : null)
+                    /*__INH_FIELD_START__*/"data-node-field":"tags",/*__INH_FIELD_END__*/onChange: e=>this.formChange("tags", e.length > 0 ? e : null)
                 })), y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "گروه دسترسی"), y.a.createElement(N["a"], {
@@ -106257,7 +107053,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("group_id", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"group_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("group_id", e)
                 }, r.map(e=>{
                     return y.a.createElement(N["a"].Option, {
                         key: e.id
@@ -106267,7 +107063,7 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "آدرس نود"), y.a.createElement(s["a"], {
                     placeholder: "آدرس یا IP سرور",
                     value: e.host,
-                    onChange: e=>this.formChange("host", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"host",/*__INH_FIELD_END__*/onChange: e=>this.formChange("host", e.target.value)
                 })), y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "دامنه‌ی تونل DNS"), y.a.createElement(N["a"], {
@@ -106277,7 +107073,7 @@ callTrusttunnel: function(e, t, n) {
                         width: "100%"
                     },
                     placeholder: "دامنه‌ی واگذار‌شده (NS) را وارد کنید و Enter بزنید",
-                    onChange: e=>this.formChange("domain", e.length > 0 ? e : null)
+                    /*__INH_FIELD_START__*/"data-node-field":"domain",/*__INH_FIELD_END__*/onChange: e=>this.formChange("domain", e.length > 0 ? e : null)
                 })), y.a.createElement("div", {
                     className: "row"
                 }, y.a.createElement("div", {
@@ -106285,13 +107081,13 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "پورت اتصال"), y.a.createElement(s["a"], {
                     placeholder: "پورت اتصال کاربر",
                     value: e.port,
-                    onChange: e=>this.formChange("port", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"port",/*__INH_FIELD_END__*/onChange: e=>this.formChange("port", e.target.value)
                 })), y.a.createElement("div", {
                     className: "form-group col-md-6 col-xs-12"
                 }, y.a.createElement("label", null, "پورت سرویس (UDP)"), y.a.createElement(s["a"], {
                     placeholder: "پورت UDP شنونده",
                     value: e.server_port,
-                    onChange: e=>this.formChange("server_port", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"server_port",/*__INH_FIELD_END__*/onChange: e=>this.formChange("server_port", e.target.value)
                 }))), y.a.createElement("div", {
                     className: "row"
                 }, y.a.createElement("div", {
@@ -106301,7 +107097,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("encryption_method", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"encryption_method",/*__INH_FIELD_END__*/onChange: e=>this.formChange("encryption_method", e)
                 }, y.a.createElement(N["a"].Option, {
                     key: 0,
                     value: 0
@@ -106325,12 +107121,12 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "کلید رمزنگاری"), y.a.createElement(s["a"], {
                     placeholder: "خالی = تولید خودکار",
                     value: e.encryption_key || "",
-                    onChange: e=>this.formChange("encryption_key", e.target.value || null)
+                    /*__INH_FIELD_START__*/"data-node-field":"encryption_key",/*__INH_FIELD_END__*/onChange: e=>this.formChange("encryption_key", e.target.value || null)
                 }))), y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "نود والد"), y.a.createElement(N["a"], {
                     value: e.parent_id || "",
-                    onChange: e=>this.formChange("parent_id", e),
+                    /*__INH_FIELD_START__*/"data-node-field":"parent_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("parent_id", e),
                     style: {
                         width: "100%"
                     }
@@ -106350,7 +107146,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("route_id", e.length > 0 ? e : null)
+                    /*__INH_FIELD_START__*/"data-node-field":"route_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("route_id", e.length > 0 ? e : null)
                 }, i.map(e=>{
                     return y.a.createElement(N["a"].Option, {
                         key: e.id
@@ -106366,7 +107162,7 @@ callTrusttunnel: function(e, t, n) {
                     loading: t,
                     onClick: ()=>this.save(),
                     type: "primary"
-                }, "ثبت"))))
+                }, "ثبت"))))/*__INH_WRAP_CLOSE_START__*/,"mdns",this)/*__INH_WRAP_CLOSE_END__*/
             }
         }
         var mMdns = Object(_["c"])(e=>{
@@ -106418,7 +107214,7 @@ callTrusttunnel: function(e, t, n) {
                 n = this.props.serverManage.servers,
                 r = this.props.serverGroup.groups,
                 i = this.props.serverRoute.routes;
-                return y.a.createElement(y.a.Fragment, null, y.a.cloneElement(this.props.children, {
+                return /*__INH_WRAP_OPEN_START__*/irNativeNodeHelp(y.a,/*__INH_WRAP_OPEN_END__*/y.a.createElement(y.a.Fragment, null, y.a.cloneElement(this.props.children, {
                     onClick: ()=>this.setState({
                         visible: !0
                     })
@@ -106436,14 +107232,14 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "نام نود"), y.a.createElement(s["a"], {
                     placeholder: "نام نود را وارد کنید",
                     value: e.name,
-                    onChange: e=>this.formChange("name", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"name",/*__INH_FIELD_END__*/onChange: e=>this.formChange("name", e.target.value)
                 })), y.a.createElement("div", {
                     className: "form-group col-4"
                 }, y.a.createElement("label", null, "ضریب"), y.a.createElement(s["a"], {
                     addonAfter: "x",
                     placeholder: "ضریب نود",
                     value: e.rate,
-                    onChange: e=>this.formChange("rate", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"rate",/*__INH_FIELD_END__*/onChange: e=>this.formChange("rate", e.target.value)
                 }))), y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "برچسب نود"), y.a.createElement(N["a"], {
@@ -106453,7 +107249,7 @@ callTrusttunnel: function(e, t, n) {
                         width: "100%"
                     },
                     placeholder: "بعد از ورود Enter بزنید",
-                    onChange: e=>this.formChange("tags", e.length > 0 ? e : null)
+                    /*__INH_FIELD_START__*/"data-node-field":"tags",/*__INH_FIELD_END__*/onChange: e=>this.formChange("tags", e.length > 0 ? e : null)
                 })), y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "گروه دسترسی"), y.a.createElement(N["a"], {
@@ -106463,7 +107259,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("group_id", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"group_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("group_id", e)
                 }, r.map(e=>{
                     return y.a.createElement(N["a"].Option, {
                         key: e.id
@@ -106473,7 +107269,7 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "آدرس نود"), y.a.createElement(s["a"], {
                     placeholder: "آدرس یا IP سرور",
                     value: e.host,
-                    onChange: e=>this.formChange("host", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"host",/*__INH_FIELD_END__*/onChange: e=>this.formChange("host", e.target.value)
                 })), y.a.createElement("div", {
                     className: "row"
                 }, y.a.createElement("div", {
@@ -106481,13 +107277,13 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "پورت اتصال"), y.a.createElement(s["a"], {
                     placeholder: "پورت اتصال کاربر",
                     value: e.port,
-                    onChange: e=>this.formChange("port", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"port",/*__INH_FIELD_END__*/onChange: e=>this.formChange("port", e.target.value)
                 })), y.a.createElement("div", {
                     className: "form-group col-md-6 col-xs-12"
                 }, y.a.createElement("label", null, "پورت سرویس"), y.a.createElement(s["a"], {
                     placeholder: "پورت شنوندهٔ endpoint",
                     value: e.server_port,
-                    onChange: e=>this.formChange("server_port", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"server_port",/*__INH_FIELD_END__*/onChange: e=>this.formChange("server_port", e.target.value)
                 }))), y.a.createElement("div", {
                     className: "row"
                 }, y.a.createElement("div", {
@@ -106495,7 +107291,7 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "دامنهٔ گواهی"), y.a.createElement(s["a"], {
                     placeholder: "خالی = همان آدرس سرور",
                     value: e.hostname || "",
-                    onChange: e=>this.formChange("hostname", e.target.value || null)
+                    /*__INH_FIELD_START__*/"data-node-field":"hostname",/*__INH_FIELD_END__*/onChange: e=>this.formChange("hostname", e.target.value || null)
                 })), y.a.createElement("div", {
                     className: "form-group col-md-6 col-xs-12"
                 }, y.a.createElement("label", null, "نوع گواهی"), y.a.createElement(N["a"], {
@@ -106503,7 +107299,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("cert_type", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"cert_type",/*__INH_FIELD_END__*/onChange: e=>this.formChange("cert_type", e)
                 }, y.a.createElement(N["a"].Option, {
                     key: "self-signed",
                     value: "self-signed"
@@ -106518,7 +107314,7 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "ایمیل Let’s Encrypt"), y.a.createElement(s["a"], {
                     placeholder: "برای ثبت حساب ACME لازم است",
                     value: e.acme_email || "",
-                    onChange: e=>this.formChange("acme_email", e.target.value || null)
+                    /*__INH_FIELD_START__*/"data-node-field":"acme_email",/*__INH_FIELD_END__*/onChange: e=>this.formChange("acme_email", e.target.value || null)
                 })), "provided" === e.cert_type && y.a.createElement("div", {
                     className: "row"
                 }, y.a.createElement("div", {
@@ -106526,13 +107322,13 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "مسیر زنجیرهٔ گواهی"), y.a.createElement(s["a"], {
                     placeholder: "/path/fullchain.pem",
                     value: e.cert_chain_path || "",
-                    onChange: e=>this.formChange("cert_chain_path", e.target.value || null)
+                    /*__INH_FIELD_START__*/"data-node-field":"cert_chain_path",/*__INH_FIELD_END__*/onChange: e=>this.formChange("cert_chain_path", e.target.value || null)
                 })), y.a.createElement("div", {
                     className: "form-group col-md-6 col-xs-12"
                 }, y.a.createElement("label", null, "مسیر کلید"), y.a.createElement(s["a"], {
                     placeholder: "/path/privkey.pem",
                     value: e.cert_key_path || "",
-                    onChange: e=>this.formChange("cert_key_path", e.target.value || null)
+                    /*__INH_FIELD_START__*/"data-node-field":"cert_key_path",/*__INH_FIELD_END__*/onChange: e=>this.formChange("cert_key_path", e.target.value || null)
                 }))), y.a.createElement("div", {
                     className: "row"
                 }, y.a.createElement("div", {
@@ -106540,18 +107336,18 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "SNI سفارشی"), y.a.createElement(s["a"], {
                     placeholder: "خالی = همان دامنهٔ گواهی",
                     value: e.custom_sni || "",
-                    onChange: e=>this.formChange("custom_sni", e.target.value || null)
+                    /*__INH_FIELD_START__*/"data-node-field":"custom_sni",/*__INH_FIELD_END__*/onChange: e=>this.formChange("custom_sni", e.target.value || null)
                 })), y.a.createElement("div", {
                     className: "form-group col-md-6 col-xs-12"
                 }, y.a.createElement("label", null, "پیشوند تصادفی کلاینت"), y.a.createElement(s["a"], {
                     placeholder: "فیلتر اتصال، احراز هویت نیست",
                     value: e.client_random_prefix || "",
-                    onChange: e=>this.formChange("client_random_prefix", e.target.value || null)
-                }))), y.a.createElement("div", {className: "row"}, y.a.createElement("div", {className: "form-group col-md-6 col-xs-12"}, y.a.createElement("label", null, "پروتکل انتقال"), y.a.createElement(N["a"], {value: e.upstream_protocol || "", style: {width: "100%"}, onChange: e=>this.formChange("upstream_protocol", e)}, y.a.createElement(N["a"].Option, {key: "", value: ""}, "طبق کلاینت"), y.a.createElement(N["a"].Option, {key: "http2", value: "http2"}, "HTTP/2"), y.a.createElement(N["a"].Option, {key: "http3", value: "http3"}, "HTTP/3"))), y.a.createElement("div", {className: "form-group col-md-6 col-xs-12"}, y.a.createElement("label", null, "ضد DPI"), y.a.createElement(N["a"], {value: e.anti_dpi ? 1 : 0, style: {width: "100%"}, onChange: e=>this.formChange("anti_dpi", e)}, y.a.createElement(N["a"].Option, {key: 0, value: 0}, "خاموش"), y.a.createElement(N["a"].Option, {key: 1, value: 1}, "روشن")))), y.a.createElement("div", {className: "row"}, y.a.createElement("div", {className: "form-group col-md-6 col-xs-12"}, y.a.createElement("label", null, "پشتیبانی IPv6"), y.a.createElement(N["a"], {value: e.has_ipv6 ? 1 : 0, style: {width: "100%"}, onChange: e=>this.formChange("has_ipv6", e)}, y.a.createElement(N["a"].Option, {key: 0, value: 0}, "خیر"), y.a.createElement(N["a"].Option, {key: 1, value: 1}, "بله"))), y.a.createElement("div", {className: "form-group col-md-6 col-xs-12"}, y.a.createElement("label", null, "DNS رمزگذاری‌شده"), y.a.createElement(s["a"], {placeholder: "با کاما جدا کنید — خالی یعنی بدون DNS اختصاصی", value: e.dns_upstreams || "", onChange: e=>this.formChange("dns_upstreams", e.target.value || null)}))), y.a.createElement("div", {
+                    /*__INH_FIELD_START__*/"data-node-field":"client_random_prefix",/*__INH_FIELD_END__*/onChange: e=>this.formChange("client_random_prefix", e.target.value || null)
+                }))), y.a.createElement("div", {className: "row"}, y.a.createElement("div", {className: "form-group col-md-6 col-xs-12"}, y.a.createElement("label", null, "پروتکل انتقال"), y.a.createElement(N["a"], {value: e.upstream_protocol || "", style: {width: "100%"}, /*__INH_FIELD_START__*/"data-node-field":"upstream_protocol",/*__INH_FIELD_END__*/onChange: e=>this.formChange("upstream_protocol", e)}, y.a.createElement(N["a"].Option, {key: "", value: ""}, "طبق کلاینت"), y.a.createElement(N["a"].Option, {key: "http2", value: "http2"}, "HTTP/2"), y.a.createElement(N["a"].Option, {key: "http3", value: "http3"}, "HTTP/3"))), y.a.createElement("div", {className: "form-group col-md-6 col-xs-12"}, y.a.createElement("label", null, "ضد DPI"), y.a.createElement(N["a"], {value: e.anti_dpi ? 1 : 0, style: {width: "100%"}, /*__INH_FIELD_START__*/"data-node-field":"anti_dpi",/*__INH_FIELD_END__*/onChange: e=>this.formChange("anti_dpi", e)}, y.a.createElement(N["a"].Option, {key: 0, value: 0}, "خاموش"), y.a.createElement(N["a"].Option, {key: 1, value: 1}, "روشن")))), y.a.createElement("div", {className: "row"}, y.a.createElement("div", {className: "form-group col-md-6 col-xs-12"}, y.a.createElement("label", null, "پشتیبانی IPv6"), y.a.createElement(N["a"], {value: e.has_ipv6 ? 1 : 0, style: {width: "100%"}, /*__INH_FIELD_START__*/"data-node-field":"has_ipv6",/*__INH_FIELD_END__*/onChange: e=>this.formChange("has_ipv6", e)}, y.a.createElement(N["a"].Option, {key: 0, value: 0}, "خیر"), y.a.createElement(N["a"].Option, {key: 1, value: 1}, "بله"))), y.a.createElement("div", {className: "form-group col-md-6 col-xs-12"}, y.a.createElement("label", null, "DNS رمزگذاری‌شده"), y.a.createElement(s["a"], {placeholder: "با کاما جدا کنید — خالی یعنی بدون DNS اختصاصی", value: e.dns_upstreams || "", /*__INH_FIELD_START__*/"data-node-field":"dns_upstreams",/*__INH_FIELD_END__*/onChange: e=>this.formChange("dns_upstreams", e.target.value || null)}))), y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "نود والد"), y.a.createElement(N["a"], {
                     value: e.parent_id || "",
-                    onChange: e=>this.formChange("parent_id", e),
+                    /*__INH_FIELD_START__*/"data-node-field":"parent_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("parent_id", e),
                     style: {
                         width: "100%"
                     }
@@ -106571,7 +107367,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("route_id", e.length > 0 ? e : null)
+                    /*__INH_FIELD_START__*/"data-node-field":"route_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("route_id", e.length > 0 ? e : null)
                 }, i.map(e=>{
                     return y.a.createElement(N["a"].Option, {
                         key: e.id
@@ -106587,7 +107383,7 @@ callTrusttunnel: function(e, t, n) {
                     loading: t,
                     onClick: ()=>this.save(),
                     type: "primary"
-                }, "ثبت"))))
+                }, "ثبت"))))/*__INH_WRAP_CLOSE_START__*/,"trusttunnel",this)/*__INH_WRAP_CLOSE_END__*/
             }
         }
         var mTrusttunnel = Object(_["c"])(e=>{
@@ -106720,7 +107516,7 @@ callTrusttunnel: function(e, t, n) {
                         showGutter: !0,
                         highlightActiveLine: !0,
                         value: ns || "",
-                        onChange: e=>this.formChange("network_settings", e),
+                        /*__INH_FIELD_START__*/"data-node-field":"network_settings",/*__INH_FIELD_END__*/onChange: e=>this.formChange("network_settings", e),
                         setOptions: {
                             enableBasicAutocompletion: !1,
                             enableLiveAutocompletion: !1,
@@ -106735,12 +107531,12 @@ callTrusttunnel: function(e, t, n) {
                         settings: ts,
                         tls: e.tls,
                         cert_apply: true,
-                        onChange: e=>this.changeServer("tls_settings", e)
+                        /*__INH_FIELD_START__*/"data-node-field":"tls_settings",/*__INH_FIELD_END__*/onChange: e=>this.changeServer("tls_settings", e)
                     })
                 case "encryption_settings":
                     return y.a.createElement(EncryptionSettings, {
                         settings: enc,
-                        onChange: e=>this.changeServer("encryption_settings", e)
+                        /*__INH_FIELD_START__*/"data-node-field":"encryption_settings",/*__INH_FIELD_END__*/onChange: e=>this.changeServer("encryption_settings", e)
                     })
                 case "padding_scheme":
                     var r = {
@@ -106769,7 +107565,7 @@ callTrusttunnel: function(e, t, n) {
                         showGutter: !0,
                         highlightActiveLine: !0,
                         value: ps || "",
-                        onChange: e=>this.formChange("padding_scheme", e),
+                        /*__INH_FIELD_START__*/"data-node-field":"padding_scheme",/*__INH_FIELD_END__*/onChange: e=>this.formChange("padding_scheme", e),
                         setOptions: {
                             enableBasicAutocompletion: !1,
                             enableLiveAutocompletion: !1,
@@ -106810,7 +107606,7 @@ callTrusttunnel: function(e, t, n) {
                 n = this.props.serverManage.servers,
                 r = this.props.serverGroup.groups,
                 i = this.props.serverRoute.routes;
-                return y.a.createElement(y.a.Fragment, null, y.a.cloneElement(this.props.children, {
+                return /*__INH_WRAP_OPEN_START__*/irNativeNodeHelp(y.a,/*__INH_WRAP_OPEN_END__*/y.a.createElement(y.a.Fragment, null, y.a.cloneElement(this.props.children, {
                     onClick: ()=>this.setState({
                         visible: !0
                     })
@@ -106831,7 +107627,7 @@ callTrusttunnel: function(e, t, n) {
                 y.a.createElement("label", null, "نام نود"), y.a.createElement(s["a"], {
                     placeholder: "\u202b\u0646\u0627\u0645 \u0646\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f\u202c",
                     value: e.name,
-                    onChange: e=>this.formChange("name", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"name",/*__INH_FIELD_END__*/onChange: e=>this.formChange("name", e.target.value)
                 })), y.a.createElement("div", {
                     className: "form-group col-4"
                 },
@@ -106839,7 +107635,7 @@ callTrusttunnel: function(e, t, n) {
                     addonAfter: "x",
                     placeholder: "\u202b\u0636\u0631\u06cc\u0628 \u0646\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f\u202c",
                     value: e.rate,
-                    onChange: e=>this.formChange("rate", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"rate",/*__INH_FIELD_END__*/onChange: e=>this.formChange("rate", e.target.value)
                 }))), y.a.createElement("div", {
                     className: "form-group"
                 },
@@ -106850,7 +107646,7 @@ callTrusttunnel: function(e, t, n) {
                         width: "100%"
                     },
                     placeholder: "\u202b\u0628\u0639\u062f \u0627\u0632 \u0648\u0631\u0648\u062f Enter \u0628\u0632\u0646\u06cc\u062f \u062a\u0627 \u0628\u0631\u0686\u0633\u0628 \u0627\u0636\u0627\u0641\u0647 \u0634\u0648\u062f\u202c",
-                    onChange: e=>this.formChange("tags", e.length > 0 ? e: null)
+                    /*__INH_FIELD_START__*/"data-node-field":"tags",/*__INH_FIELD_END__*/onChange: e=>this.formChange("tags", e.length > 0 ? e: null)
                 })), y.a.createElement("div", {
                     className: "form-group"
                 },
@@ -106864,7 +107660,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("group_id", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"group_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("group_id", e)
                 },
                 r.map(e=>{
                     return y.a.createElement(N["a"].Option, {
@@ -106880,7 +107676,7 @@ callTrusttunnel: function(e, t, n) {
                 y.a.createElement("label", null, "آدرس اتصال"), y.a.createElement(s["a"], {
                     placeholder: "آدرس یا IP",
                     value: e.host,
-                    onChange: e=>this.formChange("host", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"host",/*__INH_FIELD_END__*/onChange: e=>this.formChange("host", e.target.value)
                 })),
                 y.a.createElement("div", {
                     className: "form-group col-md-6 col-xs-12"
@@ -106888,7 +107684,7 @@ callTrusttunnel: function(e, t, n) {
                 y.a.createElement("label", null, "آدرس شنونده"), y.a.createElement(s["a"], {
                     placeholder: "آدرس یا IPپیش‌فرض0.0.0.0",
                     value: e.listen_ip,
-                    onChange: e=>this.formChange("listen_ip", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"listen_ip",/*__INH_FIELD_END__*/onChange: e=>this.formChange("listen_ip", e.target.value)
                 }))), y.a.createElement("div", {
                     className: "row"
                 },
@@ -106898,7 +107694,7 @@ callTrusttunnel: function(e, t, n) {
                 y.a.createElement("label", null, "پورت اتصال"), y.a.createElement(s["a"], {
                     placeholder: "\u202b\u067e\u0648\u0631\u062a \u0627\u062a\u0635\u0627\u0644 \u06a9\u0627\u0631\u0628\u0631\u202c",
                     value: e.port,
-                    onChange: e=>{
+                    /*__INH_FIELD_START__*/"data-node-field":"port",/*__INH_FIELD_END__*/onChange: e=>{
                         this.formChange("port", e.target.value)
                     }
                 })), y.a.createElement("div", {
@@ -106907,7 +107703,7 @@ callTrusttunnel: function(e, t, n) {
                 y.a.createElement("label", null, "پورت سرویس"), y.a.createElement(s["a"], {
                     placeholder: "\u202b\u067e\u0648\u0631\u062a \u0628\u0627\u0632 \u0633\u0631\u0648\u0631\u202c",
                     value: e.server_port,
-                    onChange: e=>{
+                    /*__INH_FIELD_START__*/"data-node-field":"server_port",/*__INH_FIELD_END__*/onChange: e=>{
                         this.formChange("server_port", e.target.value)
                     }
                 }))), y.a.createElement("div", {
@@ -106919,7 +107715,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("protocol", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"protocol",/*__INH_FIELD_END__*/onChange: e=>this.formChange("protocol", e)
                 }, y.a.createElement(N["a"].Option, {
                     key: 0,
                     value: "anytls"
@@ -106951,7 +107747,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("tls", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"tls",/*__INH_FIELD_END__*/onChange: e=>this.formChange("tls", e)
                 }, (e.protocol == "vless" || e.protocol == "vmess") && y.a.createElement(N["a"].Option, {
                     key: 0,
                     value: 0
@@ -106974,7 +107770,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("network", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"network",/*__INH_FIELD_END__*/onChange: e=>this.formChange("network", e)
                 }, y.a.createElement(N["a"].Option, {
                     value: "tcp"
                 }, "TCP"), y.a.createElement(N["a"].Option, {
@@ -106992,7 +107788,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("network", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"network",/*__INH_FIELD_END__*/onChange: e=>this.formChange("network", e)
                 }, y.a.createElement(N["a"].Option, {
                     value: "tcp"
                 }, "TCP"), y.a.createElement(N["a"].Option, {
@@ -107019,7 +107815,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("obfs", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"obfs",/*__INH_FIELD_END__*/onChange: e=>this.formChange("obfs", e)
                 }, y.a.createElement(N["a"].Option, {
                     key: 0,
                     value: null
@@ -107031,21 +107827,21 @@ callTrusttunnel: function(e, t, n) {
                 }, y.a.createElement("label", null, "رمز مبهم‌سازیobfs_password"), y.a.createElement(s["a"], {
                     value: e.obfs_password,
                     placeholder: "\u202b\u062e\u0627\u0644\u06cc \u0628\u06af\u0630\u0627\u0631\u06cc\u062f \u062a\u0627 \u062e\u0648\u062f\u06a9\u0627\u0631 \u062a\u0648\u0644\u06cc\u062f \u0634\u0648\u062f\u202c",
-                    onChange: e=>this.formChange("obfs_password", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"obfs_password",/*__INH_FIELD_END__*/onChange: e=>this.formChange("obfs_password", e.target.value)
                 }))), e.protocol == "hysteria2" && y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "پهنای باند آپلود"), y.a.createElement(s["a"], {
                     addonAfter: "Mbps",
                     placeholder: "\u202b\u067e\u0647\u0646\u0627\u06cc \u0628\u0627\u0646\u062f \u0627\u0631\u0633\u0627\u0644 \u0633\u0631\u0648\u0631\u202c,خالی بگذارید یا مقدار0استفاده ازBBR",
                     value: e.up_mbps,
-                    onChange: e=>this.formChange("up_mbps", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"up_mbps",/*__INH_FIELD_END__*/onChange: e=>this.formChange("up_mbps", e.target.value)
                 })), e.protocol == "hysteria2" && y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "پهنای باند دانلود"), y.a.createElement(s["a"], {
                     addonAfter: "Mbps",
                     placeholder: "\u202b\u067e\u0647\u0646\u0627\u06cc \u0628\u0627\u0646\u062f \u062f\u0631\u06cc\u0627\u0641\u062a \u0633\u0631\u0648\u0631\u202c,خالی بگذارید یا مقدار0استفاده ازBBR",
                     value: e.down_mbps,
-                    onChange: e=>this.formChange("down_mbps", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"down_mbps",/*__INH_FIELD_END__*/onChange: e=>this.formChange("down_mbps", e.target.value)
                 })), e.protocol == "tuic" &&  y.a.createElement("div", {
                     className: "row"
                 }, y.a.createElement("div", {
@@ -107056,7 +107852,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("disable_sni", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"disable_sni",/*__INH_FIELD_END__*/onChange: e=>this.formChange("disable_sni", e)
                 },
                 y.a.createElement(N["a"].Option, {
                     key: 0,
@@ -107074,7 +107870,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("udp_relay_mode", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"udp_relay_mode",/*__INH_FIELD_END__*/onChange: e=>this.formChange("udp_relay_mode", e)
                 },
                 y.a.createElement(N["a"].Option, {
                     key: 0,
@@ -107094,7 +107890,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("congestion_control", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"congestion_control",/*__INH_FIELD_END__*/onChange: e=>this.formChange("congestion_control", e)
                 },
                 y.a.createElement(N["a"].Option, {
                     key: 0,
@@ -107116,7 +107912,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("zero_rtt_handshake", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"zero_rtt_handshake",/*__INH_FIELD_END__*/onChange: e=>this.formChange("zero_rtt_handshake", e)
                 },
                 y.a.createElement(N["a"].Option, {
                     key: 0,
@@ -107130,7 +107926,7 @@ callTrusttunnel: function(e, t, n) {
                     className: "form-group"
                 }, y.a.createElement("label", null, "الگوریتم رمزنگاری"), y.a.createElement(N["a"], {
                     value: e.cipher ?? "aes-128-gcm",
-                    onChange: e=>this.formChange("cipher", e),
+                    /*__INH_FIELD_START__*/"data-node-field":"cipher",/*__INH_FIELD_END__*/onChange: e=>this.formChange("cipher", e),
                     style: {
                         width: "100%"
                     }
@@ -107159,7 +107955,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("encryption", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"encryption",/*__INH_FIELD_END__*/onChange: e=>this.formChange("encryption", e)
                 }, y.a.createElement(N["a"].Option, {
                     value: null
                 }, "ندارد"), y.a.createElement(N["a"].Option, {
@@ -107174,7 +107970,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("flow", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"flow",/*__INH_FIELD_END__*/onChange: e=>this.formChange("flow", e)
                 }, y.a.createElement(N["a"].Option, {
                     value: null
                 }, "ندارد"), y.a.createElement(N["a"].Option, {
@@ -107192,7 +107988,7 @@ callTrusttunnel: function(e, t, n) {
                 },
                 "پاسخ‌های بیشتر"))), y.a.createElement(N["a"], {
                     value: e.parent_id || "",
-                    onChange: e=>this.formChange("parent_id", e),
+                    /*__INH_FIELD_START__*/"data-node-field":"parent_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("parent_id", e),
                     style: {
                         width: "100%"
                     }
@@ -107216,7 +108012,7 @@ callTrusttunnel: function(e, t, n) {
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("route_id", e.length > 0 ? e: null)
+                    /*__INH_FIELD_START__*/"data-node-field":"route_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("route_id", e.length > 0 ? e: null)
                 },
                 i.map(e=>{
                     return y.a.createElement(N["a"].Option, {
@@ -107226,7 +108022,7 @@ callTrusttunnel: function(e, t, n) {
                 }))), y.a.createElement("div", {
                     className: "form-group"
                 }, y.a.createElement("label", null, "\u202b\u062f\u0633\u062a\u0648\u0631 \u0646\u0635\u0628 \u0633\u0631\u06cc\u0639\u202c"), y.a.createElement(s["a"].TextArea, {
-                    value: e.install_command,
+                    /*__INH_FIELD_START__*/"data-node-field":"install_command",/*__INH_FIELD_END__*/value: e.install_command,
                     rows: 4,
                     readOnly: true,
                     style: {
@@ -107254,7 +108050,7 @@ callTrusttunnel: function(e, t, n) {
                     title: this.state.childDrawer.title,
                     visible: this.state.childDrawer.visible,
                     onClose: ()=>this.showChildDrawer()
-                }, this.renderChildDrawer())))
+                }, this.renderChildDrawer())))/*__INH_WRAP_CLOSE_START__*/,"v2node",this)/*__INH_WRAP_CLOSE_END__*/
             }
         }
         var mV2node = Object(_["c"])(e=>{
@@ -107269,173 +108065,312 @@ callTrusttunnel: function(e, t, n) {
                 serverRoute: i
             }
         })(wV2node);
-/*__IMN_FORM_START__*//* Maintained React fragment for the native Irboard node manager.
- * Embed in both existing SPAs with patch_admin_mihomo_nodes.py. */
+/*__IMN_FORM_START__*//* Native React node editor. Uses the same Umi/DVA imports, Ant Design controls,
+ * server drawer and action footer as the existing node editors. */
 var imnProtocolNames = {
-    ssr:'ShadowsocksR', socks5:'SOCKS5', http:'HTTP / HTTPS', snell:'Snell', wireguard:'WireGuard / AmneziaWG',
-    shadowquic:'ShadowQUIC', gostrelay:'GOST Relay', ssh:'SSH', mieru:'Mieru', sudoku:'Sudoku', masque:'MASQUE',
-    openvpn:'OpenVPN', tailscale:'Tailscale / Headscale', zerotier:'ZeroTier', easytier:'EasyTier'
+    ssr: 'ShadowsocksR', socks5: 'SOCKS5', http: 'HTTP / HTTPS', snell: 'Snell',
+    wireguard: 'WireGuard / AmneziaWG', shadowquic: 'ShadowQUIC', gostrelay: 'GOST Relay',
+    ssh: 'SSH', mieru: 'Mieru', sudoku: 'Sudoku', masque: 'MASQUE', openvpn: 'OpenVPN',
+    tailscale: 'Tailscale / Headscale', zerotier: 'ZeroTier', easytier: 'EasyTier'
 };
 function imnToken() { return localStorage.getItem('authorization') || ''; }
 function imnScope() { return location.pathname + '#' + location.hash; }
-function imnText(fa,en) { return /^fa/i.test(localStorage.getItem('umi_locale') || 'fa') ? fa : en; }
+function imnText(fa, en) { return /^fa/i.test(localStorage.getItem('umi_locale') || 'fa') ? fa : en; }
+function imnLocale(value, fallback) {
+    if (typeof value === 'string') return value;
+    return value ? imnText(value.fa || value.en || fallback, value.en || value.fa || fallback) : (fallback || '');
+}
 function imnCopy(value) { return JSON.parse(JSON.stringify(value)); }
-async function imnApi(path,body,session,controller) {
+async function imnApi(path, body, session, controller) {
     var secure = String((window.settings || {}).secure_path || '');
     if (session.token !== imnToken() || session.scope !== imnScope()) throw new Error('stale');
-    if (!/^[A-Za-z0-9_-]+$/.test(secure) || !session.token) throw new Error(imnText('نشست مدیریت معتبر نیست.','An admin session is required.'));
-    var response = await fetch('/api/v1/'+secure+'/server/'+path, {
-        method:body === undefined?'GET':'POST',
-        headers:{authorization:session.token,Accept:'application/json','Content-Type':'application/json'},
-        signal:controller?controller.signal:undefined,body:body === undefined?undefined:JSON.stringify(body)
+    if (!/^[A-Za-z0-9_-]+$/.test(secure) || !session.token) throw new Error(imnText('نشست مدیریت معتبر نیست.', 'An admin session is required.'));
+    var response = await fetch('/api/v1/' + secure + '/server/' + path, {
+        method: body === undefined ? 'GET' : 'POST',
+        headers: {authorization: session.token, Accept: 'application/json', 'Content-Type': 'application/json'},
+        signal: controller ? controller.signal : undefined,
+        body: body === undefined ? undefined : JSON.stringify(body)
     });
     var data = await response.json();
     if (session.token !== imnToken() || session.scope !== imnScope()) throw new Error('stale');
     if (!response.ok) {
-        var message = data.message || imnText('درخواست ناموفق بود.','Request failed.');
-        if (data.errors) message += '\n'+Object.keys(data.errors).map(key=>key+': '+data.errors[key].join(' ')).join('\n');
-        throw new Error(message);
+        var message = data.message || imnText('درخواست ناموفق بود.', 'Request failed.');
+        if (data.errors) message += '\n' + Object.keys(data.errors).map(key => data.errors[key].join(' ')).join('\n');
+        var error = new Error(message); error.fields = data.errors || {}; throw error;
     }
     return data.data;
 }
-async function imnMutation(owner,type,action,body) {
+async function imnMutation(owner, type, action, body) {
     if (owner.imnBusy) return;
-    if (action === 'drop' && !window.confirm(imnText('این نود حذف شود؟','Delete this node?'))) return;
-    var session = {token:imnToken(),scope:imnScope()};owner.imnBusy = true;
-    try { await imnApi(type+'/'+action,body,session);owner.props.dispatch({type:'serverManage/getNodes'}); }
-    catch(error) { if (session.token === imnToken() && session.scope === imnScope() && error.message !== 'stale') c['a'].error(error.message); }
+    if (action === 'drop' && !window.confirm(imnText('این نود حذف شود؟', 'Delete this node?'))) return;
+    var session = {token: imnToken(), scope: imnScope()}; owner.imnBusy = true;
+    try { await imnApi(type + '/' + action, body, session); owner.props.dispatch({type: 'serverManage/getNodes'}); }
+    catch (error) { if (session.token === imnToken() && session.scope === imnScope() && error.message !== 'stale') c['a'].error(error.message); }
     finally { owner.imnBusy = false; }
 }
 function imnAddress(row) {
-    if (row.host) return String(row.host)+(row.port?':'+row.port:row.port_range?':'+row.port_range:'');
+    if (row.host) return String(row.host) + (row.port ? ':' + row.port : row.port_range ? ':' + row.port_range : '');
     return row.network || row.hostname || row.network_name || imnProtocolNames[row.type] || '';
 }
-var imnFieldLabels = {
-    username:['نام کاربری','Username'],password:['رمز عبور','Password'],psk:['کلید PSK','PSK'],cipher:['روش رمزگذاری','Cipher'],
-    protocol:['پروتکل SSR','SSR protocol'],obfs:['استتار','Obfuscation'],version:['نسخه','Version'],udp:['UDP','UDP'],tls:['TLS','TLS'],
-    ip:['آدرس IPv4 کلاینت','Client IPv4 address'],ipv6:['آدرس IPv6 کلاینت','Client IPv6 address'],
-    'private-key':['کلید خصوصی کلاینت','Client private key'],'public-key':['کلید عمومی سرویس','Service public key'],
-    'pre-shared-key':['کلید از پیش مشترک','Pre-shared key'],'private-key-passphrase':['عبارت عبور کلید خصوصی','Private key passphrase'],
-    transport:['انتقال','Transport'],'port-range':['بازهٔ پورت','Port range'],sni:['SNI','SNI'],key:['کلید','Key'],ca:['گواهی CA','CA certificate'],
-    cert:['گواهی کلاینت','Client certificate'],proto:['انتقال OpenVPN','OpenVPN transport'],'auth-key':['کلید ثبت دستگاه','Device registration key'],
-    hostname:['نام دستگاه','Device hostname'],'exit-node':['نود خروجی','Exit node'],'control-url':['نشانی کنترلر','Controller URL'],
-    network:['شناسهٔ شبکه','Network ID'],'network-name':['نام شبکه','Network name'],'network-secret':['رمز شبکه','Network secret'],
-    peers:['همتاها','Peers'],listeners:['نشانی‌های ورودی','Listeners'],'aead-method':['روش AEAD','AEAD method'],
-    'padding-min':['حداقل Padding','Minimum padding'],'padding-max':['حداکثر Padding','Maximum padding'],'table-type':['نوع جدول Sudoku','Sudoku table type']
-};
 class MihomoNodeDrawer extends y.a.Component {
-    constructor(props) { super(props);this.state = {visible:false,busy:false,error:'',server:null,catalog:null,drafts:{}};this.session=null;this.controller=null;this.alive=true; }
-    componentWillUnmount() { this.alive=false;clearInterval(this.timer);if(this.controller)this.controller.abort();this.session=null; }
-    current(session) { return this.alive && this.session === session && session.token === imnToken() && session.scope === imnScope(); }
-    close() { clearInterval(this.timer);if(this.controller)this.controller.abort();this.session=null;if(this.alive)this.setState({visible:false,busy:false,error:'',server:null,catalog:null,drafts:{}}); }
-    async open() {
-        if(this.controller)this.controller.abort();
-        var session={token:imnToken(),scope:imnScope()};this.session=session;this.controller=new AbortController();clearInterval(this.timer);
-        this.timer=setInterval(()=>{if(!this.current(session))this.close();},250);
-        this.setState({visible:true,busy:true,error:'',server:null,catalog:null,drafts:{}});
-        try {
-            var data=await imnApi('protocols',undefined,session,this.controller);if(!this.current(session))return;
-            var type=this.props.record?this.props.record.type:this.props.protocol,definition=data && data.protocols && data.protocols[type];
-            if(!definition)throw new Error(imnText('پروتکل در این نسخه موجود نیست.','This protocol is unavailable.'));
-            var sample=definition.example,server=this.props.record?imnCopy(this.props.record):{
-                type:type,name:'',host:sample.server || '',port:sample.port || null,server_port:sample.port || null,
-                rate:1,group_id:[],route_id:[],tags:[],parent_id:null,show:0,sort:0,managed:false
-            };
-            if(!this.props.record)Object.keys(definition.fields).forEach(column=>{
-                var option=definition.fields[column].option;
-                if(Object.prototype.hasOwnProperty.call(sample,option))server[column]=imnCopy(sample[option]);
-            });
-            server.group_id=(server.group_id || []).map(String);server.route_id=(server.route_id || []).map(String);
-            this.setState({catalog:data.protocols,server:server,drafts:{},busy:false});
-        } catch(error) { if(this.current(session))this.setState({busy:false,error:error.message}); }
+    constructor(props) {
+        super(props);
+        this.state = {visible: false, busy: false, error: '', errors: {}, server: null, catalog: null, drafts: {}, advanced: false};
+        this.session = null; this.controller = null; this.alive = true;
     }
+    componentWillUnmount() {
+        this.alive = false; clearInterval(this.timer);
+        if (this.controller) this.controller.abort(); this.session = null;
+    }
+    current(session) { return this.alive && this.session === session && session.token === imnToken() && session.scope === imnScope(); }
+    close() {
+        clearInterval(this.timer); if (this.controller) this.controller.abort(); this.session = null;
+        if (this.alive) this.setState({visible: false, busy: false, error: '', errors: {}, server: null, catalog: null, drafts: {}, advanced: false});
+    }
+    async open() {
+        if (this.controller) this.controller.abort();
+        var session = {token: imnToken(), scope: imnScope()}; this.session = session; this.controller = new AbortController();
+        clearInterval(this.timer); this.timer = setInterval(() => { if (!this.current(session)) this.close(); }, 250);
+        this.setState({visible: true, busy: true, error: '', errors: {}, server: null, catalog: null, drafts: {}, advanced: false});
+        try {
+            var data = await imnApi('protocols', undefined, session, this.controller); if (!this.current(session)) return;
+            var type = this.props.record ? this.props.record.type : this.props.protocol;
+            var definition = data && data.protocols && data.protocols[type];
+            if (!definition) throw new Error(imnText('پروتکل در این نسخه موجود نیست.', 'This protocol is unavailable.'));
+            // Examples explain a format; only the audited create defaults become values.
+            // Never reapply them when editing an existing row (including false/null).
+            var server = this.props.record ? imnCopy(this.props.record) : Object.assign({
+                name: '', host: '', port: null, server_port: null, rate: 1,
+                group_id: [], route_id: [], tags: [], parent_id: null, show: false, sort: 0, managed: false
+            }, imnCopy((definition.form || {}).defaults || {}));
+            server.type = type;
+            server.group_id = (server.group_id || []).map(String); server.route_id = (server.route_id || []).map(String);
+            var advanced = !!this.props.record && Object.keys(definition.fields).some(column =>
+                definition.fields[column].section === 'advanced' && server[column] != null);
+            this.setState({catalog: data.protocols, server: server, drafts: {}, busy: false, advanced: advanced});
+        } catch (error) { if (this.current(session)) this.setState({busy: false, error: error.message}); }
+    }
+    definition() { return this.state.catalog[this.state.server.type]; }
     source(server) {
-        var source=server,seen=new Set();
-        while(source.parent_id && !seen.has(source.parent_id)){
-            seen.add(source.parent_id);var parent=this.props.nodes.find(row=>row.type===server.type && row.id===source.parent_id);
-            if(!parent)break;source=parent;
+        var source = server, seen = new Set();
+        while (source.parent_id && !seen.has(Number(source.parent_id))) {
+            seen.add(Number(source.parent_id));
+            var parent = this.props.nodes.find(row => row.type === server.type && Number(row.id) === Number(source.parent_id));
+            if (!parent) break; source = parent;
         }
         return source;
     }
-    common(key,value) {
-        var server=Object.assign({},this.state.server);server[key]=value;
-        var source=this.source(server);
-        if(server.type==='mieru' && source.port_range)server.port=null;
-        if(server.type==='wireguard' && source.peers && source.peers.length){server.host=null;server.port=null;}
-        this.setState({server:server,error:''});
-    }
-    json(column,value) {
-        var drafts=Object.assign({},this.state.drafts);drafts[column]=value;this.setState({drafts:drafts});
-        if(!value.trim()){this.common(column,null);return;}
-        try {this.common(column,JSON.parse(value));}catch(_){this.setState({error:imnText('JSON معتبر نیست: ','Invalid JSON: ')+column});}
-    }
-    async save(event) {
-        event.preventDefault();if(this.state.busy || !this.session)return;if(!this.current(this.session)){this.close();return;}
-        var server=this.state.server,definition=this.state.catalog[server.type],payload={},session=this.session;
-        try {Object.keys(this.state.drafts).forEach(key=>{if(this.state.drafts[key].trim())JSON.parse(this.state.drafts[key]);});}
-        catch(_){this.setState({error:imnText('فیلد JSON را اصلاح کنید.','Correct the JSON field before saving.')});return;}
-        ['id','name','host','port','server_port','rate','group_id','route_id','tags','parent_id','show','sort'].concat(Object.keys(definition.fields)).forEach(key=>{if(Object.prototype.hasOwnProperty.call(server,key))payload[key]=server[key];});
-        if(definition.managed_server)payload.managed=!!server.managed;
-        ['port','server_port','parent_id'].forEach(key=>{payload[key]=payload[key]==='' || payload[key]==null?null:Number(payload[key]);});
-        payload.host=payload.host || null;payload.rate=Number(payload.rate);payload.sort=Number(payload.sort);payload.show=!!payload.show;
-        this.setState({busy:true,error:''});
-        try {await imnApi(server.type+'/save',payload,session,this.controller);if(!this.current(session))return;this.props.dispatch({type:'serverManage/getNodes'});this.close();}
-        catch(error){if(this.current(session))this.setState({busy:false,error:error.message});}
-    }
-    input(label,name,value,onChange,options) {
-        var props=Object.assign({name:name,value:value==null?'':value,disabled:this.state.busy,className:'form-control',onChange:event=>onChange(event.target.value)},options || {});
-        return y.a.createElement('div',{className:'form-group'},y.a.createElement('label',null,label),y.a.createElement('input',props));
-    }
-    fields(advanced) {
-        var server=this.state.server,definition=this.state.catalog[server.type],sample=definition.example;
-        return Object.keys(definition.fields).filter(column=>{
-            var essential=Object.prototype.hasOwnProperty.call(sample,definition.fields[column].option) || ['private_key','peers','port_range','cert','key'].indexOf(column)>=0;
-            return advanced?!essential:essential;
-        }).map(column=>{
-            var field=definition.fields[column],option=field.option,value=server[column],labels=imnFieldLabels[option],label=labels?imnText(labels[0],labels[1]):option;
-            if(field.kind==='bool')return y.a.createElement('div',{key:column,className:'form-group'},y.a.createElement('label',null,label),
-                y.a.createElement('select',{name:column,className:'form-control',value:value==null?'':value?'true':'false',disabled:this.state.busy,onChange:event=>this.common(column,event.target.value===''?null:event.target.value==='true')},
-                    y.a.createElement('option',{value:''},imnText('پیش‌فرض پروتکل','Protocol default')),y.a.createElement('option',{value:'true'},imnText('فعال','Enabled')),y.a.createElement('option',{value:'false'},imnText('غیرفعال','Disabled'))));
-            if(field.kind==='json' || ['ca','cert','key','private_key','certificate','tls_auth','tls_crypt','tls_crypt_v2'].indexOf(column)>=0)return y.a.createElement('div',{key:column,className:'form-group'},y.a.createElement('label',null,label+(field.kind==='json'?' (JSON)':'')),
-                y.a.createElement('textarea',{name:column,className:'form-control',dir:'ltr',rows:3,disabled:this.state.busy,value:field.kind==='json'?(Object.prototype.hasOwnProperty.call(this.state.drafts,column)?this.state.drafts[column]:value==null?'':JSON.stringify(value,null,2)):(value || ''),onChange:event=>field.kind==='json'?this.json(column,event.target.value):this.common(column,event.target.value)}));
-            return y.a.createElement('div',{key:column},this.input(label,column,value,change=>this.common(column,field.kind==='int'?(change===''?null:Number(change)):change),{type:field.kind==='int'?'number':/password|secret|psk|auth_key|passphrase/.test(column)?'password':'text',autoComplete:'off',dir:'ltr',min:field.kind==='int'?0:undefined}));
+    common(key, value) {
+        this.setState(state => {
+            var server = Object.assign({}, state.server, {[key]: value}), errors = Object.assign({}, state.errors);
+            delete errors[key];
+            if (server.type === 'mieru' && this.source(server).port_range) server.port = null;
+            return {server: server, errors: errors, error: ''};
         });
     }
+    json(column, text) {
+        this.setState(state => {
+            var server = Object.assign({}, state.server), errors = Object.assign({}, state.errors);
+            try {
+                var parsed = text.trim() ? JSON.parse(text) : null;
+                if (parsed !== null && (typeof parsed !== 'object')) throw new Error('shape');
+                server[column] = parsed; delete errors[column];
+            } catch (_) { errors[column] = imnText('یک آرایه یا شیء JSON معتبر وارد کنید.', 'Enter a valid JSON array or object.'); }
+            return {server: server, errors: errors, drafts: Object.assign({}, state.drafts, {[column]: text}), error: ''};
+        });
+    }
+    guide(key) { return (((this.definition().form || {}).common || {})[key] || this.definition().fields[key] || {}); }
+    label(key) { return imnLocale(this.guide(key).label, key); }
+    field(key, control, options) {
+        var guide = this.guide(key), error = this.state.errors[key], help = imnLocale(guide.help);
+        var id = 'imn-' + this.state.server.type + '-' + key, opts = options || {};
+        var required = opts.required || (guide.required && !this.state.server.parent_id);
+        return y.a.createElement('div', {key: key, className: 'form-group' + (opts.column ? ' ' + opts.column : '') + (error ? ' has-error' : ''), 'data-mihomo-field': key},
+            y.a.createElement('label', {htmlFor: id}, this.label(key), required && y.a.createElement('span', {'aria-hidden': true, style: {color: '#f5222d'}}, ' *')),
+            control,
+            help && y.a.createElement('small', {id: id + '-help', className: 'form-text text-muted', 'data-mihomo-help': key, dir: imnText('rtl', 'ltr'), style: {display: 'block', lineHeight: 1.7, overflowWrap: 'anywhere', textAlign: imnText('right', 'left')}}, help),
+            error && y.a.createElement('div', {id: id + '-error', role: 'alert', 'data-mihomo-error': key, style: {color: '#f5222d', marginTop: 4}}, error));
+    }
+    controlProps(key) {
+        return {id: 'imn-' + this.state.server.type + '-' + key, name: key, disabled: this.state.busy,
+            'aria-label': this.label(key), 'aria-invalid': !!this.state.errors[key],
+            'aria-describedby': 'imn-' + this.state.server.type + '-' + key + '-help' + (this.state.errors[key] ? ' imn-' + this.state.server.type + '-' + key + '-error' : '')};
+    }
+    input(key, options) {
+        var guide = this.guide(key), props = Object.assign({}, this.controlProps(key), {
+            value: this.state.server[key] == null ? '' : this.state.server[key],
+            placeholder: imnLocale(guide.placeholder), autoComplete: 'off', dir: key === 'name' ? imnText('rtl', 'ltr') : 'ltr',
+            onChange: event => this.common(key, event.target.value)
+        }, options || {});
+        return y.a.createElement(s['a'], props);
+    }
+    option(value, label) { return y.a.createElement(N['a'].Option, {key: String(value), value: value, 'data-mihomo-option': String(value)}, label); }
+    select(key, choices, options) {
+        var props = Object.assign({}, this.controlProps(key), {
+            value: this.state.server[key] == null ? '' : this.state.server[key], style: {width: '100%'},
+            placeholder: imnLocale(this.guide(key).placeholder), onChange: value => this.common(key, value)
+        }, options || {});
+        return y.a.createElement(N['a'], props, choices.map(choice => this.option(choice.value, imnLocale(choice.label, String(choice.value)))));
+    }
+    toggle(key) {
+        return y.a.createElement('div', null, y.a.createElement(f['a'], Object.assign({}, this.controlProps(key), {
+            checked: !!this.state.server[key], checkedChildren: imnText('فعال', 'On'), unCheckedChildren: imnText('غیرفعال', 'Off'),
+            onChange: value => this.common(key, value)
+        })));
+    }
+    protocolField(column) {
+        var field = this.definition().fields[column], value = this.state.server[column], control;
+        if (field.kind === 'bool') {
+            control = this.select(column, [
+                {value: '', label: imnText('پیش‌فرض پروتکل', 'Protocol default')},
+                {value: 'true', label: imnText('فعال', 'Enabled')}, {value: 'false', label: imnText('غیرفعال', 'Disabled')}
+            ], {value: value == null ? '' : value ? 'true' : 'false', onChange: choice => this.common(column, choice === '' ? null : choice === 'true')});
+        } else if (field.choices && field.choices.length) {
+            var choices = field.choices.slice();
+            if (!field.required) choices.unshift({value: '', label: imnText('پیش‌فرض پروتکل', 'Protocol default')});
+            if (value != null && value !== '' && !choices.some(choice => choice.value === value)) choices.push({value: value, label: String(value)});
+            control = this.select(column, choices, {onChange: choice => this.common(column, choice === '' ? null : field.kind === 'int' ? Number(choice) : choice)});
+        } else if (field.kind === 'json' || /^(ca|cert|key|private_key|certificate|tls_auth|tls_crypt|tls_crypt_v2)$/.test(column)) {
+            control = y.a.createElement(s['a'].TextArea, Object.assign({}, this.controlProps(column), {
+                rows: 3, dir: 'ltr', autoComplete: 'off', spellCheck: false, placeholder: imnLocale(field.placeholder),
+                value: field.kind === 'json' ? (Object.prototype.hasOwnProperty.call(this.state.drafts, column) ? this.state.drafts[column] : value == null ? '' : JSON.stringify(value, null, 2)) : (value || ''),
+                onChange: event => field.kind === 'json' ? this.json(column, event.target.value) : this.common(column, event.target.value)
+            }));
+        } else {
+            control = this.input(column, {type: field.kind === 'int' ? 'number' : /password|secret|psk|auth_key|passphrase/.test(column) ? 'password' : 'text',
+                dir: 'ltr', min: field.min, max: field.max, step: field.kind === 'int' ? 1 : undefined,
+                onChange: event => this.common(column, field.kind === 'int' ? (event.target.value === '' ? null : Number(event.target.value)) : event.target.value)});
+        }
+        return this.field(column, control, {required: field.required || (field.required_external && !this.state.server.managed)});
+    }
     parents() {
-        var server=this.state.server,rows=this.props.nodes.filter(row=>row.type===server.type),blocked=new Set([server.id]);
-        var changed=true;while(changed){changed=false;rows.forEach(row=>{if(blocked.has(row.parent_id) && !blocked.has(row.id)){blocked.add(row.id);changed=true;}});}
-        return rows.filter(row=>!blocked.has(row.id));
+        var server = this.state.server, rows = this.props.nodes.filter(row => row.type === server.type), blocked = new Set([Number(server.id)]);
+        var changed = true;
+        while (changed) { changed = false; rows.forEach(row => { if (blocked.has(Number(row.parent_id)) && !blocked.has(Number(row.id))) { blocked.add(Number(row.id)); changed = true; } }); }
+        return rows.filter(row => !blocked.has(Number(row.id)));
+    }
+    section(key, title, help, content) {
+        return y.a.createElement('section', {key: key, 'data-mihomo-section': key, style: {marginBottom: 20}},
+            y.a.createElement('h4', {style: {fontSize: 14, marginBottom: 6}}, title),
+            help && y.a.createElement('p', {className: 'text-muted', 'data-mihomo-section-help': key, dir: imnText('rtl', 'ltr'), style: {fontSize: 12, lineHeight: 1.7, marginBottom: 12, textAlign: imnText('right', 'left')}}, help), content);
+    }
+    protocolSection(key) {
+        var definition = this.definition(), columns = Object.keys(definition.fields).filter(column => (definition.fields[column].section || 'advanced') === key);
+        if (!columns.length || this.state.server.parent_id) return null;
+        var section = ((definition.form || {}).sections || []).find(section => section.key === key) || {};
+        return this.section(key, imnLocale(section.label, imnText('تنظیمات پروتکل', 'Protocol settings')), imnLocale(section.help), columns.map(column => this.protocolField(column)));
+    }
+    validate() {
+        var server = this.state.server, definition = this.definition(), effective = this.source(server), errors = {};
+        var required = imnText('این بخش را تکمیل کنید.', 'Complete this field.');
+        if (!String(server.name || '').trim()) errors.name = required;
+        if (!server.group_id || !server.group_id.length) errors.group_id = imnText('حداقل یک گروه دسترسی انتخاب کنید.', 'Select at least one access group.');
+        if (server.rate === '' || server.rate == null || !Number.isFinite(Number(server.rate)) || Number(server.rate) < 0 || Number(server.rate) > 99999999.99) errors.rate = imnText('ضریب باید عددی بین ۰ و ۹۹۹۹۹۹۹۹٫۹۹ باشد.', 'Enter a rate between 0 and 99999999.99.');
+        if (!Number.isInteger(Number(server.sort)) || Number(server.sort) < 0 || Number(server.sort) > 2147483647) errors.sort = imnText('ترتیب باید یک عدد صحیح نامنفی باشد.', 'Enter a non-negative integer sort order.');
+        var overlay = ['tailscale', 'zerotier', 'easytier'].indexOf(server.type) >= 0 || (server.type === 'wireguard' && effective.peers && effective.peers.length);
+        if (!overlay && !String(server.host || '').trim()) errors.host = required;
+        if (!overlay && server.host && /[\s\x00-\x1f/]/.test(server.host)) errors.host = imnText('فقط دامنه یا IP وارد کنید؛ بدون https:// یا مسیر.', 'Enter only a domain or IP, without https:// or a path.');
+        ['port', 'server_port'].forEach(key => {
+            var needed = key === 'port' ? !overlay && !(server.type === 'mieru' && effective.port_range) : !!effective.managed;
+            if ((server[key] == null || server[key] === '') && !needed) return;
+            if (!Number.isInteger(Number(server[key])) || Number(server[key]) < 1 || Number(server[key]) > 65535) errors[key] = imnText('یک پورت معتبر بین ۱ و ۶۵۵۳۵ وارد کنید.', 'Enter a port from 1 to 65535.');
+        });
+        if (!server.parent_id) {
+            Object.keys(definition.fields).forEach(column => {
+                var field = definition.fields[column], value = server[column];
+                if ((field.required || (field.required_external && !server.managed)) && (value == null || value === '')) errors[column] = required;
+                if (field.kind === 'int' && value != null && value !== '' && (!Number.isInteger(Number(value)) || (field.min != null && value < field.min) || (field.max != null && value > field.max))) errors[column] = imnText('یک عدد صحیح در بازهٔ مشخص‌شده وارد کنید.', 'Enter an integer within the stated range.');
+                if (field.managed_credential && server.managed && value) {
+                    if ((!String(value).includes('{{uuid}}') && !String(value).includes('{{user_id}}')) || String(value).replace(/\{\{uuid\}\}|\{\{user_id\}\}/g, '').includes('{{')) errors[column] = imnText('برای کاربران مستقل خالی بگذارید یا از {{uuid}} استفاده کنید.', 'Leave blank for individual users or use {{uuid}}.');
+                }
+                if (Object.prototype.hasOwnProperty.call(this.state.drafts, column) && this.state.drafts[column].trim()) {
+                    try { var parsed = JSON.parse(this.state.drafts[column]); if (!parsed || typeof parsed !== 'object') throw new Error('shape'); }
+                    catch (_) { errors[column] = imnText('یک آرایه یا شیء JSON معتبر وارد کنید.', 'Enter a valid JSON array or object.'); }
+                }
+            });
+            if (server.managed && server.type === 'mieru' && server.port_range) errors.port_range = imnText('برای نود مدیریت‌شده، بازه را خالی و یک پورت انتخاب کنید.', 'Managed nodes need one port; clear the port range.');
+            if (server.type === 'ssh' && !server.password && !server.private_key) errors.password = imnText('رمز عبور یا کلید خصوصی SSH را وارد کنید.', 'Enter the SSH password or private key.');
+            if (['wireguard', 'masque'].indexOf(server.type) >= 0 && server.network !== 'h3-l4proxy' && !server.ip && !server.ipv6) errors.ip = imnText('IPv4 یا IPv6 تخصیص‌یافتهٔ کلاینت را وارد کنید.', 'Enter the client IPv4 or IPv6 address assigned by the service.');
+            if (server.type === 'openvpn' && !(server.username && server.password) && !(server.cert && server.key)) errors.username = imnText('نام کاربری و رمز، یا گواهی و کلید کلاینت را تکمیل کنید.', 'Provide username/password or a client certificate/key pair.');
+        }
+        return errors;
+    }
+    showErrors(errors, message) {
+        var fields = this.definition().fields, first = Object.keys(errors)[0];
+        this.setState({errors: errors, error: message || imnText('بخش‌های مشخص‌شده را اصلاح کنید.', 'Correct the highlighted fields.'), advanced: this.state.advanced || Object.keys(errors).some(key => fields[key] && fields[key].section === 'advanced')}, () => {
+            var element = first && document.getElementById('imn-' + this.state.server.type + '-' + first);
+            if (element) { element.scrollIntoView({block: 'center'}); element.focus(); }
+        });
+    }
+    async save(event) {
+        if (event) event.preventDefault();
+        if (this.state.busy || !this.session) return;
+        if (!this.current(this.session)) { this.close(); return; }
+        var errors = this.validate(); if (Object.keys(errors).length) { this.showErrors(errors); return; }
+        var server = this.state.server, definition = this.definition(), payload = {}, session = this.session;
+        ['id', 'name', 'host', 'port', 'server_port', 'rate', 'group_id', 'route_id', 'tags', 'parent_id', 'show', 'sort'].concat(Object.keys(definition.fields)).forEach(key => {
+            if (Object.prototype.hasOwnProperty.call(server, key)) payload[key] = server[key];
+        });
+        if (definition.managed_server) payload.managed = !!server.managed;
+        ['port', 'server_port', 'parent_id'].forEach(key => { payload[key] = payload[key] === '' || payload[key] == null ? null : Number(payload[key]); });
+        payload.host = payload.host || null; payload.rate = Number(payload.rate); payload.sort = Number(payload.sort); payload.show = !!payload.show;
+        this.setState({busy: true, error: '', errors: {}});
+        try {
+            await imnApi(server.type + '/save', payload, session, this.controller); if (!this.current(session)) return;
+            this.props.dispatch({type: 'serverManage/getNodes'}); this.close();
+        } catch (error) {
+            if (!this.current(session)) return;
+            var mapped = {};
+            Object.keys(error.fields || {}).forEach(key => {
+                var base = key.split('.')[0], column = base === 'server' ? 'host' : Object.keys(definition.fields).find(column => definition.fields[column].option === base) || base;
+                mapped[column] = error.fields[key].join(' ');
+            });
+            this.setState({busy: false}); this.showErrors(mapped, error.message);
+        }
     }
     body() {
-        var server=this.state.server;if(!server)return null;
-        var definition=this.state.catalog[server.type],source=this.source(server),overlay=['tailscale','zerotier','easytier'].indexOf(server.type)>=0 || (server.type==='wireguard' && source.peers && source.peers.length);
-        return y.a.createElement('form',{'data-mihomo-form':server.type,onSubmit:event=>this.save(event)},
-            y.a.createElement('div',{className:'row'},y.a.createElement('div',{className:'col-md-8'},this.input(imnText('نام نود','Node name'),'name',server.name,v=>this.common('name',v),{required:true,maxLength:255})),
-                y.a.createElement('div',{className:'col-md-4'},this.input(imnText('ضریب','Rate'),'rate',server.rate,v=>this.common('rate',v),{type:'number',min:0,step:'0.01',required:true}))),
-            y.a.createElement('div',{className:'form-group'},y.a.createElement('label',null,imnText('گروه دسترسی','Access groups')),
-                y.a.createElement(N['a'],{mode:'multiple',value:server.group_id,style:{width:'100%'},disabled:this.state.busy,'data-mihomo-groups':true,onChange:values=>this.common('group_id',values)},this.props.groups.map(group=>y.a.createElement(N['a'].Option,{key:String(group.id),value:String(group.id)},group.name)))),
-            y.a.createElement('div',{className:'form-group'},y.a.createElement('label',null,imnText('نود والد','Parent node')),
-                y.a.createElement('select',{name:'parent_id',className:'form-control',value:server.parent_id || '',disabled:this.state.busy,onChange:event=>this.common('parent_id',event.target.value?Number(event.target.value):null)},
-                    y.a.createElement('option',{value:''},imnText('بدون والد','No parent')),this.parents().map(row=>y.a.createElement('option',{key:row.id,value:row.id},row.name+' (#'+row.id+')')))),
-            y.a.createElement('div',{className:'form-group'},y.a.createElement('label',null,imnText('برچسب نود','Tags')),y.a.createElement(N['a'],{mode:'tags',value:server.tags || [],style:{width:'100%'},disabled:this.state.busy,onChange:values=>this.common('tags',values)})),
-            !overlay && y.a.createElement('div',{className:'row'},y.a.createElement('div',{className:'col-md-6'},this.input(imnText('آدرس اتصال','Connection address'),'host',server.host,v=>this.common('host',v),{required:server.type!=='wireguard',dir:'ltr'})),
-                y.a.createElement('div',{className:'col-md-3'},this.input(imnText('پورت اتصال','Connection port'),'port',server.port,v=>this.common('port',v),{type:'number',min:1,max:65535,disabled:this.state.busy || !!source.port_range})),
-                y.a.createElement('div',{className:'col-md-3'},this.input(imnText('پورت سرویس','Service port'),'server_port',server.server_port,v=>this.common('server_port',v),{type:'number',min:1,max:65535}))),
-            y.a.createElement('div',{className:'form-group'},y.a.createElement('label',null,imnText('مسیریابی','Routes')),y.a.createElement(N['a'],{mode:'multiple',value:server.route_id || [],style:{width:'100%'},disabled:this.state.busy,onChange:values=>this.common('route_id',values)},this.props.routes.map(route=>y.a.createElement(N['a'].Option,{key:String(route.id),value:String(route.id)},route.remarks || route.name || String(route.id))))),
-            !server.parent_id && definition.managed_server && y.a.createElement('div',{className:'form-group'},y.a.createElement('label',null,y.a.createElement('input',{name:'managed',type:'checkbox',checked:!!server.managed,disabled:this.state.busy,onChange:event=>this.common('managed',event.target.checked)}),' ',imnText('مدیریت کاربران با V2bX / هستهٔ Mihomo','Manage users with V2bX / Mihomo')),server.managed && y.a.createElement('p',{className:'text-muted'},imnText('نام کاربری و رمز عبور را خالی بگذارید یا از {{uuid}} استفاده کنید. گواهی TLS و تنظیمات JLS در سرور V2bX تعیین می‌شوند.','Leave credentials blank or use {{uuid}}. Configure server TLS certificates and JLS on V2bX.'))),
-            server.parent_id?y.a.createElement('p',{className:'text-muted'},imnText('تنظیمات پروتکل از نود والد گرفته می‌شود.','Protocol settings are inherited from the parent node.')):
-                y.a.createElement(y.a.Fragment,null,y.a.createElement('h4',null,imnProtocolNames[server.type]),this.fields(false),y.a.createElement('details',null,y.a.createElement('summary',null,imnText('تنظیمات پیشرفتهٔ پروتکل','Advanced protocol settings')),this.fields(true))),
-            this.input(imnText('ترتیب','Sort order'),'sort',server.sort,v=>this.common('sort',v),{type:'number',min:0,max:2147483647}),
-            y.a.createElement('div',{className:'form-group'},y.a.createElement('label',null,y.a.createElement('input',{name:'show',type:'checkbox',checked:!!server.show,disabled:this.state.busy,onChange:event=>this.common('show',event.target.checked)}),' ',imnText('نمایش در اشتراک','Visible in subscriptions'))),
-            y.a.createElement('button',{type:'submit','data-mihomo-save':true,className:'btn btn-primary',disabled:this.state.busy},imnText('ثبت','Save')));
+        var server = this.state.server; if (!server) return null;
+        var definition = this.definition(), form = definition.form || {}, source = this.source(server);
+        var overlay = ['tailscale', 'zerotier', 'easytier'].indexOf(server.type) >= 0 || (server.type === 'wireguard' && source.peers && source.peers.length);
+        var advanced = Object.keys(definition.fields).some(column => (definition.fields[column].section || 'advanced') === 'advanced');
+        return y.a.createElement('form', {'data-mihomo-form': server.type, onSubmit: event => this.save(event), noValidate: true, style: {overflowWrap: 'anywhere'}},
+            y.a.createElement('p', {className: 'text-muted', 'data-mihomo-description': true, dir: imnText('rtl', 'ltr'), style: {lineHeight: 1.8, textAlign: imnText('right', 'left')}}, imnLocale(form.description)),
+            this.section('general', imnText('مشخصات و دسترسی', 'Node details and access'), imnText('نام قابل‌نمایش و گروه کاربرانی را تعیین کنید که اجازهٔ استفاده از این نود دارند.', 'Choose the display name and the subscriber groups allowed to use this node.'), [
+                y.a.createElement('div', {className: 'row', key: 'name-rate'}, this.field('name', this.input('name', {maxLength: 255}), {required: true, column: 'col-8'}), this.field('rate', this.input('rate', {type: 'number', min: 0, max: 99999999.99, step: '0.01', addonAfter: 'x', dir: 'ltr'}), {required: true, column: 'col-4'})),
+                this.field('group_id', this.select('group_id', this.props.groups.map(group => ({value: String(group.id), label: group.name})), {mode: 'multiple', 'data-mihomo-groups': true}), {required: true}),
+                this.field('tags', this.select('tags', [], {mode: 'tags', tokenSeparators: [',']}))
+            ]),
+            this.section('endpoint', imnText('اتصال و مدیریت نود', 'Connection and node management'), imnLocale(form.capability), [
+                this.field('parent_id', this.select('parent_id', [{value: '', label: imnText('بدون والد', 'No parent')}].concat(this.parents().map(row => ({value: row.id, label: row.name + ' (#' + row.id + ')'}))), {value: server.parent_id || '', onChange: value => this.common('parent_id', value === '' ? null : Number(value))})),
+                !server.parent_id && definition.managed_server && this.field('managed', this.toggle('managed')),
+                !overlay && this.field('host', this.input('host', {dir: 'ltr'}), {required: true}),
+                !overlay && y.a.createElement('div', {className: 'row', key: 'ports'},
+                    this.field('port', this.input('port', {type: 'number', min: 1, max: 65535, dir: 'ltr', disabled: this.state.busy || !!source.port_range}), {column: 'col-6', required: !source.port_range}),
+                    this.field('server_port', this.input('server_port', {type: 'number', min: 1, max: 65535, dir: 'ltr'}), {column: 'col-6', required: !!source.managed})),
+                server.parent_id && y.a.createElement('p', {key: 'inherited', className: 'text-muted', 'data-mihomo-inherited': true}, imnText('تنظیمات پروتکل و حالت مدیریت از نود والد گرفته می‌شود: ', 'Protocol settings and management mode are inherited from: ') + (source.name || '') + ' (#' + source.id + ')')
+            ]),
+            this.protocolSection('connection'), this.protocolSection('credentials'), this.protocolSection('security'),
+            !server.parent_id && advanced && y.a.createElement(y.a.Fragment, null,
+                y.a.createElement(l['a'], {'data-mihomo-advanced': true, htmlType: 'button', 'aria-expanded': this.state.advanced, style: {marginBottom: 16}, onClick: () => this.setState({advanced: !this.state.advanced})}, imnText('تنظیمات پیشرفتهٔ پروتکل', 'Advanced protocol settings'), y.a.createElement(m['a'], {type: this.state.advanced ? 'up' : 'down'})),
+                this.state.advanced && this.protocolSection('advanced')),
+            this.section('publication', imnText('مسیریابی و نمایش', 'Routing and visibility'), imnText('مسیریابی، ترتیب فهرست و نمایش در اشتراک را پس از تکمیل تنظیمات بررسی کنید.', 'Review routing, list order and subscription visibility after configuring the connection.'), [
+                this.field('route_id', this.select('route_id', this.props.routes.map(route => ({value: String(route.id), label: route.remarks || route.name || String(route.id)})), {mode: 'multiple'})),
+                this.field('sort', this.input('sort', {type: 'number', min: 0, max: 2147483647, dir: 'ltr'})), this.field('show', this.toggle('show'))
+            ]),
+            y.a.createElement('div', {className: 'v2board-drawer-action'},
+                y.a.createElement(l['a'], {htmlType: 'button', disabled: this.state.busy, style: {marginRight: 8}, onClick: () => this.close()}, imnText('انصراف', 'Cancel')),
+                y.a.createElement(l['a'], {htmlType: 'submit', type: 'primary', loading: this.state.busy, disabled: this.state.busy, 'data-mihomo-save': true}, imnText('ثبت', 'Save'))));
     }
     render() {
-        return y.a.createElement(y.a.Fragment,null,y.a.cloneElement(this.props.children,{onClick:event=>{event.preventDefault();this.open();}}),
-            y.a.createElement(R['a'],{id:'mihomo-node-drawer',visible:this.state.visible,width:'80%',maskClosable:true,onClose:()=>this.close(),title:(this.props.record?imnText('ویرایش نود','Edit node'):imnText('نود جدید','New node'))+' — '+(imnProtocolNames[this.props.protocol || (this.props.record || {}).type] || ''),destroyOnClose:true},
-                this.state.busy && y.a.createElement('p',{role:'status'},imnText('در حال انجام…','Working…')),this.state.error && y.a.createElement('p',{role:'alert',className:'alert alert-danger',style:{whiteSpace:'pre-wrap'}},this.state.error),this.body()));
+        return y.a.createElement(y.a.Fragment, null,
+            y.a.cloneElement(this.props.children, {onClick: event => { event.preventDefault(); this.open(); }}),
+            y.a.createElement(R['a'], {id: 'server', visible: this.state.visible, width: window.innerWidth <= 768 ? '100%' : '80%', maskClosable: !this.state.busy,
+                onClose: () => this.close(), title: (this.props.record ? imnText('ویرایش نود', 'Edit node') : imnText('نود جدید', 'New node')) + ' — ' + (imnProtocolNames[this.props.protocol || (this.props.record || {}).type] || ''), destroyOnClose: true},
+                this.state.busy && !this.state.server && y.a.createElement('p', {role: 'status'}, imnText('در حال دریافت تنظیمات…', 'Loading settings…')),
+                this.state.error && y.a.createElement('div', {role: 'alert', className: 'alert alert-danger', style: {whiteSpace: 'pre-wrap'}}, this.state.error), this.body()));
     }
 }
-var mMihomo = Object(_['c'])(state=>({groups:state.serverGroup.groups || [],routes:state.serverRoute.routes || [],nodes:state.serverManage.servers || []}))(MihomoNodeDrawer);
+var mMihomo = Object(_['c'])(state => ({groups: state.serverGroup.groups || [], routes: state.serverRoute.routes || [], nodes: state.serverManage.servers || []}))(MihomoNodeDrawer);
 /*__IMN_FORM_END__*/        class q extends y.a.Component {
             constructor(e) {
                 super(e),
@@ -114300,7 +115235,8 @@ var mMihomo = Object(_['c'])(state=>({groups:state.serverGroup.groups || [],rout
         }
     },
     ykC2: function(e, t, n) {
-        "use strict";
+        "use strict";/*__INH_REQUIRE_START__*/
+        var irNativeNodeHelp = n("irboard/native-node-help").default;/*__INH_REQUIRE_END__*/
         n("bbsP");
         var r = n("/wGt")
           , i = (n("+L6B"),
@@ -114410,7 +115346,7 @@ var mMihomo = Object(_['c'])(state=>({groups:state.serverGroup.groups || [],rout
                         showGutter: !0,
                         highlightActiveLine: !0,
                         value: t || "",
-                        onChange: e=>this.formChange("network_settings", e),
+                        /*__INH_FIELD_START__*/"data-node-field":"network_settings",/*__INH_FIELD_END__*/onChange: e=>this.formChange("network_settings", e),
                         setOptions: {
                             enableBasicAutocompletion: !1,
                             enableLiveAutocompletion: !1,
@@ -114435,7 +115371,7 @@ var mMihomo = Object(_['c'])(state=>({groups:state.serverGroup.groups || [],rout
                   , n = this.props.serverManage.servers
                   , c = this.props.serverGroup.groups
                   , u = this.props.serverRoute.routes;
-                return f.a.createElement(f.a.Fragment, null, f.a.cloneElement(this.props.children, {
+                return /*__INH_WRAP_OPEN_START__*/irNativeNodeHelp(f.a,/*__INH_WRAP_OPEN_END__*/f.a.createElement(f.a.Fragment, null, f.a.cloneElement(this.props.children, {
                     onClick: ()=>this.onShow()
                 }), f.a.createElement(r["a"], {
                     id: "server",
@@ -114451,14 +115387,14 @@ var mMihomo = Object(_['c'])(state=>({groups:state.serverGroup.groups || [],rout
                 }, f.a.createElement("label", null, "نام نود"), f.a.createElement(l["a"], {
                     placeholder: "\u202b\u0646\u0627\u0645 \u0646\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f\u202c",
                     value: e.name,
-                    onChange: e=>this.formChange("name", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"name",/*__INH_FIELD_END__*/onChange: e=>this.formChange("name", e.target.value)
                 })), f.a.createElement("div", {
                     className: "form-group col-4"
                 }, f.a.createElement("label", null, "ضریب"), f.a.createElement(l["a"], {
                     addonAfter: "x",
                     placeholder: "\u202b\u0636\u0631\u06cc\u0628 \u0646\u0648\u062f \u0631\u0627 \u0648\u0627\u0631\u062f \u06a9\u0646\u06cc\u062f\u202c",
                     value: e.rate,
-                    onChange: e=>this.formChange("rate", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"rate",/*__INH_FIELD_END__*/onChange: e=>this.formChange("rate", e.target.value)
                 }))), f.a.createElement("div", {
                     className: "form-group"
                 }, f.a.createElement("label", null, "برچسب نود"), f.a.createElement(s["a"], {
@@ -114468,7 +115404,7 @@ var mMihomo = Object(_['c'])(state=>({groups:state.serverGroup.groups || [],rout
                         width: "100%"
                     },
                     placeholder: "\u202b\u0628\u0639\u062f \u0627\u0632 \u0648\u0631\u0648\u062f Enter \u0628\u0632\u0646\u06cc\u062f \u062a\u0627 \u0628\u0631\u0686\u0633\u0628 \u0627\u0636\u0627\u0641\u0647 \u0634\u0648\u062f\u202c",
-                    onChange: e=>this.formChange("tags", e.length > 0 ? e : null)
+                    /*__INH_FIELD_START__*/"data-node-field":"tags",/*__INH_FIELD_END__*/onChange: e=>this.formChange("tags", e.length > 0 ? e : null)
                 })), f.a.createElement("div", {
                     className: "form-group"
                 }, f.a.createElement("label", null, "گروه دسترسی ", f.a.createElement(p["a"], null, f.a.createElement("a", {
@@ -114480,7 +115416,7 @@ var mMihomo = Object(_['c'])(state=>({groups:state.serverGroup.groups || [],rout
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("group_id", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"group_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("group_id", e)
                 }, c.map(e=>{
                     return f.a.createElement(s["a"].Option, {
                         key: e.id
@@ -114493,7 +115429,7 @@ var mMihomo = Object(_['c'])(state=>({groups:state.serverGroup.groups || [],rout
                 }, f.a.createElement("label", null, "آدرس نود"), f.a.createElement(l["a"], {
                     placeholder: "آدرس یا IP",
                     value: e.host,
-                    onChange: e=>this.formChange("host", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"host",/*__INH_FIELD_END__*/onChange: e=>this.formChange("host", e.target.value)
                 }))), f.a.createElement("div", {
                     className: "row"
                 }, f.a.createElement("div", {
@@ -114501,7 +115437,7 @@ var mMihomo = Object(_['c'])(state=>({groups:state.serverGroup.groups || [],rout
                 }, f.a.createElement("label", null, "پورت اتصال"), f.a.createElement(l["a"], {
                     placeholder: "\u202b\u067e\u0648\u0631\u062a \u0627\u062a\u0635\u0627\u0644 \u06a9\u0627\u0631\u0628\u0631\u202c",
                     value: e.port,
-                    onChange: e=>{
+                    /*__INH_FIELD_START__*/"data-node-field":"port",/*__INH_FIELD_END__*/onChange: e=>{
                         this.formChange("port", e.target.value)
                     }
                 })), f.a.createElement("div", {
@@ -114509,7 +115445,7 @@ var mMihomo = Object(_['c'])(state=>({groups:state.serverGroup.groups || [],rout
                 }, f.a.createElement("label", null, "پورت سرویس"), f.a.createElement(l["a"], {
                     placeholder: "\u202b\u067e\u0648\u0631\u062a \u0628\u0627\u0632 \u0633\u0631\u0648\u0631\u202c",
                     value: e.server_port,
-                    onChange: e=>{
+                    /*__INH_FIELD_START__*/"data-node-field":"server_port",/*__INH_FIELD_END__*/onChange: e=>{
                         this.formChange("server_port", e.target.value)
                     }
                 })), f.a.createElement("div", {
@@ -114525,7 +115461,7 @@ var mMihomo = Object(_['c'])(state=>({groups:state.serverGroup.groups || [],rout
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("allow_insecure", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"allow_insecure",/*__INH_FIELD_END__*/onChange: e=>this.formChange("allow_insecure", e)
                 }, f.a.createElement(s["a"].Option, {
                     key: 0,
                     value: 0
@@ -114537,7 +115473,7 @@ var mMihomo = Object(_['c'])(state=>({groups:state.serverGroup.groups || [],rout
                 }, f.a.createElement("label", null, "\u202b\u0646\u0634\u0627\u0646\u06af\u0631 \u0646\u0627\u0645 \u0633\u0631\u0648\u0631\u202c(sni)"), f.a.createElement(l["a"], {
                     placeholder: "\u202b\u0628\u0631\u0627\u06cc \u062a\u0623\u06cc\u06cc\u062f \u06af\u0648\u0627\u0647\u06cc \u0632\u0645\u0627\u0646\u06cc \u06a9\u0647 \u0622\u062f\u0631\u0633 \u0646\u0648\u062f \u0628\u0627 \u06af\u0648\u0627\u0647\u06cc \u0645\u0637\u0627\u0628\u0642\u062a \u0646\u062f\u0627\u0631\u062f \u0627\u0633\u062a\u0641\u0627\u062f\u0647 \u0645\u06cc\u200c\u0634\u0648\u062f\u202c",
                     value: e.server_name,
-                    onChange: e=>this.formChange("server_name", e.target.value)
+                    /*__INH_FIELD_START__*/"data-node-field":"server_name",/*__INH_FIELD_END__*/onChange: e=>this.formChange("server_name", e.target.value)
                 })), f.a.createElement("div", {
                     className: "row"
                 }, f.a.createElement("div", {
@@ -114551,7 +115487,7 @@ var mMihomo = Object(_['c'])(state=>({groups:state.serverGroup.groups || [],rout
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("network", e)
+                    /*__INH_FIELD_START__*/"data-node-field":"network",/*__INH_FIELD_END__*/onChange: e=>this.formChange("network", e)
                 }, f.a.createElement(s["a"].Option, {
                     value: "tcp"
                 }, "TCP"), f.a.createElement(s["a"].Option, {
@@ -114568,7 +115504,7 @@ var mMihomo = Object(_['c'])(state=>({groups:state.serverGroup.groups || [],rout
                     rel: "noreferrer"
                 }, "پاسخ‌های بیشتر"))), f.a.createElement(s["a"], {
                     value: e.parent_id || "",
-                    onChange: e=>this.formChange("parent_id", e),
+                    /*__INH_FIELD_START__*/"data-node-field":"parent_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("parent_id", e),
                     style: {
                         width: "100%"
                     }
@@ -114590,7 +115526,7 @@ var mMihomo = Object(_['c'])(state=>({groups:state.serverGroup.groups || [],rout
                     style: {
                         width: "100%"
                     },
-                    onChange: e=>this.formChange("route_id", e.length > 0 ? e : null)
+                    /*__INH_FIELD_START__*/"data-node-field":"route_id",/*__INH_FIELD_END__*/onChange: e=>this.formChange("route_id", e.length > 0 ? e : null)
                 }, u.map(e=>{
                     return f.a.createElement(s["a"].Option, {
                         key: e.id
@@ -114614,7 +115550,7 @@ var mMihomo = Object(_['c'])(state=>({groups:state.serverGroup.groups || [],rout
                     title: this.state.childDrawer.title,
                     visible: this.state.childDrawer.visible,
                     onClose: ()=>this.showChildDrawer()
-                }, this.renderChildDrawer())))
+                }, this.renderChildDrawer())))/*__INH_WRAP_CLOSE_START__*/,"trojan",this)/*__INH_WRAP_CLOSE_END__*/
             }
         }
         t["a"] = Object(d["c"])(e=>{

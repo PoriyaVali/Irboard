@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Add the Tailored sidebar item and owned route to both prebuilt admin bundles.
+"""Build the native Tailored Umi route and sidebar into both admin bundles.
 
-Only two fenced additions are written, immediately after the existing /plan
-menu and route objects. All other bytes (including local operator edits) are
+Three fenced additions supply the menu, route and maintained React module.
+The menu/route follow /plan; the module precedes the native plan module.
+All other bytes (including local operator edits) are
 preserved. Unknown or ambiguous anchors abort BEFORE writing either file.
 Re-running is idempotent. Run against explicit private copies when preparing
 an overlay for a customised deployment; never replace that deployment's whole
@@ -20,16 +21,15 @@ import sys
 from pathlib import Path
 
 ADMIN = Path(__file__).resolve().parent.parent / "public" / "assets" / "admin"
+SOURCE = Path(__file__).with_name("admin_tailored_pricing.js")
 ROUTE = "/tailored-pricing"
 LABEL = r'(/^fa\b/i.test(localStorage.getItem("umi_locale") || "fa") ? "\u062f\u0633\u062a\u200c\u062f\u0648\u0632" : "Tailored")'
 MENU = '{title: ' + LABEL + ', type: "item", href: "' + ROUTE + '", icon: o.a.createElement("i", {className: "nav-main-link-icon si si-scissors"})}'
-PAGE = ('{path: "' + ROUTE + '", exact: !0, component: function(e) {'
-        'var r=n.n(n("q1tI")).a; return r.createElement(n("Bl7J").a, '
-        'Object.assign({},e,{title:' + LABEL + '}), '
-        'r.createElement("div",{id:"doctor-tailored-host"}));}}')
+PAGE = '{path: "' + ROUTE + '", exact: !0, component: n("irboard/tailored-pricing").default}'
 REGIONS = {
     "MENU": ', /*__DTP_MENU_START__*/' + MENU + '/*__DTP_MENU_END__*/',
     "ROUTE": ', /*__DTP_ROUTE_START__*/' + PAGE + '/*__DTP_ROUTE_END__*/',
+    "MODULE": '',
 }
 
 
@@ -44,7 +44,7 @@ def remove_owned(source: str) -> str:
         if starts != ends or starts > 1:
             raise PatchError(f"ambiguous or incomplete {kind} fence")
         if starts:
-            pattern = r", /\*__DTP_" + kind + r"_START__\*/.*?/\*__DTP_" + kind + r"_END__\*/"
+            pattern = ("" if kind == "MODULE" else r", ") + r"/\*__DTP_" + kind + r"_START__\*/.*?/\*__DTP_" + kind + r"_END__\*/"
             source, count = re.subn(pattern, "", source, flags=re.DOTALL)
             if count != 1:
                 raise PatchError(f"unexpected {kind} owned-region delimiter")
@@ -109,6 +109,13 @@ def patch_bytes(original: bytes) -> bytes:
     output = clean
     for end, region in sorted(((menu_end, REGIONS["MENU"]), (route_end, REGIONS["ROUTE"])), reverse=True):
         output = output[:end] + region + output[end:]
+    module_anchor = '    ih8c: function(e, t, n) {'
+    if output.count(module_anchor) != 1 or '"irboard/tailored-pricing": function' in clean:
+        raise PatchError("native plan module anchor changed or duplicate tailored module")
+    module = ('/*__DTP_MODULE_START__*/    "irboard/tailored-pricing": function(e, t, n) {\n'
+              + '"use strict";\n' + SOURCE.read_text(encoding="utf-8")
+              + '\n    },\n/*__DTP_MODULE_END__*/')
+    output = output.replace(module_anchor, module + module_anchor, 1)
     if remove_owned(output) != clean:
         raise PatchError("unexpected mutation outside owned additions")
     return output.encode("utf-8")
