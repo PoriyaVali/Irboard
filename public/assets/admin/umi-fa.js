@@ -104862,8 +104862,8 @@ var imnNativeNodeGuides = {
             "Match the server TLS mode. Verified TLS needs a matching hostname and certificate; REALITY is a separate mode."
         ],
         "tls_settings": [
-            "نام دامنه و تنظیمات TLS را مطابق سرور وارد کنید؛ کلید و فایل گواهی مربوط به سرور هستند، نه آدرس اتصال کاربران.",
-            "Match the server TLS configuration; server key and certificate paths are distinct from the subscriber connection address."
+            "در TLS معمولی، نام دامنه و گواهی سرور را هماهنگ کنید. در REALITY، نام مقصد پوششی و جفت‌کلید X25519 را تنظیم کنید؛ آدرس اتصال کاربران جداگانه در فرم اصلی نود وارد می‌شود.",
+            "For ordinary TLS, match the server certificate hostname. For REALITY, configure the cover hostname and X25519 key pair. The subscriber endpoint is configured separately in the main node form."
         ],
         "tlsSettings": [
             "نام دامنه و تنظیمات TLS را مطابق سرور وارد کنید؛ از غیرفعال‌کردن اعتبارسنجی برای پنهان‌کردن خطای دامنه استفاده نکنید.",
@@ -104970,8 +104970,8 @@ var imnNativeNodeGuides = {
             "Path to that certificate’s matching private key on the server; make it readable by the service and keep it private."
         ],
         "dest": [
-            "مقصد پوششی REALITY به شکل دامنه:پورت؛ باید با کلاینت و تنظیمات سرور سازگار باشد و گواهی برای نود صادر نمی‌کند.",
-            "REALITY cover destination as hostname:port; match the server and clients. It does not issue a certificate for the node."
+            "دامنه یا IP مقصد پوششی REALITY را بدون https:// و بدون پورت وارد کنید. پورت مقصد در Server Port همین پنجره تنظیم می‌شود؛ نام SNI باید با گواهی مقصد پوششی سازگار باشد.",
+            "REALITY cover destination hostname or IP, without https:// or a port. Set its port in this dialog's Server Port field; the SNI must match the cover destination certificate."
         ],
         "xver": [
             "نسخهٔ PROXY protocol مقصد REALITY؛ فقط اگر مقصد آن را پشتیبانی می‌کند تغییر دهید. مقدار ۰ یعنی غیرفعال.",
@@ -105131,7 +105131,16 @@ var imnNativeNodeGuides = {
                 "Filter target protocols, one core-recognized name per line; this does not change the node connection protocol."
             ]
         },
-        "tls": {},
+        "tls": {
+            "server_name": [
+                "برای REALITY، نام SNI سرویس مقصد پوششی را بدون پورت وارد کنید؛ مانند www.google.com. برای دامنهٔ پوششی گواهی صادر نمی‌کنید. در TLS معمولی، نام باید با گواهی نود مطابقت داشته باشد و CertDomain در V2bX جداگانه تنظیم می‌شود.",
+                "For REALITY, enter the cover service SNI without a port, such as www.google.com; you do not issue a certificate for that cover domain. For ordinary TLS, match the node certificate and configure V2bX CertDomain separately."
+            ],
+            "server_port": [
+                "پورت مقصد پوششی REALITY، معمولاً ۴۴۳؛ این فیلد پورت شنود نود نیست. برای مقصد www.google.com:443، در Server Address فقط www.google.com و در این فیلد 443 وارد کنید. پورت سرویس نود در فرم اصلی تنظیم می‌شود.",
+                "REALITY cover destination port, usually 443. This is not the node listener port. For www.google.com:443, enter www.google.com in Server Address and 443 here. Configure the node listener in the main form."
+            ]
+        },
         "encryption": {
             "mode": [
                 "حالت رمزگذاری VLESS مطابق سرور و کلاینت؛ تغییر حالت به کلیدها و تنظیمات سازگار همان حالت نیاز دارد.",
