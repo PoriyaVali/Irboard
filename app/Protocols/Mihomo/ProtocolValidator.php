@@ -28,6 +28,35 @@ class ProtocolValidator
         if (strlen((string)base64_decode($key, true)) !== 32 || base64_encode((string)base64_decode($key, true)) !== str_replace(["\r", "\n"], '', $key)) self::fail($field, 'کلید WireGuard باید ۳۲ بایت با قالب Base64 باشد.');
     }
 
+    /** Whether Mihomo resolves the path inside the client's home directory on every OS (C.Path.IsSafePath). */
+    private static function clientPath(string $path): bool
+    {
+        if (preg_match('~^([/\\\\]|[A-Za-z]:)~', $path)) return false;
+        return !in_array('..', preg_split('~[/\\\\]~', $path), true);
+    }
+
+    /**
+     * component/ca NewTLSKeyPairLoader. Unless both values form a PEM pair,
+     * Mihomo reads them as files, which subscribers' devices do not have.
+     */
+    private static function clientCertificate(string $certificate, string $key): void
+    {
+        if ($certificate === '' && $key === '') return;
+        $readable = strpos($certificate, '-----BEGIN CERTIFICATE-----') !== false && @openssl_x509_read($certificate);
+        $loaded = @openssl_pkey_get_private($key);
+        $details = $loaded ? openssl_pkey_get_details($loaded) : [];
+        $kind = $details['type'] ?? null;
+        $pkcs8 = '';
+        // Go's crypto/tls loads RSA, ECDSA on the NIST curves and Ed25519, which PHP 8.3 reports like X25519.
+        $supported = $kind === OPENSSL_KEYTYPE_RSA
+            || ($kind === OPENSSL_KEYTYPE_EC && in_array($details['ec']['curve_name'] ?? '', ['secp224r1', 'prime256v1', 'secp384r1', 'secp521r1'], true))
+            || (!in_array($kind, [null, OPENSSL_KEYTYPE_RSA, OPENSSL_KEYTYPE_EC, OPENSSL_KEYTYPE_DSA, OPENSSL_KEYTYPE_DH], true)
+                && openssl_pkey_export($loaded, $pkcs8) && strpos((string)base64_decode(preg_replace('/-----[^\n]*-----|\s/', '', $pkcs8)), "\x06\x03\x2b\x65\x70") !== false);
+        if (!$readable || !$supported || !@openssl_x509_check_private_key($certificate, $loaded)) {
+            self::fail($readable ? 'private_key' : 'certificate', 'گواهی و کلید خصوصی کلاینت باید هر دو متن کامل PEM و متعلق به هم باشند؛ کلید باید بدون رمز و از نوع RSA، ECDSA یا Ed25519 باشد. مسیر فایل روی دستگاه کاربران وجود ندارد و کل پروفایل را از کار می‌اندازد.');
+        }
+    }
+
     public static function validate(string $type, array $settings): void
     {
         $rules = [];
@@ -122,6 +151,38 @@ class ProtocolValidator
                 if (!@openssl_x509_read($settings['cert']) || !@openssl_pkey_get_private($settings['key'] ?? '')) self::fail('cert', 'گواهی و کلید کلاینت معتبر نیست.');
                 if (!@openssl_x509_check_private_key($settings['cert'], $settings['key'])) self::fail('key', 'کلید خصوصی با گواهی کلاینت مطابقت ندارد.');
             }
+        }
+        if ($type === 'ssh') {
+            // Mihomo rejects the whole profile when a key fails to load.
+            if (($settings['private-key'] ?? '') !== '') {
+                $problem = SshKeys::privateKeyProblem($settings['private-key'], (string)($settings['private-key-passphrase'] ?? ''));
+                if ($problem) self::fail(...$problem);
+            }
+            foreach ($settings['host-key'] ?? [] as $entry) {
+                if (SshKeys::hostKeyType($entry) === null) self::fail('host_key', 'هر کلید میزبان باید کلید عمومی سرور با قالب «ssh-ed25519 AAAA…» باشد، مانند محتوای /etc/ssh/ssh_host_ed25519_key.pub یا یک خط خروجی ssh-keyscan؛ کلید نامعتبر پروفایل همهٔ کاربران را از کار می‌اندازد.');
+            }
+            $pinned = SshKeys::hostKeyAlgorithms($settings['host-key'] ?? []);
+            foreach ($settings['host-key-algorithms'] ?? [] as $algorithm) {
+                if (in_array($algorithm, $pinned ?: SshKeys::HOST_KEY_ALGORITHMS, true)) continue;
+                self::fail('host_key_algorithms', $pinned
+                    ? 'این الگوریتم با هیچ‌یک از کلیدهای میزبان واردشده جور نیست و اگر سرور آن را انتخاب کند اتصال رد می‌شود؛ آن را حذف کنید یا فهرست را خالی بگذارید تا پنل آن را از روی کلیدها بسازد.'
+                    : 'این الگوریتم کلید میزبان در کلاینت پشتیبانی نمی‌شود؛ از ' . implode('، ', SshKeys::HOST_KEY_ALGORITHMS) . ' استفاده کنید.');
+            }
+        }
+        if (in_array($type, ['socks5', 'http', 'gostrelay'], true)) {
+            // component/ca NewFingerprintVerifier.
+            $fingerprint = $settings['fingerprint'] ?? '';
+            if (in_array($fingerprint, ['chrome', 'firefox', 'safari', 'ios', 'android', 'edge', '360', 'qq', 'random', 'randomized'], true)) self::fail('fingerprint', 'این گزینه اثر انگشت SHA-256 گواهی سرور است؛ نام مرورگر را در client-fingerprint وارد کنید.');
+            $hex = trim(str_replace(':', '', $fingerprint), " \t\n\r\x0B\f");
+            if ($fingerprint !== '' && (strlen($hex) !== 64 || !ctype_xdigit($hex))) self::fail('fingerprint', 'اثر انگشت گواهی باید SHA-256 با ۶۴ رقم Hex باشد؛ دونقطه بین بایت‌ها مجاز است.');
+            self::clientCertificate($settings['certificate'] ?? '', $settings['private-key'] ?? '');
+        }
+        foreach (['state-dir' => 'state_dir', 'planet' => 'planet'] as $option => $field) {
+            if (($settings[$option] ?? '') !== '' && !self::clientPath($settings[$option])) self::fail($field, 'مسیر باید نسبی و داخل پوشهٔ پیکربندی کلاینت باشد، مانند zerotier/node1؛ کلاینت مسیر مطلق یا دارای .. را رد می‌کند و کل پروفایل بارگذاری نمی‌شود.');
+        }
+        if ($type === 'mieru' && ($settings['traffic-pattern'] ?? '') !== '') {
+            $problem = MieruTrafficPattern::problem($settings['traffic-pattern']);
+            if ($problem) self::fail('traffic_pattern', $problem);
         }
         if ($type === 'http' && isset($settings['headers'])) {
             foreach ($settings['headers'] as $key => $value) {

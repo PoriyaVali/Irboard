@@ -391,7 +391,6 @@
                 "show": false,
                 "sort": 0,
                 "port": 443,
-                "server_port": 443,
                 "cipher": "chacha20-ietf",
                 "ssr_protocol": "auth_sha1_v4",
                 "obfs": "tls1.2_ticket_auth",
@@ -691,8 +690,8 @@
                     "en": "Certificate fingerprint"
                 },
                 "help": {
-                    "fa": "اثر انگشت گواهی اعلام‌شده توسط سرویس را برای pinning وارد کنید؛ این گزینه با شبیه‌سازی مرورگر در client-fingerprint تفاوت دارد.",
-                    "en": "Enter the service certificate fingerprint for pinning; this differs from browser emulation in client-fingerprint."
+                    "fa": "اثر انگشت SHA-256 گواهی سرویس برای pinning، ۶۴ رقم Hex با یا بدون دونقطه؛ این گزینه با شبیه‌سازی مرورگر در client-fingerprint تفاوت دارد.",
+                    "en": "The SHA-256 fingerprint of the service certificate for pinning: 64 hex digits, colons optional. This differs from browser emulation in client-fingerprint."
                 },
                 "section": "security",
                 "required": false
@@ -705,8 +704,8 @@
                     "en": "TLS client certificate"
                 },
                 "help": {
-                    "fa": "گواهی یا مسیر گواهی کلاینت برای mTLS، طبق تنظیم Mihomo کلاینت؛ گواهی سرور V2bX نیست و در اشتراک توزیع می‌شود.",
-                    "en": "The client certificate or client-side certificate path for mTLS, as required by Mihomo; this is not the V2bX server certificate and is distributed in subscriptions."
+                    "fa": "متن کامل PEM گواهی کلاینت برای mTLS همراه با private-key متناظر؛ مسیر فایل پذیرفته نمی‌شود چون روی دستگاه کاربران وجود ندارد. گواهی سرور V2bX نیست و در اشتراک توزیع می‌شود.",
+                    "en": "The full PEM client certificate for mTLS, together with its private-key. File paths are not accepted because subscribers' devices do not have them. This is not the V2bX server certificate and is distributed in subscriptions."
                 },
                 "section": "security",
                 "required": false
@@ -719,8 +718,8 @@
                     "en": "Client private key"
                 },
                 "help": {
-                    "fa": "کلید خصوصی یا مسیر کلید کلاینت TLS، مطابق تنظیم Mihomo کلاینت؛ مسیر کلید خصوصی سرور V2bX را اینجا وارد نکنید.",
-                    "en": "The TLS client private key or client-side key path as required by Mihomo; do not enter a V2bX server private-key path here."
+                    "fa": "متن کامل PEM کلید خصوصی بدون رمز متناظر با certificate برای mTLS؛ مسیر فایل پذیرفته نمی‌شود. کلید خصوصی سرور V2bX را اینجا وارد نکنید.",
+                    "en": "The full unencrypted PEM private key matching certificate for mTLS; file paths are not accepted. Do not enter the V2bX server private key here."
                 },
                 "section": "credentials",
                 "required": false
@@ -1136,8 +1135,8 @@
                     "en": "Certificate fingerprint"
                 },
                 "help": {
-                    "fa": "اثر انگشت گواهی اعلام‌شده توسط سرویس را برای pinning وارد کنید؛ این گزینه با شبیه‌سازی مرورگر در client-fingerprint تفاوت دارد.",
-                    "en": "Enter the service certificate fingerprint for pinning; this differs from browser emulation in client-fingerprint."
+                    "fa": "اثر انگشت SHA-256 گواهی سرویس برای pinning، ۶۴ رقم Hex با یا بدون دونقطه؛ این گزینه با شبیه‌سازی مرورگر در client-fingerprint تفاوت دارد.",
+                    "en": "The SHA-256 fingerprint of the service certificate for pinning: 64 hex digits, colons optional. This differs from browser emulation in client-fingerprint."
                 },
                 "section": "security",
                 "required": false
@@ -1150,8 +1149,8 @@
                     "en": "TLS client certificate"
                 },
                 "help": {
-                    "fa": "گواهی یا مسیر گواهی کلاینت برای mTLS، طبق تنظیم Mihomo کلاینت؛ گواهی سرور V2bX نیست و در اشتراک توزیع می‌شود.",
-                    "en": "The client certificate or client-side certificate path for mTLS, as required by Mihomo; this is not the V2bX server certificate and is distributed in subscriptions."
+                    "fa": "متن کامل PEM گواهی کلاینت برای mTLS همراه با private-key متناظر؛ مسیر فایل پذیرفته نمی‌شود چون روی دستگاه کاربران وجود ندارد. گواهی سرور V2bX نیست و در اشتراک توزیع می‌شود.",
+                    "en": "The full PEM client certificate for mTLS, together with its private-key. File paths are not accepted because subscribers' devices do not have them. This is not the V2bX server certificate and is distributed in subscriptions."
                 },
                 "section": "security",
                 "required": false
@@ -1164,8 +1163,8 @@
                     "en": "Client private key"
                 },
                 "help": {
-                    "fa": "کلید خصوصی یا مسیر کلید کلاینت TLS، مطابق تنظیم Mihomo کلاینت؛ مسیر کلید خصوصی سرور V2bX را اینجا وارد نکنید.",
-                    "en": "The TLS client private key or client-side key path as required by Mihomo; do not enter a V2bX server private-key path here."
+                    "fa": "متن کامل PEM کلید خصوصی بدون رمز متناظر با certificate برای mTLS؛ مسیر فایل پذیرفته نمی‌شود. کلید خصوصی سرور V2bX را اینجا وارد نکنید.",
+                    "en": "The full unencrypted PEM private key matching certificate for mTLS; file paths are not accepted. Do not enter the V2bX server private key here."
                 },
                 "section": "credentials",
                 "required": false
@@ -1732,7 +1731,6 @@
                 "show": false,
                 "sort": 0,
                 "port": 443,
-                "server_port": 443,
                 "version": 3,
                 "udp": true
             },
@@ -2311,7 +2309,6 @@
                 "show": false,
                 "sort": 0,
                 "port": 51820,
-                "server_port": 51820,
                 "udp": true
             },
             "common": {
@@ -3227,8 +3224,8 @@
                     "en": "Certificate fingerprint"
                 },
                 "help": {
-                    "fa": "اثر انگشت گواهی اعلام‌شده توسط سرویس را برای pinning وارد کنید؛ این گزینه با شبیه‌سازی مرورگر در client-fingerprint تفاوت دارد.",
-                    "en": "Enter the service certificate fingerprint for pinning; this differs from browser emulation in client-fingerprint."
+                    "fa": "اثر انگشت SHA-256 گواهی سرویس برای pinning، ۶۴ رقم Hex با یا بدون دونقطه؛ این گزینه با شبیه‌سازی مرورگر در client-fingerprint تفاوت دارد.",
+                    "en": "The SHA-256 fingerprint of the service certificate for pinning: 64 hex digits, colons optional. This differs from browser emulation in client-fingerprint."
                 },
                 "section": "security",
                 "required": false
@@ -3241,8 +3238,8 @@
                     "en": "TLS client certificate"
                 },
                 "help": {
-                    "fa": "گواهی یا مسیر گواهی کلاینت برای mTLS، طبق تنظیم Mihomo کلاینت؛ گواهی سرور V2bX نیست و در اشتراک توزیع می‌شود.",
-                    "en": "The client certificate or client-side certificate path for mTLS, as required by Mihomo; this is not the V2bX server certificate and is distributed in subscriptions."
+                    "fa": "متن کامل PEM گواهی کلاینت برای mTLS همراه با private-key متناظر؛ مسیر فایل پذیرفته نمی‌شود چون روی دستگاه کاربران وجود ندارد. گواهی سرور V2bX نیست و در اشتراک توزیع می‌شود.",
+                    "en": "The full PEM client certificate for mTLS, together with its private-key. File paths are not accepted because subscribers' devices do not have them. This is not the V2bX server certificate and is distributed in subscriptions."
                 },
                 "section": "security",
                 "required": false
@@ -3255,8 +3252,8 @@
                     "en": "Client private key"
                 },
                 "help": {
-                    "fa": "کلید خصوصی یا مسیر کلید کلاینت TLS، مطابق تنظیم Mihomo کلاینت؛ مسیر کلید خصوصی سرور V2bX را اینجا وارد نکنید.",
-                    "en": "The TLS client private key or client-side key path as required by Mihomo; do not enter a V2bX server private-key path here."
+                    "fa": "متن کامل PEM کلید خصوصی بدون رمز متناظر با certificate برای mTLS؛ مسیر فایل پذیرفته نمی‌شود. کلید خصوصی سرور V2bX را اینجا وارد نکنید.",
+                    "en": "The full unencrypted PEM private key matching certificate for mTLS; file paths are not accepted. Do not enter the V2bX server private key here."
                 },
                 "section": "credentials",
                 "required": false
@@ -3382,7 +3379,6 @@
                 "show": false,
                 "sort": 0,
                 "port": 443,
-                "server_port": 443,
                 "udp": true,
                 "skip_cert_verify": false
             },
@@ -3619,8 +3615,8 @@
                     "en": "Client private key"
                 },
                 "help": {
-                    "fa": "متن کامل کلید خصوصی حساب SSH کلاینت را جای‌گذاری کنید؛ اگر رمز ورود دارید می‌توانید خالی بگذارید. کلید عمومیِ متناظر باید در authorized_keys همان حساب روی سرور مجاز باشد.",
-                    "en": "Paste the SSH client account private key; leave blank if using a login password. Its public key must be authorized on the SSH server."
+                    "fa": "متن کامل کلید خصوصی حساب SSH کلاینت را از خط BEGIN تا END جای‌گذاری کنید (Ed25519، ECDSA یا RSA)؛ مسیر فایل پذیرفته نمی‌شود. اگر رمز ورود دارید می‌توانید خالی بگذارید. کلید عمومیِ متناظر باید در authorized_keys همان حساب روی سرور باشد.",
+                    "en": "Paste the whole SSH client private key from BEGIN to END (Ed25519, ECDSA or RSA); file paths are not accepted. Leave blank if using a login password. Its public key must be in that account's authorized_keys on the server."
                 },
                 "section": "credentials",
                 "required": false
@@ -3633,8 +3629,8 @@
                     "en": "SSH private-key passphrase"
                 },
                 "help": {
-                    "fa": "اگر کلید خصوصی SSH رمزگذاری شده است عبارت عبور آن را بنویسید؛ برای کلید بدون رمز خالی بگذارید.",
-                    "en": "Enter the passphrase if the SSH private key is encrypted; leave blank for an unencrypted key."
+                    "fa": "فقط برای کلید PEM رمزدار قدیمی (BEGIN RSA یا EC PRIVATE KEY با Proc-Type) لازم است؛ کلید OpenSSH رمزدار پذیرفته نمی‌شود، پس رمز آن را بردارید. برای کلید بدون رمز خالی بگذارید.",
+                    "en": "Needed only for a legacy encrypted PEM key (BEGIN RSA or EC PRIVATE KEY with Proc-Type). Encrypted OpenSSH keys are not accepted, so remove their passphrase. Leave blank for an unencrypted key."
                 },
                 "section": "credentials",
                 "required": false
@@ -3647,14 +3643,14 @@
                     "en": "SSH host keys"
                 },
                 "help": {
-                    "fa": "آرایهٔ کلیدهای عمومی مورد اعتماد سرور، با قالب ssh-ed25519 AAAA…؛ از مدیر سرور بگیرید. خالی، بررسی کلید میزبان را حذف می‌کند؛ این کلید ورود کلاینت نیست.",
-                    "en": "An array of trusted server host public keys in ssh-ed25519 AAAA… format, obtained from the administrator. Leaving it blank disables host-key verification; these are not client login keys."
+                    "fa": "آرایهٔ کلیدهای عمومی میزبان سرور، هر کدام با قالب «ssh-ed25519 AAAA…»، مانند محتوای /etc/ssh/ssh_host_ed25519_key.pub یا یک خط ssh-keyscan. اگر host-key-algorithms خالی باشد، پنل آن را از نوع همین کلیدها می‌سازد تا سرور همان کلید را ارائه دهد. خالی، بررسی کلید میزبان را حذف می‌کند؛ این کلید ورود کلاینت نیست.",
+                    "en": "An array of server host public keys, each like \"ssh-ed25519 AAAA…\", such as /etc/ssh/ssh_host_ed25519_key.pub or one ssh-keyscan line. When host-key-algorithms is blank, the panel derives it from these key types so the server presents a pinned key. Leaving it blank disables host-key verification; these are not client login keys."
                 },
                 "section": "security",
                 "required": false,
                 "placeholder": {
-                    "fa": "[]",
-                    "en": "[]"
+                    "fa": "[\"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA…\"]",
+                    "en": "[\"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAA…\"]"
                 }
             },
             "host_key_algorithms": {
@@ -3665,14 +3661,14 @@
                     "en": "SSH host-key algorithms"
                 },
                 "help": {
-                    "fa": "آرایهٔ الگوریتم‌های مجاز کلید میزبان را فقط طبق سیاست سرور بنویسید؛ در حالت عادی خالی بگذارید.",
-                    "en": "An array of permitted host-key algorithms; set only for the server policy, otherwise leave blank."
+                    "fa": "معمولاً خالی بگذارید؛ با کلید میزبان، پنل آن را خودکار می‌سازد. اگر همراه کلید میزبان پر کنید، فقط الگوریتم کلیدهای واردشده (مثل ssh-ed25519 یا rsa-sha2-256) مجاز است، چون با الگوریتم دیگر سرور کلید دیگری ارائه می‌دهد.",
+                    "en": "Usually leave blank; with host keys, the panel fills it in. If set alongside host keys, only those keys' algorithms (such as ssh-ed25519 or rsa-sha2-256) are allowed, because another algorithm makes the server present a different key."
                 },
                 "section": "security",
                 "required": false,
                 "placeholder": {
-                    "fa": "[]",
-                    "en": "[]"
+                    "fa": "[\"ssh-ed25519\"]",
+                    "en": "[\"ssh-ed25519\"]"
                 }
             },
             "tfo": {
@@ -3781,8 +3777,7 @@
                 "parent_id": null,
                 "show": false,
                 "sort": 0,
-                "port": 22,
-                "server_port": 22
+                "port": 22
             },
             "common": {
                 "name": {
@@ -3949,12 +3944,12 @@
                 {
                     "key": "security",
                     "label": {
-                        "fa": "TLS و امنیت اتصال",
-                        "en": "TLS and connection security"
+                        "fa": "تأیید هویت سرور SSH",
+                        "en": "SSH server verification"
                     },
                     "help": {
-                        "fa": "اعتبارسنجی گواهی را فعال نگه دارید؛ تنظیمات گواهی کلاینت با گواهی سرور متفاوت است.",
-                        "en": "Keep certificate validation enabled; client certificates differ from server certificates."
+                        "fa": "کلید میزبان سرور را وارد کنید تا کلاینت به سرور جعلی وصل نشود؛ بدون آن هر کلید میزبانی پذیرفته می‌شود.",
+                        "en": "Pin the server host key so clients refuse an impostor server; without it any host key is accepted."
                     }
                 },
                 {
@@ -4173,8 +4168,8 @@
                     "en": "Mieru traffic pattern"
                 },
                 "help": {
-                    "fa": "الگوی ترافیک توافق‌شده با سرویس را وارد کنید؛ برای سرویس بدون الگوی سفارشی خالی بگذارید.",
-                    "en": "Enter the traffic pattern agreed with the service; leave blank when no custom pattern is used."
+                    "fa": "رشتهٔ Base64 الگوی ترافیک را همان‌طور که mieru تولید کرده و با سرویس توافق شده است وارد کنید؛ برای سرویس بدون الگوی سفارشی خالی بگذارید.",
+                    "en": "Enter the Base64 traffic pattern generated by mieru and agreed with the service, unchanged; leave blank when no custom pattern is used."
                 },
                 "section": "advanced",
                 "required": false
@@ -4970,7 +4965,6 @@
                 "show": false,
                 "sort": 0,
                 "port": 443,
-                "server_port": 443,
                 "aead_method": "chacha20-poly1305",
                 "padding_min": 10,
                 "padding_max": 30,
@@ -5575,7 +5569,6 @@
                 "show": false,
                 "sort": 0,
                 "port": 443,
-                "server_port": 443,
                 "udp": true,
                 "skip_cert_verify": false
             },
@@ -6340,7 +6333,6 @@
                 "show": false,
                 "sort": 0,
                 "port": 1194,
-                "server_port": 1194,
                 "proto": "udp",
                 "dev": "tun",
                 "udp": true
@@ -6592,8 +6584,8 @@
                     "en": "Client state directory"
                 },
                 "help": {
-                    "fa": "مسیر نگهداری هویت/وضعیت روی دستگاه کلاینت؛ این مسیر در اشتراک می‌آید و مسیر فایل روی سرور پنل یا V2bX نیست.",
-                    "en": "A state/identity directory on the client device; it is distributed in subscriptions, not a path on the panel or V2bX server."
+                    "fa": "مسیر نسبی نگهداری هویت/وضعیت داخل پوشهٔ پیکربندی کلاینت، مانند tailscale/node1؛ کلاینت مسیر مطلق یا دارای .. را رد می‌کند. این مسیر در اشتراک می‌آید و مسیر روی سرور پنل یا V2bX نیست.",
+                    "en": "A relative state/identity directory inside the client's configuration folder, such as tailscale/node1; clients refuse absolute paths or \"..\". It is distributed in subscriptions and is not a path on the panel or V2bX server."
                 },
                 "section": "advanced",
                 "required": false
@@ -6997,8 +6989,8 @@
                     "en": "Client state directory"
                 },
                 "help": {
-                    "fa": "مسیر نگهداری هویت/وضعیت روی دستگاه کلاینت؛ این مسیر در اشتراک می‌آید و مسیر فایل روی سرور پنل یا V2bX نیست.",
-                    "en": "A state/identity directory on the client device; it is distributed in subscriptions, not a path on the panel or V2bX server."
+                    "fa": "مسیر نسبی نگهداری هویت/وضعیت داخل پوشهٔ پیکربندی کلاینت، مانند tailscale/node1؛ کلاینت مسیر مطلق یا دارای .. را رد می‌کند. این مسیر در اشتراک می‌آید و مسیر روی سرور پنل یا V2bX نیست.",
+                    "en": "A relative state/identity directory inside the client's configuration folder, such as tailscale/node1; clients refuse absolute paths or \"..\". It is distributed in subscriptions and is not a path on the panel or V2bX server."
                 },
                 "section": "advanced",
                 "required": false
@@ -7025,8 +7017,8 @@
                     "en": "ZeroTier client planet file"
                 },
                 "help": {
-                    "fa": "مسیر فایل planet اختصاصی روی دستگاه کلاینت؛ فایل باید روی همان کلاینت موجود و مجاز باشد. مسیر فایل پنل نیست؛ برای ZeroTier عادی خالی بگذارید.",
-                    "en": "A custom planet file path on the client device; that file must exist and be permitted there. This is not a panel-server path; leave blank for normal ZeroTier."
+                    "fa": "مسیر نسبی فایل planet اختصاصی در پوشهٔ پیکربندی روی دستگاه هر کلاینت، نه مسیری روی سرور پنل؛ پنل این فایل را نمی‌فرستد و اگر روی دستگاه کاربری نباشد، کل پروفایل او بارگذاری نمی‌شود. برای ZeroTier عادی خالی بگذارید.",
+                    "en": "A relative path to a custom planet file in the configuration folder on each client device, not a panel-server path. The panel does not deliver the file, and a subscriber without it cannot load any of their profile. Leave blank for normal ZeroTier."
                 },
                 "section": "advanced",
                 "required": false
@@ -7793,8 +7785,8 @@
                     "en": "Client state directory"
                 },
                 "help": {
-                    "fa": "مسیر نگهداری هویت/وضعیت روی دستگاه کلاینت؛ این مسیر در اشتراک می‌آید و مسیر فایل روی سرور پنل یا V2bX نیست.",
-                    "en": "A state/identity directory on the client device; it is distributed in subscriptions, not a path on the panel or V2bX server."
+                    "fa": "مسیر نسبی نگهداری هویت/وضعیت داخل پوشهٔ پیکربندی کلاینت، مانند tailscale/node1؛ کلاینت مسیر مطلق یا دارای .. را رد می‌کند. این مسیر در اشتراک می‌آید و مسیر روی سرور پنل یا V2bX نیست.",
+                    "en": "A relative state/identity directory inside the client's configuration folder, such as tailscale/node1; clients refuse absolute paths or \"..\". It is distributed in subscriptions and is not a path on the panel or V2bX server."
                 },
                 "section": "advanced",
                 "required": false

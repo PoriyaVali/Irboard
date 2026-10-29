@@ -56,7 +56,9 @@ class AdminFormMetadataTest extends TestCase
             }
             if (ManagedServer::supports($type)) $this->assertTrue($defaults['managed']);
             else $this->assertArrayNotHasKey('managed', $defaults);
-            if (isset($defaults['port'])) $this->assertSame($defaults['port'], $defaults['server_port']);
+            // Only V2bX listens on a service port; an external service already has one.
+            if (isset($defaults['port']) && ManagedServer::supports($type)) $this->assertSame($defaults['port'], $defaults['server_port']);
+            else $this->assertArrayNotHasKey('server_port', $defaults, $type);
             if (isset($defaults['skip_cert_verify'])) $this->assertFalse($defaults['skip_cert_verify']);
             if (in_array($type, ['http', 'socks5'], true)) $this->assertTrue($defaults['tls']);
         }
@@ -110,6 +112,12 @@ class AdminFormMetadataTest extends TestCase
         $this->assertSame(['world', 'seed'], array_keys($orbit[0]));
         $this->assertStringContainsString('client device', $catalog['zerotier']['fields']['planet']['help']['en']);
         $this->assertStringContainsString('disables host-key verification', $catalog['ssh']['fields']['host_key']['help']['en']);
+        $this->assertStringContainsString('ssh-keyscan', $catalog['ssh']['fields']['host_key']['help']['en']);
+        $this->assertStringContainsString('BEGIN', $catalog['ssh']['fields']['private_key']['help']['en']);
+        $this->assertStringContainsString('File paths are not accepted', $catalog['http']['fields']['certificate']['help']['en']);
+        $sections = array_column($catalog['ssh']['form']['sections'], 'label', 'key');
+        $this->assertSame('SSH server verification', $sections['security']['en']);
+        $this->assertStringContainsString('TLS', array_column($catalog['http']['form']['sections'], 'label', 'key')['security']['en']);
         $this->assertSame([10, 30], [$catalog['sudoku']['form']['defaults']['padding_min'], $catalog['sudoku']['form']['defaults']['padding_max']]);
         $this->assertSame(3, $catalog['snell']['form']['defaults']['version']);
     }

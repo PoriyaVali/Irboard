@@ -68,6 +68,34 @@ Tailscale، ZeroTier و EasyTier آدرس/پورت مستقیم لازم ندا�
 و جفت cert/key در OpenVPN، padding و HTTP mask در Sudoku و شناسهٔ شبکهٔ ZeroTier
 است. فیلد متعلق به پروتکل دیگر و گزینهٔ ناشناخته رد می‌شود.
 
+### گزینه‌هایی که کل پروفایل را از کار می‌اندازند
+
+Mihomo اگر حتی یک proxy بارگذاری نشود، **کل پروفایل** کاربر را رد می‌کند. برای
+همین این مقادیر هنگام ذخیره همان‌طور بررسی می‌شوند که کلاینت آن‌ها را می‌خواند:
+
+- **کلید خصوصی SSH** مطابق `golang.org/x/crypto/ssh` و `crypto/x509` بررسی می‌شود:
+  قالب OpenSSH، PEM یا PKCS#8 از نوع Ed25519، ECDSA (P-256/P-384/P-521) یا RSA،
+  همراه با بررسی سازگاری اعداد RSA. کلید PEM رمزدار قدیمی با عبارت عبورش
+  رمزگشایی و آزموده می‌شود. کلید OpenSSH رمزدار پذیرفته نمی‌شود، چون PHP
+  bcrypt_pbkdf ندارد و عبارت عبور همراه کلید برای همهٔ کاربران ارسال می‌شود؛ روی
+  یک نسخه از کلید `ssh-keygen -p -N "" -f <فایل>` را اجرا کنید. کلید DSA، P-224،
+  X25519، کلید PuTTY و مسیر فایل نیز رد می‌شوند.
+- **کلید میزبان SSH** مانند `ssh.ParseAuthorizedKey` خوانده می‌شود (خط
+  authorized_keys یا ssh-keyscan)؛ نوع اعلام‌شده باید با خود کلید یکی باشد.
+- اگر `host-key-algorithms` خالی باشد، خروجی اشتراک آن را از نوع کلیدهای میزبان
+  می‌سازد. بدون آن، x/crypto کلید ECDSA را ترجیح می‌دهد و سروری که مثل نصب
+  پیش‌فرض OpenSSH کلید ECDSA هم دارد همان را نشان می‌دهد؛ در نتیجه کلید Ed25519
+  یا RSA پین‌شده هرگز مطابقت نمی‌کند و اتصال با `host key mismatch` رد می‌شود.
+  فهرستی که ادمین وارد کند فقط می‌تواند الگوریتم کلیدهای پین‌شده را داشته باشد.
+- در SOCKS5، HTTP و GOST Relay، `fingerprint` باید SHA-256 گواهی (۶۴ رقم Hex) و
+  `certificate` و `private-key` هر دو متن PEM و متعلق به هم باشند.
+- `traffic-pattern` در Mieru مانند Decode و Validate خود mieru بررسی می‌شود.
+- `state-dir` و `planet` باید مسیر نسبی و بدون `..` باشند. فایل planet را پنل
+  ارسال نمی‌کند و باید روی دستگاه همهٔ کاربران وجود داشته باشد.
+
+پورت شنود سرویس (`server_port`) فقط برای نود ریشهٔ مدیریت‌شده با V2bX نمایش
+داده می‌شود؛ سرویس بیرونی و نود فرزند شنوندهٔ V2bX ندارند.
+
 خروجی‌های `mihomo`، `meta`، `verge` و `nyanpasu` از این پروتکل‌ها پشتیبانی می‌کنند.
 آدرس و پورت از فیلدهای نود و نوع از کنترلر همان پروتکل گرفته می‌شود. مقادیر متنی
 `{{uuid}}` و `{{user_id}}` برای هر مشترک جایگزین می‌شوند؛ تنظیمات خام والد یا
@@ -96,7 +124,7 @@ Irboard است؛ دادهٔ جدول آزمایشی شاخه‌های منتشر
 
 ```sh
 python3 scripts/patch_admin_mihomo_nodes.py --check
-vendor/bin/phpunit --filter 'MihomoNodesTest|MihomoSubscriptionTest'
+vendor/bin/phpunit --filter 'MihomoNodesTest|MihomoSubscriptionTest|SshKeysTest|MieruTrafficPatternTest'
 node --test tests/AdminMihomoNodesBrowserTest.cjs
 IRBOARD_MIHOMO_CONTRACT_DIR=/tmp/mihomo-contract vendor/bin/phpunit --filter MihomoSubscriptionTest
 python3 tests/ValidateMihomoConfig.py --binary /path/to/mihomo --profiles /tmp/mihomo-contract/ClashMeta.json

@@ -108151,6 +108151,8 @@ class MihomoNodeDrawer extends y.a.Component {
         } catch (error) { if (this.current(session)) this.setState({busy: false, error: error.message}); }
     }
     definition() { return this.state.catalog[this.state.server.type]; }
+    // Only a managed root node runs a V2bX listener; external services and relays have no service port.
+    listens(server) { return !!(this.definition().managed_server && !server.parent_id && server.managed); }
     source(server) {
         var source = server, seen = new Set();
         while (source.parent_id && !seen.has(Number(source.parent_id))) {
@@ -108271,7 +108273,8 @@ class MihomoNodeDrawer extends y.a.Component {
         if (!overlay && !String(server.host || '').trim()) errors.host = required;
         if (!overlay && server.host && /[\s\x00-\x1f/]/.test(server.host)) errors.host = imnText('فقط دامنه یا IP وارد کنید؛ بدون https:// یا مسیر.', 'Enter only a domain or IP, without https:// or a path.');
         ['port', 'server_port'].forEach(key => {
-            var needed = key === 'port' ? !overlay && !(server.type === 'mieru' && effective.port_range) : !!effective.managed && !server.parent_id;
+            if (key === 'server_port' && !this.listens(server)) return;
+            var needed = key === 'port' ? !overlay && !(server.type === 'mieru' && effective.port_range) : true;
             if ((server[key] == null || server[key] === '') && !needed) return;
             if (!Number.isInteger(Number(server[key])) || Number(server[key]) < 1 || Number(server[key]) > 65535) errors[key] = imnText('یک پورت معتبر بین ۱ و ۶۵۵۳۵ وارد کنید.', 'Enter a port from 1 to 65535.');
         });
@@ -108347,7 +108350,7 @@ class MihomoNodeDrawer extends y.a.Component {
                 !overlay && this.field('host', this.input('host', {dir: 'ltr'}), {required: true}),
                 !overlay && y.a.createElement('div', {className: 'row', key: 'ports'},
                     this.field('port', this.input('port', {type: 'number', min: 1, max: 65535, dir: 'ltr', disabled: this.state.busy || !!source.port_range}), {column: 'col-6', required: !source.port_range}),
-                    this.field('server_port', this.input('server_port', {type: 'number', min: 1, max: 65535, dir: 'ltr'}), {column: 'col-6', required: !!source.managed && !server.parent_id})),
+                    this.listens(server) && this.field('server_port', this.input('server_port', {type: 'number', min: 1, max: 65535, dir: 'ltr'}), {column: 'col-6', required: true})),
                 server.parent_id && y.a.createElement('p', {key: 'inherited', className: 'text-muted', 'data-mihomo-inherited': true}, imnText('تنظیمات پروتکل و حالت مدیریت از نود والد گرفته می‌شود: ', 'Protocol settings and management mode are inherited from: ') + (source.name || '') + ' (#' + source.id + ')')
             ]),
             this.protocolSection('connection'), this.protocolSection('credentials'), this.protocolSection('security'),

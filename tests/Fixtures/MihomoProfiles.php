@@ -16,6 +16,10 @@ class MihomoProfiles
         if (isset($settings['server'])) $settings['server'] = '192.0.2.10';
         if ($protocol === 'sudoku') $settings['key'] = '11111111-2222-3333-4444-555555555555';
         if ($protocol === 'zerotier') $settings['network'] = '0123456789abcdef';
+        if ($protocol === 'ssh') {
+            $settings['private-key'] = SshKeyFixtures::privateKey('openssh-ed25519');
+            $settings['host-key'] = [SshKeyFixtures::hostKey('ed25519'), SshKeyFixtures::hostKey('rsa')];
+        }
         if ($protocol === 'wireguard') {
             $settings['private-key'] = base64_encode(str_repeat(chr(1), 32));
             $settings['public-key'] = base64_encode(str_repeat(chr(2), 32));

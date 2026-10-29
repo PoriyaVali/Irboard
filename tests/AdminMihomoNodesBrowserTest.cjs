@@ -200,7 +200,8 @@ async function selectGroup(page) {
 async function draft(page, protocol = 'socks5', name = 'Fictional node') {
     await openForm(page, protocol); await page.set('name', name); await selectGroup(page);
     if (!['tailscale', 'zerotier', 'easytier'].includes(protocol)) {
-        await page.set('host', 'new.example.test'); await page.set('port', '1443'); await page.set('server_port', '2443');
+        await page.set('host', 'new.example.test'); await page.set('port', '1443');
+        if (state.protocols[protocol].managed_server) await page.set('server_port', '2443');
     }
     await page.set('rate', '1.5');
 }
@@ -227,7 +228,11 @@ test('all fifteen protocol choices open normal forms from the existing + menu in
             assert.equal(await page.evaluate('document.querySelector("[data-mihomo-form]").dataset.mihomoForm'), type);
             assert.ok(await page.evaluate('Boolean(document.querySelector("[data-mihomo-form] [name=name]") && document.querySelector("[data-mihomo-form] [name=rate]") && document.querySelector("[data-mihomo-form] .ant-select"))'));
             assert.ok(await page.evaluate('Array.from(document.querySelectorAll("[data-mihomo-form] [name]")).some(e=>!["name","rate","host","port","server_port","parent_id","sort","show"].includes(e.name))'), type + ' has ordinary protocol fields');
-            if (!['tailscale', 'zerotier', 'easytier'].includes(type)) assert.ok(await page.evaluate('Boolean(document.querySelector("[data-mihomo-form] [name=host]") && document.querySelector("[data-mihomo-form] [name=server_port]"))'));
+            if (!['tailscale', 'zerotier', 'easytier'].includes(type)) {
+                assert.ok(await page.evaluate('Boolean(document.querySelector("[data-mihomo-form] [name=host]"))'));
+                // New drafts of V2bX-capable types start managed; other types never run a V2bX listener.
+                assert.equal(await page.evaluate('Boolean(document.querySelector("[data-mihomo-form] [name=server_port]"))'), Boolean(state.protocols[type].managed_server), type + ' service port');
+            }
             assert.equal(await page.evaluate('document.querySelector("[data-mihomo-advanced]").getAttribute("aria-expanded")'), 'false');
             const controls = await page.evaluate('(()=>{const form=document.querySelector("[data-mihomo-form]");return {plain:Array.from(form.querySelectorAll("input:not([type=hidden]),textarea")).filter(e=>!e.closest(".ant-select")&&!e.classList.contains("ant-input")).map(e=>e.name),help:Array.from(form.querySelectorAll("[data-mihomo-field]")).filter(e=>e.getBoundingClientRect().height>0).map(e=>({field:e.dataset.mihomoField,label:(e.querySelector("label")||{}).textContent||"",help:(e.querySelector("[data-mihomo-help]")||{}).textContent||""})),sections:Array.from(form.querySelectorAll("[data-mihomo-section]")).filter(e=>e.getBoundingClientRect().height>0).map(e=>e.textContent.trim()),footer:!!document.querySelector(".ant-drawer-open .v2board-drawer-action .ant-btn-primary[data-mihomo-save]")};})()');
             assert.deepEqual(controls.plain, [], type + ' uses the bundled AntD inputs');
@@ -273,12 +278,13 @@ test('ordinary fields create and edit a node in the same native table and keep t
     assert.equal(await page.evaluate('!!document.querySelector("#main-container img[src=x]") || !!window.pwned'), false);
     assert.match(await page.evaluate('document.querySelector("#main-container .ant-table").textContent'), /HTTP/);
     await page.click('#main-container [data-mihomo-edit="1"]');
-    await page.wait('document.querySelector("[data-mihomo-form] [name=server_port]")');
-    assert.equal(await page.evaluate('document.querySelector("[data-mihomo-form] [name=server_port]").value'), '2443');
+    await page.wait('document.querySelector("[data-mihomo-form] [name=rate]")');
     assert.equal(await page.evaluate('document.querySelector("[data-mihomo-form] [name=rate]").value'), '1.5');
-    await page.set('name', 'Edited native node'); await page.set('server_port', '3443');
+    // An external service has no V2bX listener; its stored value is kept untouched.
+    assert.equal(await page.evaluate('Boolean(document.querySelector("[data-mihomo-form] [name=server_port]"))'), false);
+    await page.set('name', 'Edited native node');
     await page.click('[data-mihomo-save]'); await saved(page, 1);
-    assert.equal(state.nodes[0].server_port, 3443);
+    assert.equal(state.nodes[0].server_port, 2443);
     await page.wait('document.querySelector("#main-container .ant-table").textContent.includes("Edited native node")');
     assert.match(await page.evaluate('document.querySelector("#main-container .ant-table").textContent'), /Edited native node/);
 });
@@ -320,7 +326,7 @@ test('invalid advanced JSON and rejected saves retain ordinary form values', asy
     await page.wait('document.querySelector(".ant-drawer-open [role=alert]") && !document.querySelector("[data-mihomo-save]").disabled');
     assert.match(await page.evaluate('document.querySelector(".ant-drawer-open [role=alert]").textContent'), /Required credential/);
     assert.equal(await page.evaluate('document.querySelector("[data-mihomo-form] [name=name]").value'), 'Fictional node');
-    assert.equal(await page.evaluate('document.querySelector("[data-mihomo-form] [name=server_port]").value'), '2443');
+    assert.equal(await page.evaluate('document.querySelector("[data-mihomo-form] [name=port]").value'), '1443');
 });
 
 test('route and account changes discard a drawer draft and stale credentials', async () => {
@@ -365,6 +371,22 @@ test('parent choices stay within one protocol and optional booleans preserve the
     await saved(page, 4);
     const request = state.requests.find(r=>r.action==='save');
     assert.equal(request.type, 'http');assert.equal(request.payload.id, 2);assert.equal(request.payload.parent_id, null);assert.equal(request.payload.tls, false);
+});
+
+test('the V2bX listening port is offered only for a managed root node, and SSH explains host verification', async () => {
+    const page = await openPage();
+    const listening = () => page.evaluate('Boolean(document.querySelector("[data-mihomo-form] [name=server_port]"))');
+    await openForm(page, 'http');
+    assert.equal(await listening(), true);
+    await page.toggle('managed', false);
+    assert.equal(await listening(), false, 'an external service has no V2bX listener');
+    await page.toggle('managed', true);
+    assert.equal(await listening(), true);
+    await closeForm(page);
+    await openForm(page, 'ssh');
+    assert.equal(await listening(), false);
+    assert.match(await page.evaluate('document.querySelector("[data-mihomo-section=security]").textContent'), /SSH server verification/);
+    assert.match(await page.evaluate('document.querySelector("[data-mihomo-field=host_key] textarea").placeholder'), /^\["ssh-ed25519 /);
 });
 
 test('managed server mode is available only for the four implemented server protocols', async () => {
