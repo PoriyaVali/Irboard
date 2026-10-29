@@ -204,7 +204,7 @@ class MihomoNodeDrawer extends y.a.Component {
         if (!overlay && !String(server.host || '').trim()) errors.host = required;
         if (!overlay && server.host && /[\s\x00-\x1f/]/.test(server.host)) errors.host = imnText('فقط دامنه یا IP وارد کنید؛ بدون https:// یا مسیر.', 'Enter only a domain or IP, without https:// or a path.');
         ['port', 'server_port'].forEach(key => {
-            var needed = key === 'port' ? !overlay && !(server.type === 'mieru' && effective.port_range) : !!effective.managed;
+            var needed = key === 'port' ? !overlay && !(server.type === 'mieru' && effective.port_range) : !!effective.managed && !server.parent_id;
             if ((server[key] == null || server[key] === '') && !needed) return;
             if (!Number.isInteger(Number(server[key])) || Number(server[key]) < 1 || Number(server[key]) > 65535) errors[key] = imnText('یک پورت معتبر بین ۱ و ۶۵۵۳۵ وارد کنید.', 'Enter a port from 1 to 65535.');
         });
@@ -221,6 +221,7 @@ class MihomoNodeDrawer extends y.a.Component {
                     catch (_) { errors[column] = imnText('یک آرایه یا شیء JSON معتبر وارد کنید.', 'Enter a valid JSON array or object.'); }
                 }
             });
+            if (server.managed && definition.managed_server && !['username', 'password'].some(column => !server[column] || String(server[column]).includes('{{uuid}}'))) errors.password = imnText('شناسهٔ عددی کاربر قابل حدس است؛ نام کاربری یا رمز عبور باید {{uuid}} داشته باشد یا خالی بماند.', 'A user ID is guessable: the username or password must contain {{uuid}} or stay blank.');
             if (server.managed && server.type === 'mieru' && server.port_range) errors.port_range = imnText('برای نود مدیریت‌شده، بازه را خالی و یک پورت انتخاب کنید.', 'Managed nodes need one port; clear the port range.');
             if (server.type === 'ssh' && !server.password && !server.private_key) errors.password = imnText('رمز عبور یا کلید خصوصی SSH را وارد کنید.', 'Enter the SSH password or private key.');
             if (['wireguard', 'masque'].indexOf(server.type) >= 0 && server.network !== 'h3-l4proxy' && !server.ip && !server.ipv6) errors.ip = imnText('IPv4 یا IPv6 تخصیص‌یافتهٔ کلاینت را وارد کنید.', 'Enter the client IPv4 or IPv6 address assigned by the service.');
@@ -279,7 +280,7 @@ class MihomoNodeDrawer extends y.a.Component {
                 !overlay && this.field('host', this.input('host', {dir: 'ltr'}), {required: true}),
                 !overlay && y.a.createElement('div', {className: 'row', key: 'ports'},
                     this.field('port', this.input('port', {type: 'number', min: 1, max: 65535, dir: 'ltr', disabled: this.state.busy || !!source.port_range}), {column: 'col-6', required: !source.port_range}),
-                    this.field('server_port', this.input('server_port', {type: 'number', min: 1, max: 65535, dir: 'ltr'}), {column: 'col-6', required: !!source.managed})),
+                    this.field('server_port', this.input('server_port', {type: 'number', min: 1, max: 65535, dir: 'ltr'}), {column: 'col-6', required: !!source.managed && !server.parent_id})),
                 server.parent_id && y.a.createElement('p', {key: 'inherited', className: 'text-muted', 'data-mihomo-inherited': true}, imnText('تنظیمات پروتکل و حالت مدیریت از نود والد گرفته می‌شود: ', 'Protocol settings and management mode are inherited from: ') + (source.name || '') + ' (#' + source.id + ')')
             ]),
             this.protocolSection('connection'), this.protocolSection('credentials'), this.protocolSection('security'),
