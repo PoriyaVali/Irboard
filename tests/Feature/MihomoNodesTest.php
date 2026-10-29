@@ -84,6 +84,27 @@ class MihomoNodesTest extends TestCase
         }
     }
 
+    public function testManagedCredentialsNeedTheUuidAndRelaysNeedNoListenPort(): void
+    {
+        $headers = $this->auth();
+        foreach (\App\Protocols\Mihomo\ManagedServer::TYPES as $type) {
+            $model = Registry::model($type);
+            // {{user_id}} is a public sequence number, not a per-user secret.
+            $guessable = $this->node($type, ['managed' => true, 'username' => '{{user_id}}', 'password' => 'pass-{{user_id}}', 'server_port' => 32001]);
+            $this->withHeaders($headers)->postJson($this->path($type, 'save'), $guessable)->assertUnprocessable()->assertJsonValidationErrors('password');
+            $this->assertSame(0, $model::count());
+            $readable = $this->node($type, ['managed' => true, 'username' => 'user-{{user_id}}', 'password' => '', 'server_port' => 32001]);
+            $this->withHeaders($headers)->postJson($this->path($type, 'save'), $readable)->assertOk();
+            $root = $model::first();
+            // A relay inherits the root's mode; V2bX listens only for the root.
+            $relay = $this->node($type, ['name' => 'relay ' . $type, 'parent_id' => $root->id, 'server_port' => null]);
+            $this->withHeaders($headers)->postJson($this->path($type, 'save'), $relay)->assertOk();
+            $this->assertNull($model::where('parent_id', $root->id)->value('server_port'));
+            $readable['id'] = $root->id; $readable['rate'] = 2;
+            $this->withHeaders($headers)->postJson($this->path($type, 'save'), $readable)->assertOk();
+        }
+    }
+
     public function testEveryProtocolHasItsOwnRealTableModelColumnsAndProtectedCrud(): void
     {
         $this->assertCount(15, Registry::types());

@@ -18,14 +18,20 @@ class ManagedServer
     {
         if (empty($node['managed'])) return;
         if (!self::supports($type)) self::fail('managed', 'این پروتکل هنوز ورودی سرور چندکاربره در هستهٔ Mihomo ندارد.');
-        if (empty($node['server_port'])) self::fail('server_port', 'پورت شنوندهٔ V2bX الزامی است.');
+        // Relays inherit the root's mode; V2bX listens only for the root node.
+        if (empty($node['parent_id']) && empty($node['server_port'])) self::fail('server_port', 'پورت شنوندهٔ V2bX الزامی است.');
+        $templates = '';
         foreach (['username', 'password'] as $field) {
             $value = $node[$field] ?? '';
             if (strpos(str_replace(['{{uuid}}', '{{user_id}}'], '', (string)$value), '{{') !== false) self::fail($field, 'قالب مشخصات معتبر نیست.');
             if ($value !== '' && $value !== null && strpos($value, '{{uuid}}') === false && strpos($value, '{{user_id}}') === false) {
                 self::fail($field, 'در حالت V2bX، مشخصات باید برای هر کاربر یکتا باشند؛ از {{uuid}} استفاده کنید یا فیلد را خالی بگذارید.');
             }
+            $templates .= ($value === '' || $value === null) ? '{{uuid}}' : $value;
         }
+        // {{user_id}} is a public sequence number: credentials without the
+        // subscriber's UUID would let anyone use, and bill, any account.
+        if (strpos($templates, '{{uuid}}') === false) self::fail('password', 'شناسهٔ عددی کاربر قابل حدس است؛ نام کاربری یا رمز عبور باید {{uuid}} داشته باشد یا خالی بماند.');
         if ($type === 'mieru' && !empty($node['port_range'])) self::fail('port_range', 'نود مدیریت‌شده از یک پورت سرویس استفاده می‌کند.');
     }
 
