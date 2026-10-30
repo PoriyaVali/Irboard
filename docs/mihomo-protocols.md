@@ -127,7 +127,7 @@ Irboard است؛ دادهٔ جدول آزمایشی شاخه‌های منتشر
 
 ```sh
 python3 scripts/patch_admin_mihomo_nodes.py --check
-vendor/bin/phpunit --filter 'MihomoNodesTest|MihomoSubscriptionTest|SshKeysTest|MieruTrafficPatternTest'
+vendor/bin/phpunit --filter 'MihomoNodesTest|MihomoSubscriptionTest|SshKeysTest|MieruTrafficPatternTest|SudokuKeysTest|AdminFormMetadataTest'
 node --test tests/AdminMihomoNodesBrowserTest.cjs
 IRBOARD_MIHOMO_CONTRACT_DIR=/tmp/mihomo-contract vendor/bin/phpunit --filter MihomoSubscriptionTest
 python3 tests/ValidateMihomoConfig.py --binary /path/to/mihomo --profiles /tmp/mihomo-contract/ClashMeta.json
@@ -142,8 +142,8 @@ v1.19.33 بررسی می‌شود؛ ابزار تست کلید و گواهی خ�
 
 ## اتصال به هستهٔ سرور Mihomo در V2bX
 
-حالت «مدیریت کاربران با V2bX / هستهٔ Mihomo» برای HTTP، SOCKS5، Mieru و
-ShadowQUIC اضافه شده است. مقدار `managed` در جدول اختصاصی همان پروتکل ذخیره
+حالت «مدیریت کاربران با V2bX / هستهٔ Mihomo» برای HTTP، SOCKS5، Mieru،
+ShadowQUIC، Sudoku و Snell اضافه شده است. مقدار `managed` در جدول اختصاصی همان پروتکل ذخیره
 می‌شود و برای تمام رکوردهای قدیمی پیش‌فرض صفر دارد. پروفایل خارجی با ارتقا
 به سرور مدیریت‌شده تبدیل نمی‌شود.
 
@@ -159,12 +159,29 @@ ShadowQUIC اضافه شده است. مقدار `managed` در جدول اختص
 
 مصرف، heartbeat، مسدودی، گروه‌ها و محدودیت‌ها از مسیر عادی UniProxy عبور
 می‌کنند. برای پروفایل خارجی و پروتکل فاقد ورودی سرور، config همچنان 501 است.
-فورک فعلی برای Snell و Sudoku ورودی تک‌کلیدی دارد و برای برخی پروتکل‌ها فقط
-کلاینت دارد؛ این موارد به‌عنوان سرور چندکاربره فعال نشده‌اند.
+برای SSR، WireGuard، GOST Relay، SSH، MASQUE، OpenVPN، Tailscale، ZeroTier و
+EasyTier فورک فقط کلاینت دارد؛ این‌ها سرویس بیرونی‌اند و config آن‌ها 501 است.
+
+**Sudoku.** سرور Sudoku جدول‌ها و کلید AEAD را از کلید عمومی می‌سازد و کلاینت
+از کلید عمومی‌ای که کلیدش به آن تعلق دارد. پنل برای نود اصلی یک کلید خصوصی اصلی
+(۶۴ رقم hex) نگه می‌دارد؛ اگر خالی بماند هنگام ذخیره ساخته می‌شود. هر کاربر در
+اشتراک تکهٔ جدای `r || x-r` از آن را می‌گیرد که `r` از کلید اصلی و UUID او
+مشتق می‌شود (`app/Protocols/Mihomo/SudokuKeys.php`). V2bX همان تکه‌ها را
+می‌سازد و فقط هش تکهٔ کاربران فعلی را می‌پذیرد. API تنظیمات کلید اصلی و
+تنظیمات جدول، AEAD و HTTP mask را می‌فرستد؛ `http-mask-tls`، `http-mask-host` و
+`multiplex` تنظیم کلاینت‌اند. هر دارندهٔ یک تکه می‌تواند کلید اصلی را بازسازی
+کند؛ چیزی که کاربران را از هم جدا می‌کند UUID درون تکه است.
+
+**Snell.** Snell شناسهٔ کاربر ندارد. نود مدیریت‌شده باید در `obfs-opts`
+مقدار `{"mode":"shadow-tls","version":3,"host":"..."}` بدون password داشته
+باشد: دست‌دهی ShadowTLS نسخهٔ ۳ کاربر را مشخص می‌کند و PSK هر کاربر، که خالی
+یعنی `{{uuid}}`، رمز ShadowTLS او هم هست. host باید سایتی با TLS 1.3 و گواهی
+همان نام باشد؛ V2bX دست‌دهی را به host:443 یا `MihomoOptions.ShadowTLSHandshake`
+می‌فرستد. Mihomo v1.19.33 و Surge Snell روی ShadowTLS را پشتیبانی می‌کنند.
 
 راهنمای تنظیم و محدودیت‌های هسته در مخزن V2bX، فایل
 [`docs/mihomo-server.md`](https://github.com/PoriyaVali/V2bX/blob/dev_new/docs/mihomo-server.md)
-است. در HTTP، SOCKS5، Mieru و ShadowQUIC افزودن یا حذف کاربر بقیهٔ کاربران را
+است. در HTTP، SOCKS5، Mieru، ShadowQUIC، Sudoku و Snell افزودن یا حذف کاربر بقیهٔ کاربران را
 قطع نمی‌کند. کاربری که حذف شود (مسدودی، پایان اشتراک یا حجم) فوراً قطع می‌شود و
 دیگر وصل نمی‌شود. تغییر سرعت و محدودیت دستگاه روی اتصال باز اعمال می‌شود.
 

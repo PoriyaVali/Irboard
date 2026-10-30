@@ -1205,6 +1205,7 @@ CREATE TABLE IF NOT EXISTS `v2_server_snell` (
   `host` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `port` int(11) DEFAULT NULL,
   `server_port` int(11) DEFAULT NULL,
+  `managed` tinyint(1) NOT NULL DEFAULT '0',
   `rate` decimal(10,2) NOT NULL DEFAULT '1.00',
   `tags` text COLLATE utf8mb4_unicode_ci,
   `psk` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -1425,6 +1426,7 @@ CREATE TABLE IF NOT EXISTS `v2_server_sudoku` (
   `host` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `port` int(11) DEFAULT NULL,
   `server_port` int(11) DEFAULT NULL,
+  `managed` tinyint(1) NOT NULL DEFAULT '0',
   `rate` decimal(10,2) NOT NULL DEFAULT '1.00',
   `tags` text COLLATE utf8mb4_unicode_ci,
   `key` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
@@ -1689,3 +1691,5 @@ ALTER TABLE `v2_server_http` ADD COLUMN `managed` tinyint(1) NOT NULL DEFAULT '0
 ALTER TABLE `v2_server_socks5` ADD COLUMN `managed` tinyint(1) NOT NULL DEFAULT '0';
 ALTER TABLE `v2_server_mieru` ADD COLUMN `managed` tinyint(1) NOT NULL DEFAULT '0';
 ALTER TABLE `v2_server_shadowquic` ADD COLUMN `managed` tinyint(1) NOT NULL DEFAULT '0';
+ALTER TABLE `v2_server_sudoku` ADD COLUMN `managed` tinyint(1) NOT NULL DEFAULT '0';
+ALTER TABLE `v2_server_snell` ADD COLUMN `managed` tinyint(1) NOT NULL DEFAULT '0';

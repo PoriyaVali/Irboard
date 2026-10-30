@@ -1505,11 +1505,13 @@
                     "en": "Snell PSK"
                 },
                 "help": {
-                    "fa": "کلید PSK تنظیم‌شده روی سرویس Snell را دقیقاً کپی کنید؛ با نام کاربری یا رمز پنل جایگزین نکنید.",
-                    "en": "Copy the exact PSK configured on the Snell service; do not use a panel username or password."
+                    "fa": "در حالت مدیریت با V2bX خالی بگذارید یا {{uuid}} بنویسید تا هر کاربر کلید خودش را داشته باشد؛ همین کلید رمز ShadowTLS او هم هست. برای سرویس بیرونی، PSK همان سرویس را کپی کنید.",
+                    "en": "When V2bX manages users, leave blank or enter {{uuid}} so each subscriber has their own key, which is also their ShadowTLS password. For an external service, copy that service's PSK."
                 },
                 "section": "credentials",
-                "required": true
+                "required": false,
+                "managed_credential": true,
+                "required_external": true
             },
             "udp": {
                 "option": "udp",
@@ -1600,14 +1602,14 @@
                     "en": "Snell obfuscation options"
                 },
                 "help": {
-                    "fa": "شیء JSON گزینه‌های استتار را از پروفایل سرویس کپی کنید؛ mode می‌تواند http، tls، shadow-tls، restls یا jls باشد.",
-                    "en": "Copy the service obfuscation JSON object; mode may be http, tls, shadow-tls, restls or jls."
+                    "fa": "شیء JSON استتار. در حالت مدیریت با V2bX فقط ShadowTLS نسخهٔ ۳ کاربران را از هم جدا می‌کند: {\"mode\":\"shadow-tls\",\"version\":3,\"host\":\"دامنهٔ یک سایت TLS 1.3\"} بدون password. برای سرویس بیرونی، mode می‌تواند http، tls، shadow-tls، restls یا jls باشد.",
+                    "en": "The obfuscation JSON object. When V2bX manages users, only ShadowTLS v3 tells them apart: {\"mode\":\"shadow-tls\",\"version\":3,\"host\":\"a TLS 1.3 site\"} without a password. For an external service, mode may be http, tls, shadow-tls, restls or jls."
                 },
                 "section": "advanced",
                 "required": false,
                 "placeholder": {
-                    "fa": "{}",
-                    "en": "{}"
+                    "fa": "{\"mode\":\"shadow-tls\",\"version\":3,\"host\":\"www.example.com\"}",
+                    "en": "{\"mode\":\"shadow-tls\",\"version\":3,\"host\":\"www.example.com\"}"
                 }
             },
             "client_fingerprint": {
@@ -1709,15 +1711,15 @@
                 "required": false
             }
         },
-        "managed_server": false,
+        "managed_server": true,
         "form": {
             "description": {
                 "fa": "اتصال Snell با کلید PSK؛ نسخه و استتار را از تنظیمات سرور بگیرید.",
                 "en": "A Snell connection using a PSK; obtain the version and obfuscation settings from the server."
             },
             "capability": {
-                "fa": "ابتدا سرویس یا شبکهٔ مقصد و اطلاعات کلاینت را بیرون V2bX آماده کنید و سپس پروفایل آن را اینجا وارد کنید. این نوع در حال حاضر ورودی سرور چندکاربرهٔ مدیریت‌شده ندارد؛ ذخیرهٔ این فرم به‌تنهایی سرور، حساب یا محدودیت سمت سرویس ایجاد نمی‌کند.",
-                "en": "Provision the destination service or network and client credentials outside V2bX first, then enter its profile here. This type currently has no managed multi-user server inbound; saving this form alone does not create its server, accounts or service-side limits."
+                "fa": "برای ساخت سرور، V2bX نسخهٔ 1.11.0 یا جدیدتر با هستهٔ mihomo را نصب و ID نود اصلی را ثبت کنید؛ کاربران، مصرف و محدودیت‌ها از پنل می‌آیند. دست‌دهی ShadowTLS به host:443 در obfs-opts می‌رود، یا به MihomoOptions.ShadowTLSHandshake سرور؛ آن سرور باید گواهی همان host را داشته باشد. کلاینت باید Snell روی ShadowTLS را پشتیبانی کند، مثل Surge یا mihomo نسخهٔ 1.19.33.",
+                "en": "To provision the server, install V2bX 1.11.0 or later with the mihomo core and register the root node ID; the panel supplies users, usage and limits. The ShadowTLS handshake goes to the obfs-opts host on port 443, or to the server's MihomoOptions.ShadowTLSHandshake, which must serve that host's certificate. Clients must support Snell over ShadowTLS, as Surge and Mihomo v1.19.33 do."
             },
             "endpoint": true,
             "defaults": {
@@ -1731,8 +1733,15 @@
                 "show": false,
                 "sort": 0,
                 "port": 443,
+                "server_port": 443,
+                "managed": true,
                 "version": 3,
-                "udp": true
+                "udp": true,
+                "obfs_opts": {
+                    "mode": "shadow-tls",
+                    "version": 3,
+                    "host": ""
+                }
             },
             "common": {
                 "name": {
@@ -4494,11 +4503,12 @@
                     "en": "Protocol key"
                 },
                 "help": {
-                    "fa": "کلید مشترک Sudoku را دقیقاً از سرویس مقصد بگیرید؛ دو سمت باید یک کلید داشته باشند. مقدار نمونه یا رمز پنل را وارد نکنید.",
-                    "en": "Obtain the exact Sudoku shared key from the destination; both sides must match. Do not use a sample or panel password."
+                    "fa": "در حالت مدیریت با V2bX، کلید خصوصی اصلی (۶۴ رقم hex) است؛ خالی بگذارید تا هنگام ذخیره ساخته شود. هر کاربر تکهٔ جداگانه‌ای از آن را در اشتراک می‌گیرد و با حذف او همان تکه از کار می‌افتد. برای سرویس بیرونی، کلید همان سرویس را کپی کنید.",
+                    "en": "When V2bX manages users this is the master private key (64 hex digits); leave blank to generate one on save. Each subscriber receives their own split of it, which stops working when they are removed. For an external service, copy that service's key."
                 },
                 "section": "credentials",
-                "required": true
+                "required": false,
+                "required_external": true
             },
             "aead_method": {
                 "option": "aead-method",
@@ -4943,15 +4953,15 @@
                 "required": false
             }
         },
-        "managed_server": false,
+        "managed_server": true,
         "form": {
             "description": {
                 "fa": "اتصال Sudoku؛ کلید و تنظیمات AEAD، جدول و HTTP mask باید با سرویس مقصد هماهنگ باشند.",
                 "en": "A Sudoku connection; match its key, AEAD, table and HTTP-mask settings to the destination service."
             },
             "capability": {
-                "fa": "ابتدا سرویس یا شبکهٔ مقصد و اطلاعات کلاینت را بیرون V2bX آماده کنید و سپس پروفایل آن را اینجا وارد کنید. این نوع در حال حاضر ورودی سرور چندکاربرهٔ مدیریت‌شده ندارد؛ ذخیرهٔ این فرم به‌تنهایی سرور، حساب یا محدودیت سمت سرویس ایجاد نمی‌کند.",
-                "en": "Provision the destination service or network and client credentials outside V2bX first, then enter its profile here. This type currently has no managed multi-user server inbound; saving this form alone does not create its server, accounts or service-side limits."
+                "fa": "برای ساخت سرور، V2bX نسخهٔ 1.11.0 یا جدیدتر با هستهٔ mihomo را نصب و ID نود اصلی را ثبت کنید؛ کاربران، مصرف و محدودیت‌ها از پنل می‌آیند. V2bX کاوشگرها را به سایت پوششی خودش می‌برد. TLS ندارد؛ برای http-mask-tls یک CDN یا پراکسی TLS جلوی نود لازم است.",
+                "en": "To provision the server, install V2bX 1.11.0 or later with the mihomo core and register the root node ID; the panel supplies users, usage and limits. V2bX hands probers to its own cover site. The node has no TLS: http-mask-tls needs a CDN or TLS proxy in front of it."
             },
             "endpoint": true,
             "defaults": {
@@ -4965,6 +4975,8 @@
                 "show": false,
                 "sort": 0,
                 "port": 443,
+                "server_port": 443,
+                "managed": true,
                 "aead_method": "chacha20-poly1305",
                 "padding_min": 10,
                 "padding_max": 30,

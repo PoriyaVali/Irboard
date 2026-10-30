@@ -53,12 +53,33 @@ class MihomoNodesTest extends TestCase
         ], $attrs);
     }
 
+    /**
+     * A managed node's fields with blank per-user templates: a username and a
+     * password, Snell's PSK with its ShadowTLS v3 camouflage, or a Sudoku
+     * master key that the panel generates.
+     */
+    private function managed(string $type, array $attrs = []): array
+    {
+        $fields = [
+            'sudoku' => ['key' => ''],
+            'snell' => ['psk' => '', 'obfs_opts' => ['mode' => 'shadow-tls', 'version' => 3, 'host' => 'www.example.com']],
+        ][$type] ?? ['username' => '', 'password' => ''];
+        return array_replace(['managed' => true, 'server_port' => 32001] + $fields, $attrs);
+    }
+
+    /** The per-user template a managed node of $type is keyed by, if any. */
+    private function template(string $type): ?string
+    {
+        if ($type === 'sudoku') return null;
+        return $type === 'snell' ? 'psk' : 'password';
+    }
+
     public function testManagedServerContractAndUniqueSubscriptionCredentials(): void
     {
         config(['v2board.server_token' => 'managed-test-key']);
         $headers = $this->auth();
         foreach (\App\Protocols\Mihomo\ManagedServer::TYPES as $type) {
-            $node = $this->node($type, ['managed' => true, 'username' => '', 'password' => '', 'server_port' => 32001]);
+            $node = $this->node($type, $this->managed($type));
             $this->withHeaders($headers)->postJson($this->path($type, 'save'), $node)->assertOk();
             $stored = Registry::model($type)::first();
             $api = '/api/v1/server/UniProxy/config?token=managed-test-key&node_type=' . $type . '&node_id=' . $stored->id;
@@ -75,10 +96,27 @@ class MihomoNodesTest extends TestCase
             $this->assertSame(2, $matches[0]['available_status']);
 
             $outbound = Outbound::render($stored->toArray() + ['type' => $type], ['id' => 17, 'uuid' => 'individual-secret']);
-            $this->assertSame('individual-secret', $outbound['username']);
-            $this->assertSame('individual-secret', $outbound['password']);
-            $node['id'] = $stored->id; $node['password'] = 'shared-password';
-            $this->withHeaders($headers)->postJson($this->path($type, 'save'), $node)->assertUnprocessable()->assertJsonValidationErrors('password');
+            $other = Outbound::render($stored->toArray() + ['type' => $type], ['id' => 18, 'uuid' => 'another-secret']);
+            if ($type === 'sudoku') {
+                $this->assertNull(\App\Protocols\Mihomo\SudokuKeys::problem($stored->key), 'the panel generates the master key');
+                $this->assertSame($stored->key, $body['key']);
+                $this->assertSame(\App\Protocols\Mihomo\SudokuKeys::userKey($stored->key, 'individual-secret'), $outbound['key']);
+                $this->assertNotSame($outbound['key'], $other['key']);
+                $node['id'] = $stored->id; $node['key'] = 'shared-key';
+                $this->withHeaders($headers)->postJson($this->path($type, 'save'), $node)->assertUnprocessable()->assertJsonValidationErrors('key');
+            } elseif ($type === 'snell') {
+                $this->assertSame(['mode' => 'shadow-tls', 'host' => 'www.example.com', 'version' => 3], $body['obfs_opts']);
+                $this->assertSame('individual-secret', $outbound['psk']);
+                $this->assertSame('individual-secret', $outbound['obfs-opts']['password'], 'the PSK is the ShadowTLS password');
+                $this->assertSame('another-secret', $other['psk']);
+                $node['id'] = $stored->id; $node['psk'] = 'shared-psk';
+                $this->withHeaders($headers)->postJson($this->path($type, 'save'), $node)->assertUnprocessable()->assertJsonValidationErrors('psk');
+            } else {
+                $this->assertSame('individual-secret', $outbound['username']);
+                $this->assertSame('individual-secret', $outbound['password']);
+                $node['id'] = $stored->id; $node['password'] = 'shared-password';
+                $this->withHeaders($headers)->postJson($this->path($type, 'save'), $node)->assertUnprocessable()->assertJsonValidationErrors('password');
+            }
             $stored->update(['managed' => false]);
             $this->getJson($api)->assertStatus(501);
         }
@@ -98,14 +136,14 @@ class MihomoNodesTest extends TestCase
         foreach (\App\Protocols\Mihomo\ManagedServer::TYPES as $type) {
             $model = Registry::model($type);
             foreach ([$dns, $outbound] as $refused) {
-                $node = $this->node($type, ['managed' => true, 'username' => '', 'password' => '', 'server_port' => 32001, 'route_id' => [$block, $refused]]);
+                $node = $this->node($type, $this->managed($type, ['route_id' => [$block, $refused]]));
                 $this->withHeaders($headers)->postJson($this->path($type, 'save'), $node)->assertUnprocessable()->assertJsonValidationErrors('route_id');
                 $this->assertSame(0, $model::count());
             }
             // An external service never reaches V2bX; its routes are its own.
             $external = $this->node($type, ['managed' => false, 'route_id' => [$dns]]);
             $this->withHeaders($headers)->postJson($this->path($type, 'save'), $external)->assertOk();
-            $managed = $this->node($type, ['name' => 'managed ' . $type, 'managed' => true, 'username' => '', 'password' => '', 'server_port' => 32001, 'route_id' => [$block]]);
+            $managed = $this->node($type, $this->managed($type, ['name' => 'managed ' . $type, 'route_id' => [$block]]));
             $this->withHeaders($headers)->postJson($this->path($type, 'save'), $managed)->assertOk();
             $root = $model::where('managed', true)->first();
             // A relay's routes reach only subscriptions.
@@ -122,16 +160,96 @@ class MihomoNodesTest extends TestCase
         $this->withHeaders($headers)->postJson($this->path('route', 'save'), $edit)->assertOk();
     }
 
+    // V2bX tells Snell users apart by their ShadowTLS v3 handshake, whose
+    // password is the user's PSK; an external Snell service keeps any mode.
+    public function testManagedSnellNeedsShadowTlsV3WithTheUsersPsk(): void
+    {
+        config(['v2board.server_token' => 'managed-test-key']);
+        $headers = $this->auth();
+        $model = Registry::model('snell');
+        foreach ([
+            'simple-obfs' => ['mode' => 'tls', 'host' => 'www.example.com'],
+            'shadow-tls v2' => ['mode' => 'shadow-tls', 'version' => 2, 'host' => 'www.example.com', 'password' => 'p'],
+            'no host' => ['mode' => 'shadow-tls', 'version' => 3, 'host' => ''],
+            'a shared password' => ['mode' => 'shadow-tls', 'version' => 3, 'host' => 'www.example.com', 'password' => '{{uuid}}'],
+            'jls' => ['mode' => 'jls', 'host' => 'www.example.com', 'username' => 'u', 'password' => 'p'],
+        ] as $name => $obfs) {
+            $node = $this->node('snell', $this->managed('snell', ['obfs_opts' => $obfs]));
+            $this->withHeaders($headers)->postJson($this->path('snell', 'save'), $node)->assertUnprocessable()->assertJsonValidationErrors('obfs_opts');
+        }
+        $this->assertSame(0, $model::count());
+        $external = $this->node('snell', ['managed' => false, 'obfs_opts' => ['mode' => 'tls', 'host' => 'www.example.com']]);
+        $this->withHeaders($headers)->postJson($this->path('snell', 'save'), $external)->assertOk();
+
+        $node = $this->node('snell', $this->managed('snell', ['name' => 'managed snell', 'psk' => 'k-{{uuid}}', 'version' => 4]));
+        $this->withHeaders($headers)->postJson($this->path('snell', 'save'), $node)->assertOk();
+        $stored = $model::where('managed', true)->first();
+        $body = $this->getJson('/api/v1/server/UniProxy/config?token=managed-test-key&node_type=snell&node_id=' . $stored->id)->assertOk()->json();
+        $this->assertSame('{{uuid}}', $body['username']);
+        $this->assertSame('k-{{uuid}}', $body['password']);
+        $this->assertSame(4, $body['version']);
+        $this->assertSame(['mode' => 'shadow-tls', 'host' => 'www.example.com', 'version' => 3], $body['obfs_opts']);
+        $this->assertArrayNotHasKey('psk', $body);
+        $profile = Outbound::render($stored->toArray() + ['type' => 'snell'], ['id' => 17, 'uuid' => 'individual-secret']);
+        $this->assertSame('k-individual-secret', $profile['psk']);
+        $this->assertSame(['mode' => 'shadow-tls', 'version' => 3, 'host' => 'www.example.com', 'password' => 'k-individual-secret'], $profile['obfs-opts']);
+    }
+
+    // Each user holds a split of the node's master key; V2bX derives the same
+    // splits from the master and the users' UUIDs.
+    public function testManagedSudokuOwnsAMasterKeyAndHandsOutSplits(): void
+    {
+        config(['v2board.server_token' => 'managed-test-key']);
+        $headers = $this->auth();
+        $model = Registry::model('sudoku');
+        foreach (['11111111-2222-3333-4444-555555555555', str_repeat('f', 64)] as $bad) {
+            $node = $this->node('sudoku', $this->managed('sudoku', ['key' => $bad]));
+            $this->withHeaders($headers)->postJson($this->path('sudoku', 'save'), $node)->assertUnprocessable()->assertJsonValidationErrors('key');
+        }
+        $this->assertSame(0, $model::count());
+
+        $master = '1a1786c2533e7d5b5b1015d717ea8ce09165858dec91327c66bb958dcbd0050a';
+        $node = $this->node('sudoku', $this->managed('sudoku', ['key' => $master, 'http_mask_tls' => true, 'http_mask_host' => 'cdn.example.com', 'multiplex' => 'on',
+            'httpmask' => ['disable' => false, 'mode' => 'ws', 'path-root' => 'abc']]));
+        $this->withHeaders($headers)->postJson($this->path('sudoku', 'save'), $node)->assertOk();
+        $root = $model::first();
+        $this->assertSame($master, $root->key, 'a master key the administrator gave is kept');
+        $body = $this->getJson('/api/v1/server/UniProxy/config?token=managed-test-key&node_type=sudoku&node_id=' . $root->id)->assertOk()->json();
+        $this->assertSame($master, $body['key']);
+        $this->assertSame(['{{uuid}}', '{{uuid}}'], [$body['username'], $body['password']]);
+        $this->assertSame([true, 'ws', 'abc'], [$body['http_mask'], $body['http_mask_mode'], $body['path_root']], 'the nested httpmask wins, as in the client');
+        foreach (['http_mask_tls', 'http_mask_host', 'multiplex', 'httpmask'] as $client) $this->assertArrayNotHasKey($client, $body);
+
+        // A relay's subscribers hold the same splits as the root's.
+        $relay = $this->node('sudoku', ['name' => 'relay sudoku', 'parent_id' => $root->id, 'host' => 'relay.example.com', 'server_port' => null]);
+        $this->withHeaders($headers)->postJson($this->path('sudoku', 'save'), $relay)->assertOk();
+        $user = $this->makeUser(['group_id' => 1, 'uuid' => '00c68113-03c2-42cb-9f3c-976fe2b0eb94', 'expired_at' => time() + 3600]);
+        $profiles = array_column((new ServerService())->getAvailableProtocolNodes($user), 'mihomo', 'name');
+        $split = 'a0213c63cb3355827ca213074aa8c03b25d9931c423779fd7c8cf056f77a46077af5495f880a28d9de6d01d0cd41cca46c8cf170aa5ab97ee92ea536d455bf02';
+        $this->assertSame($split, $profiles['native sudoku']['key']);
+        $this->assertSame($split, $profiles['relay sudoku']['key']);
+
+        // Saving without a key generates a master.
+        $fresh = $this->node('sudoku', $this->managed('sudoku', ['name' => 'fresh sudoku']));
+        $this->withHeaders($headers)->postJson($this->path('sudoku', 'save'), $fresh)->assertOk();
+        $generated = $model::where('name', 'fresh sudoku')->value('key');
+        $this->assertNull(\App\Protocols\Mihomo\SudokuKeys::problem($generated));
+        $this->assertNotSame($master, $generated);
+    }
+
     public function testManagedCredentialsNeedTheUuidAndRelaysNeedNoListenPort(): void
     {
         $headers = $this->auth();
         foreach (\App\Protocols\Mihomo\ManagedServer::TYPES as $type) {
             $model = Registry::model($type);
+            $template = $this->template($type);
             // {{user_id}} is a public sequence number, not a per-user secret.
-            $guessable = $this->node($type, ['managed' => true, 'username' => '{{user_id}}', 'password' => 'pass-{{user_id}}', 'server_port' => 32001]);
-            $this->withHeaders($headers)->postJson($this->path($type, 'save'), $guessable)->assertUnprocessable()->assertJsonValidationErrors('password');
-            $this->assertSame(0, $model::count());
-            $readable = $this->node($type, ['managed' => true, 'username' => 'user-{{user_id}}', 'password' => '', 'server_port' => 32001]);
+            if ($template) {
+                $guessable = $this->node($type, $this->managed($type, $template === 'psk' ? ['psk' => 'pass-{{user_id}}'] : ['username' => '{{user_id}}', 'password' => 'pass-{{user_id}}']));
+                $this->withHeaders($headers)->postJson($this->path($type, 'save'), $guessable)->assertUnprocessable()->assertJsonValidationErrors($template);
+                $this->assertSame(0, $model::count());
+            }
+            $readable = $this->node($type, $this->managed($type, $template === 'password' ? ['username' => 'user-{{user_id}}'] : []));
             $this->withHeaders($headers)->postJson($this->path($type, 'save'), $readable)->assertOk();
             $root = $model::first();
             // A relay inherits the root's mode; V2bX listens only for the root.

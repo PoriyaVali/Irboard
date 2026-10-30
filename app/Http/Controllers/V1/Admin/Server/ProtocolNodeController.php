@@ -65,6 +65,7 @@ abstract class ProtocolNodeController extends Controller
             abort_unless($node, 404);
             unset($params['id']);
             $node->fill($params);
+            ManagedServer::prepare($this->type, $node);
             $id = $node->id ?? 0;
             $rows[$id] = $node;
             $data = $rows->map->toArray()->all();
@@ -80,7 +81,7 @@ abstract class ProtocolNodeController extends Controller
                 ManagedServer::validate($this->type, $effective);
                 ManagedServer::validateRoutes($effective);
                 $settings = ProtocolRegistry::options($this->type, $effective);
-                if (!empty($effective['managed'])) $settings = ManagedServer::credentials($settings);
+                if (!empty($effective['managed'])) $settings = ManagedServer::credentials($this->type, $settings);
                 Outbound::validate($this->type, $settings);
             }
             $node->save();

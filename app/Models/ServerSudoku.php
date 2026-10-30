@@ -10,6 +10,7 @@ class ServerSudoku extends Model
     protected $dateFormat = 'U';
     protected $guarded = ['id'];
     protected $casts = [
+        'managed' => 'boolean',
         'created_at' => 'timestamp',
         'updated_at' => 'timestamp',
         'group_id' => 'array',
