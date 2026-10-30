@@ -2,12 +2,17 @@
 
 namespace App\Protocols\Mihomo;
 
+use App\Models\ServerRoute;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
 
 /** The server contract is narrower than Mihomo's client outbound catalog. */
 class ManagedServer
 {
     public const TYPES = ['http', 'socks5', 'mieru', 'shadowquic'];
+
+    /** The route actions V2bX's Mihomo core applies; it refuses a node with DNS or outbound routes. */
+    public const ROUTE_ACTIONS = ['block', 'block_ip', 'block_port', 'protocol'];
 
     public static function supports(string $type): bool
     {
@@ -33,6 +38,30 @@ class ManagedServer
         // subscriber's UUID would let anyone use, and bill, any account.
         if (strpos($templates, '{{uuid}}') === false) self::fail('password', 'شناسهٔ عددی کاربر قابل حدس است؛ نام کاربری یا رمز عبور باید {{uuid}} داشته باشد یا خالی بماند.');
         if ($type === 'mieru' && !empty($node['port_range'])) self::fail('port_range', 'نود مدیریت‌شده از یک پورت سرویس استفاده می‌کند.');
+    }
+
+    /** V2bX reads a managed root's routes; a child's reach only subscriptions. */
+    public static function validateRoutes(array $node): void
+    {
+        if (empty($node['managed']) || !empty($node['parent_id']) || empty($node['route_id'])) return;
+        $unsupported = ServerRoute::whereIn('id', array_map('intval', (array)$node['route_id']))
+            ->whereNotIn('action', self::ROUTE_ACTIONS)->pluck('remarks')->all();
+        if ($unsupported) self::fail('route_id', 'هستهٔ Mihomo در V2bX فقط مسیرهای مسدودسازی (block، block_ip، block_port و protocol) را اجرا می‌کند و نودی با مسیر DNS یا خروجی را بالا نمی‌آورد؛ این مسیرها را از نود بردارید: ' . implode('، ', $unsupported));
+    }
+
+    /** The managed root nodes using a route, as "type: name". */
+    public static function nodesUsingRoute(int $routeId): array
+    {
+        $names = [];
+        foreach (self::TYPES as $type) {
+            $table = ProtocolRegistry::table($type);
+            if (!Schema::hasTable($table) || !Schema::hasColumn($table, 'managed')) continue;
+            $model = ProtocolRegistry::model($type);
+            foreach ($model::where('managed', true)->whereNull('parent_id')->get() as $node) {
+                if (in_array($routeId, array_map('intval', (array)$node->route_id), true)) $names[] = $type . ': ' . $node->name;
+            }
+        }
+        return $names;
     }
 
     public static function credentials(array $settings): array

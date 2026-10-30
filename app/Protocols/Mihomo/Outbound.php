@@ -124,6 +124,10 @@ class Outbound
     {
         $settings = ProtocolRegistry::options($server['type'], $server);
         if (!empty($server['managed'])) $settings = ManagedServer::credentials($settings);
+        if ($server['type'] === 'ssh' && !empty($settings['host-key']) && empty($settings['host-key-algorithms'])) {
+            $algorithms = SshKeys::hostKeyAlgorithms($settings['host-key']);
+            if ($algorithms) $settings['host-key-algorithms'] = $algorithms;
+        }
         $replace = function ($value) use (&$replace, $user) {
             if (is_array($value)) return array_map($replace, $value);
             if (!is_string($value)) return $value;

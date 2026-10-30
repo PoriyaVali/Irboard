@@ -659,7 +659,7 @@ jobs:
       - name: New node protocol administration and subscription contract
         env:
           IRBOARD_MIHOMO_CONTRACT_DIR: ${{ runner.temp }}/mihomo-contract
-        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'AdminFormMetadataTest|MihomoNodesTest|MihomoSubscriptionTest'
+        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'AdminFormMetadataTest|MihomoNodesTest|MihomoSubscriptionTest|SshKeysTest|MieruTrafficPatternTest'
 
       - name: Simulate node traffic, limits, bans and reporting with real Redis
         env:

@@ -78,6 +78,7 @@ abstract class ProtocolNodeController extends Controller
             foreach (array_intersect_key($data, $affected) as $rowId => $row) {
                 $effective = Outbound::inherit($this->type, $row, $data);
                 ManagedServer::validate($this->type, $effective);
+                ManagedServer::validateRoutes($effective);
                 $settings = ProtocolRegistry::options($this->type, $effective);
                 if (!empty($effective['managed'])) $settings = ManagedServer::credentials($settings);
                 Outbound::validate($this->type, $settings);

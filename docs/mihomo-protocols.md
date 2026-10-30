@@ -68,6 +68,37 @@ Tailscale، ZeroTier و EasyTier آدرس/پورت مستقیم لازم ندا�
 و جفت cert/key در OpenVPN، padding و HTTP mask در Sudoku و شناسهٔ شبکهٔ ZeroTier
 است. فیلد متعلق به پروتکل دیگر و گزینهٔ ناشناخته رد می‌شود.
 
+### گزینه‌هایی که کل پروفایل را از کار می‌اندازند
+
+Mihomo اگر حتی یک proxy بارگذاری نشود، **کل پروفایل** کاربر را رد می‌کند. برای
+همین این مقادیر هنگام ذخیره همان‌طور بررسی می‌شوند که کلاینت آن‌ها را می‌خواند:
+
+- **کلید خصوصی SSH** مطابق `golang.org/x/crypto/ssh` و `crypto/x509` بررسی می‌شود:
+  قالب OpenSSH، PEM یا PKCS#8 از نوع Ed25519، ECDSA (P-256/P-384/P-521) یا RSA،
+  همراه با بررسی سازگاری اعداد RSA. کلید PEM رمزدار قدیمی با عبارت عبورش
+  رمزگشایی و آزموده می‌شود. کلید OpenSSH رمزدار پذیرفته نمی‌شود، چون PHP
+  bcrypt_pbkdf ندارد و عبارت عبور همراه کلید برای همهٔ کاربران ارسال می‌شود؛ روی
+  یک نسخه از کلید `ssh-keygen -p -N "" -f <فایل>` را اجرا کنید. کلید DSA، P-224،
+  X25519، کلید PuTTY و مسیر فایل نیز رد می‌شوند.
+- **کلید میزبان SSH** مانند `ssh.ParseAuthorizedKey` خوانده می‌شود (خط
+  authorized_keys یا ssh-keyscan)؛ نوع اعلام‌شده باید با خود کلید یکی باشد.
+- اگر `host-key-algorithms` خالی باشد، خروجی اشتراک آن را از نوع کلیدهای میزبان
+  می‌سازد. بدون آن، x/crypto کلید ECDSA را ترجیح می‌دهد و سروری که مثل نصب
+  پیش‌فرض OpenSSH کلید ECDSA هم دارد همان را نشان می‌دهد؛ در نتیجه کلید Ed25519
+  یا RSA پین‌شده هرگز مطابقت نمی‌کند و اتصال با `host key mismatch` رد می‌شود.
+  فهرستی که ادمین وارد کند فقط می‌تواند الگوریتم کلیدهای پین‌شده را داشته باشد.
+- در SOCKS5، HTTP و GOST Relay، `fingerprint` باید SHA-256 گواهی (۶۴ رقم Hex) و
+  `certificate` و `private-key` هر دو متن PEM و متعلق به هم باشند.
+- `traffic-pattern` در Mieru مانند Decode و Validate خود mieru بررسی می‌شود.
+- نام کاربری و رمز Mieru هر کدام حداکثر ۶۴ بایت و در SOCKS5 حداکثر ۲۵۵ بایت
+  هستند؛ برای قالب، هر `{{uuid}}` ۳۶ بایت و هر `{{user_id}}` ۱۰ بایت حساب می‌شود.
+  مقدار طولانی‌تر در کلاینت و در V2bX رد می‌شود.
+- `state-dir` و `planet` باید مسیر نسبی و بدون `..` باشند. فایل planet را پنل
+  ارسال نمی‌کند و باید روی دستگاه همهٔ کاربران وجود داشته باشد.
+
+پورت شنود سرویس (`server_port`) فقط برای نود ریشهٔ مدیریت‌شده با V2bX نمایش
+داده می‌شود؛ سرویس بیرونی و نود فرزند شنوندهٔ V2bX ندارند.
+
 خروجی‌های `mihomo`، `meta`، `verge` و `nyanpasu` از این پروتکل‌ها پشتیبانی می‌کنند.
 آدرس و پورت از فیلدهای نود و نوع از کنترلر همان پروتکل گرفته می‌شود. مقادیر متنی
 `{{uuid}}` و `{{user_id}}` برای هر مشترک جایگزین می‌شوند؛ تنظیمات خام والد یا
@@ -96,7 +127,7 @@ Irboard است؛ دادهٔ جدول آزمایشی شاخه‌های منتشر
 
 ```sh
 python3 scripts/patch_admin_mihomo_nodes.py --check
-vendor/bin/phpunit --filter 'MihomoNodesTest|MihomoSubscriptionTest'
+vendor/bin/phpunit --filter 'MihomoNodesTest|MihomoSubscriptionTest|SshKeysTest|MieruTrafficPatternTest'
 node --test tests/AdminMihomoNodesBrowserTest.cjs
 IRBOARD_MIHOMO_CONTRACT_DIR=/tmp/mihomo-contract vendor/bin/phpunit --filter MihomoSubscriptionTest
 python3 tests/ValidateMihomoConfig.py --binary /path/to/mihomo --profiles /tmp/mihomo-contract/ClashMeta.json
@@ -133,5 +164,14 @@ ShadowQUIC اضافه شده است. مقدار `managed` در جدول اختص
 
 راهنمای تنظیم و محدودیت‌های هسته در مخزن V2bX، فایل
 [`docs/mihomo-server.md`](https://github.com/PoriyaVali/V2bX/blob/dev_new/docs/mihomo-server.md)
-است. تغییر اعضای نود در این نسخه شنوندهٔ همان نود را بازسازی می‌کند و اتصال‌ها
-نیاز به اتصال دوباره دارند؛ تغییر سرعت روی اتصال باز اعمال می‌شود.
+است. در HTTP، SOCKS5، Mieru و ShadowQUIC افزودن یا حذف کاربر بقیهٔ کاربران را
+قطع نمی‌کند. کاربری که حذف شود (مسدودی، پایان اشتراک یا حجم) فوراً قطع می‌شود و
+دیگر وصل نمی‌شود. تغییر سرعت و محدودیت دستگاه روی اتصال باز اعمال می‌شود.
+
+نود ریشهٔ مدیریت‌شده فقط مسیرهای `block`، `block_ip`، `block_port` و `protocol`
+را می‌پذیرد. V2bX این مسیرها را مانند هستهٔ sing با sniff اجرا می‌کند: پروتکل
+(مثلاً bittorrent) و دامنهٔ TLS، HTTP یا QUIC اتصالی که مستقیم به IP زده شود.
+هستهٔ Mihomo مسیرهای `dns`، `route`، `route_ip` و `default_out` را ندارد و نود
+دارای آن‌ها را بالا نمی‌آورد. به همین دلیل پنل آن‌ها را هنگام ذخیرهٔ نود رد می‌کند و
+مسیری را که روی چنین نودی است نمی‌توان به این نوع‌ها تغییر داد. سرویس بیرونی و
+نود فرزند به V2bX نمی‌رسند و این محدودیت را ندارند.

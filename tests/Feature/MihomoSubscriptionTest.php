@@ -39,6 +39,7 @@ class MihomoSubscriptionTest extends TestCase
                 $proxy = $proxies[$index];
                 $this->assertSame($servers[$index]['mihomo'], $proxy, $class . ' ' . $protocol);
                 if (isset($proxy['udp'])) $this->assertFalse($proxy['udp']);
+                if ($protocol === 'ssh') $this->assertSame(['ssh-ed25519', 'rsa-sha2-512', 'rsa-sha2-256', 'ssh-rsa'], $proxy['host-key-algorithms'], $class);
                 $this->assertContains($proxy['name'], $config['proxy-groups'][0]['proxies']);
             }
             $trust = $proxies[15];
@@ -67,6 +68,18 @@ class MihomoSubscriptionTest extends TestCase
         $wg['peers'] = [['server' => $wg['server'], 'port' => $wg['port'], 'public-key' => $wg['public-key'], 'allowed-ips' => ['0.0.0.0/0', '::/0']]];
         unset($wg['server'], $wg['port'], $wg['public-key']);
         $this->assertSame($wg, Outbound::validate('wireguard', $wg));
+    }
+
+    public function testPinnedSshHostKeysChooseTheAlgorithmsUnlessTheAdministratorDid(): void
+    {
+        $user = ['id' => 7, 'uuid' => '11111111-2222-3333-4444-555555555555'];
+        $settings = MihomoProfiles::settings('ssh');
+        $server = ['name' => 'ssh', 'type' => 'ssh'] + Registry::storage('ssh', $settings);
+        // Mihomo's x/crypto prefers ECDSA, which a stock OpenSSH server also holds.
+        $this->assertSame(['ssh-ed25519', 'rsa-sha2-512', 'rsa-sha2-256', 'ssh-rsa'], Outbound::render($server, $user)['host-key-algorithms']);
+        $this->assertSame(['ssh-ed25519'], Outbound::render(['host_key_algorithms' => ['ssh-ed25519']] + $server, $user)['host-key-algorithms']);
+        $this->assertArrayNotHasKey('host-key-algorithms', Outbound::render(['host_key' => null] + $server, $user));
+        $this->assertSame(Registry::storage('ssh', $settings), Registry::storage('ssh', Outbound::validate('ssh', $settings)), 'the stored node is not changed');
     }
 
     public function testTrustTunnelSelfSignedAndCertificateNameFallback(): void

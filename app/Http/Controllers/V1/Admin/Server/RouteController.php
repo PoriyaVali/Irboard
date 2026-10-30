@@ -4,8 +4,10 @@ namespace App\Http\Controllers\V1\Admin\Server;
 
 use App\Http\Controllers\Controller;
 use App\Models\ServerRoute;
+use App\Protocols\Mihomo\ManagedServer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Validation\ValidationException;
 
 class RouteController extends Controller
 {
@@ -40,6 +42,10 @@ class RouteController extends Controller
             $normalizedMatch = array_filter((array)($params['match'] ?? []));
         }
         $params['match'] = json_encode($normalizedMatch);
+        if ($request->input('id') && !in_array($params['action'], ManagedServer::ROUTE_ACTIONS, true)) {
+            $nodes = ManagedServer::nodesUsingRoute((int)$request->input('id'));
+            if ($nodes) throw ValidationException::withMessages(['action' => 'این مسیر روی نود مدیریت‌شدهٔ Mihomo است و هستهٔ Mihomo در V2bX فقط مسیرهای مسدودسازی را اجرا می‌کند؛ ابتدا مسیر را از این نودها بردارید: ' . implode('، ', $nodes)]);
+        }
         if ($request->input('id')) {
             try {
                 $route = ServerRoute::find($request->input('id'));
