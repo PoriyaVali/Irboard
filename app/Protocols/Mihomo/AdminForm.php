@@ -51,6 +51,21 @@ class AdminForm
                     $field['required_external'] = in_array($type, ['mieru', 'shadowquic'], true);
                     $field['help'] = self::text('در حالت مدیریت با V2bX خالی بگذارید یا {{uuid}} بنویسید تا برای هر کاربر جدا ساخته شود. برای سرویس بیرونی، مقدار همان سرویس را وارد کنید.', 'When V2bX manages users, leave blank or enter {{uuid}} for an individual subscriber credential. For an external service, enter that service\'s credential.');
                 }
+                if ($type === 'snell' && $option === 'psk') {
+                    $field['managed_credential'] = true;
+                    $field['required'] = false;
+                    $field['required_external'] = true;
+                    $field['help'] = self::text('در حالت مدیریت با V2bX خالی بگذارید یا {{uuid}} بنویسید تا هر کاربر کلید خودش را داشته باشد؛ همین کلید رمز ShadowTLS او هم هست. برای سرویس بیرونی، PSK همان سرویس را کپی کنید.', 'When V2bX manages users, leave blank or enter {{uuid}} so each subscriber has their own key, which is also their ShadowTLS password. For an external service, copy that service\'s PSK.');
+                }
+                if ($type === 'sudoku' && $option === 'key') {
+                    $field['required'] = false;
+                    $field['required_external'] = true;
+                    $field['help'] = self::text('در حالت مدیریت با V2bX، کلید خصوصی اصلی (۶۴ رقم hex) است؛ خالی بگذارید تا هنگام ذخیره ساخته شود. هر کاربر تکهٔ جداگانه‌ای از آن را در اشتراک می‌گیرد و با حذف او همان تکه از کار می‌افتد. برای سرویس بیرونی، کلید همان سرویس را کپی کنید.', 'When V2bX manages users this is the master private key (64 hex digits); leave blank to generate one on save. Each subscriber receives their own split of it, which stops working when they are removed. For an external service, copy that service\'s key.');
+                }
+                if ($type === 'snell' && $option === 'obfs-opts') {
+                    $field['help'] = self::text('شیء JSON استتار. در حالت مدیریت با V2bX فقط ShadowTLS نسخهٔ ۳ کاربران را از هم جدا می‌کند: {"mode":"shadow-tls","version":3,"host":"دامنهٔ یک سایت TLS 1.3"} بدون password. برای سرویس بیرونی، mode می‌تواند http، tls، shadow-tls، restls یا jls باشد.', 'The obfuscation JSON object. When V2bX manages users, only ShadowTLS v3 tells them apart: {"mode":"shadow-tls","version":3,"host":"a TLS 1.3 site"} without a password. For an external service, mode may be http, tls, shadow-tls, restls or jls.');
+                    $field['placeholder'] = self::text('{"mode":"shadow-tls","version":3,"host":"www.example.com"}', '{"mode":"shadow-tls","version":3,"host":"www.example.com"}');
+                }
                 if ($field['kind'] === 'json' && !isset($field['placeholder'])) {
                     $field['placeholder'] = self::text(self::jsonPlaceholder($type, $option), self::jsonPlaceholder($type, $option));
                 }
@@ -79,7 +94,8 @@ class AdminForm
             'ssr' => ['cipher' => 'chacha20-ietf', 'ssr_protocol' => 'auth_sha1_v4', 'obfs' => 'tls1.2_ticket_auth', 'udp' => true],
             'http' => ['tls' => true, 'skip_cert_verify' => false],
             'socks5' => ['tls' => true, 'udp' => true, 'skip_cert_verify' => false],
-            'snell' => ['version' => 3, 'udp' => true],
+            // A managed Snell node needs ShadowTLS v3; the administrator adds the host.
+            'snell' => ['version' => 3, 'udp' => true, 'obfs_opts' => ['mode' => 'shadow-tls', 'version' => 3, 'host' => '']],
             'wireguard' => ['udp' => true],
             'shadowquic' => ['zero_rtt' => false],
             'gostrelay' => ['udp' => true, 'skip_cert_verify' => false],
@@ -141,6 +157,8 @@ class AdminForm
     {
         if (ManagedServer::supports($type)) {
             if ($type === 'shadowquic') return self::text('برای ساخت سرور، V2bX نسخهٔ 1.10.0 یا جدیدتر با هستهٔ mihomo را نصب و ID نود اصلی را ثبت کنید. مقصد پوششی دارای QUIC را در MihomoOptions.JLSUpstream سرور تنظیم و پورت UDP را باز کنید؛ کاربران از پنل دریافت می‌شوند.', 'To provision the server, install V2bX 1.10.0 or later with the mihomo core and register the root node ID. Configure a working QUIC decoy in the server MihomoOptions.JLSUpstream and open its UDP port; the panel supplies users.');
+            if ($type === 'sudoku') return self::text('برای ساخت سرور، V2bX نسخهٔ 1.11.0 یا جدیدتر با هستهٔ mihomo را نصب و ID نود اصلی را ثبت کنید؛ کاربران، مصرف و محدودیت‌ها از پنل می‌آیند. V2bX کاوشگرها را به سایت پوششی خودش می‌برد. TLS ندارد؛ برای http-mask-tls یک CDN یا پراکسی TLS جلوی نود لازم است.', 'To provision the server, install V2bX 1.11.0 or later with the mihomo core and register the root node ID; the panel supplies users, usage and limits. V2bX hands probers to its own cover site. The node has no TLS: http-mask-tls needs a CDN or TLS proxy in front of it.');
+            if ($type === 'snell') return self::text('برای ساخت سرور، V2bX نسخهٔ 1.11.0 یا جدیدتر با هستهٔ mihomo را نصب و ID نود اصلی را ثبت کنید؛ کاربران، مصرف و محدودیت‌ها از پنل می‌آیند. دست‌دهی ShadowTLS به host:443 در obfs-opts می‌رود، یا به MihomoOptions.ShadowTLSHandshake سرور؛ آن سرور باید گواهی همان host را داشته باشد. کلاینت باید Snell روی ShadowTLS را پشتیبانی کند، مثل Surge یا mihomo نسخهٔ 1.19.33.', 'To provision the server, install V2bX 1.11.0 or later with the mihomo core and register the root node ID; the panel supplies users, usage and limits. The ShadowTLS handshake goes to the obfs-opts host on port 443, or to the server\'s MihomoOptions.ShadowTLSHandshake, which must serve that host\'s certificate. Clients must support Snell over ShadowTLS, as Surge and Mihomo v1.19.33 do.');
             return self::text('برای ساخت سرور، V2bX نسخهٔ 1.10.0 یا جدیدتر با هستهٔ mihomo را نصب و نوع و ID نود اصلی را ثبت کنید؛ کاربران، مصرف و محدودیت‌ها از پنل می‌آیند. در صورت فعال‌بودن TLS، دامنه و گواهی سرور را در CertConfig همان V2bX تنظیم کنید.', 'To provision the server, install V2bX 1.10.0 or later with the mihomo core and register the root node type and ID. The panel supplies users, usage and limits. With TLS enabled, configure the server domain and certificate in that V2bX node CertConfig.');
         }
         return self::text('ابتدا سرویس یا شبکهٔ مقصد و اطلاعات کلاینت را بیرون V2bX آماده کنید و سپس پروفایل آن را اینجا وارد کنید. این نوع در حال حاضر ورودی سرور چندکاربرهٔ مدیریت‌شده ندارد؛ ذخیرهٔ این فرم به‌تنهایی سرور، حساب یا محدودیت سمت سرویس ایجاد نمی‌کند.', 'Provision the destination service or network and client credentials outside V2bX first, then enter its profile here. This type currently has no managed multi-user server inbound; saving this form alone does not create its server, accounts or service-side limits.');

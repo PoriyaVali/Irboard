@@ -58,6 +58,31 @@ class MihomoSubscriptionTest extends TestCase
         $this->assertSame([], $legacy['proxies']);
     }
 
+    /** Managed profiles carry each subscriber's own credential; exported for ValidateMihomoConfig.py. */
+    public function testManagedProfilesCarryEachSubscribersCredential(): void
+    {
+        $users = [['id' => 91, 'uuid' => '11111111-2222-3333-4444-555555555555'], ['id' => 92, 'uuid' => '66666666-7777-8888-9999-000000000000']];
+        $exported = [];
+        foreach (\App\Protocols\Mihomo\ManagedServer::TYPES as $protocol) {
+            $settings = MihomoProfiles::settings($protocol);
+            foreach (['username', 'password', 'psk'] as $key) if (array_key_exists($key, $settings)) $settings[$key] = '';
+            if ($protocol === 'snell') $settings['obfs-opts'] = ['mode' => 'shadow-tls', 'version' => 3, 'host' => 'www.example.com'];
+            if ($protocol === 'sudoku') $settings['key'] = \App\Protocols\Mihomo\SudokuKeys::generate();
+            $server = ['name' => 'managed ' . $protocol, 'type' => $protocol, 'managed' => true, 'server_port' => 443] + Registry::storage($protocol, $settings);
+            \App\Protocols\Mihomo\ManagedServer::validate($protocol, $server);
+            [$one, $two] = array_map(function ($user) use ($server) { return Outbound::render($server, $user); }, $users);
+            $credential = ['sudoku' => 'key', 'snell' => 'psk'][$protocol] ?? 'password';
+            $this->assertNotSame($one[$credential], $two[$credential], $protocol);
+            if ($protocol === 'snell') $this->assertSame($one['psk'], $one['obfs-opts']['password']);
+            if ($protocol === 'sudoku') $this->assertSame(128, strlen($one['key']));
+            $exported[] = $one;
+        }
+        if ($dir = getenv('IRBOARD_MIHOMO_CONTRACT_DIR')) {
+            if (!is_dir($dir)) mkdir($dir, 0755, true);
+            file_put_contents($dir . '/Managed.json', json_encode($exported, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n");
+        }
+    }
+
     public function testMieruPortRangeAndWireguardPeersKeepTheirShape(): void
     {
         $mieru = MihomoProfiles::settings('mieru');

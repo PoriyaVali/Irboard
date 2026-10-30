@@ -50,6 +50,10 @@ class NodeApiContractTest extends TestCase
             'socks5' => ['managed' => 1, 'username' => '', 'password' => '', 'tls' => 1],
             'mieru' => ['managed' => 1, 'username' => '', 'password' => '', 'transport' => 'TCP'],
             'shadowquic' => ['managed' => 1, 'username' => '', 'password' => ''],
+            // V2bX core/mihomo/server_test.go: testSudokuMaster.
+            'sudoku' => ['managed' => 1, 'key' => '1a1786c2533e7d5b5b1015d717ea8ce09165858dec91327c66bb958dcbd0050a', 'aead_method' => 'chacha20-poly1305',
+                'padding_min' => 10, 'padding_max' => 30, 'table_type' => 'prefer_ascii', 'http_mask' => 1, 'http_mask_mode' => 'ws', 'path_root' => 'contract', 'multiplex' => 'on'],
+            'snell' => ['managed' => 1, 'psk' => '', 'version' => 4, 'obfs_opts' => '{"mode":"shadow-tls","version":3,"host":"cover.example.test"}'],
         ];
         foreach ($types as $type) DB::table('v2_server_' . $type)->insert($common + $extra[$type]);
         DB::table('v2_server_hysteria')->insert(array_replace($common, ['id' => 2, 'version' => 2, 'up_mbps' => 0, 'down_mbps' => 0, 'obfs' => 'salamander', 'obfs_password' => 'fictional-obfs']));

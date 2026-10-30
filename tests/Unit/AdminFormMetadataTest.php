@@ -68,18 +68,31 @@ class AdminFormMetadataTest extends TestCase
     {
         foreach (ManagedServer::TYPES as $type) {
             $definition = AdminForm::catalog(Outbound::catalog())[$type];
-            $node = array_replace($definition['form']['defaults'], ['host' => 'node.example.test', 'username' => '', 'password' => '']);
+            $node = array_replace($definition['form']['defaults'], ['host' => 'node.example.test']);
+            // What an administrator still has to supply: Snell's camouflage site.
+            if ($type === 'snell') $node['obfs_opts']['host'] = 'www.example.com';
+            // Saving generates a Sudoku master key.
+            $row = (object)$node;
+            ManagedServer::prepare($type, $row);
+            $node = (array)$row;
             ManagedServer::validate($type, $node);
-            $settings = ManagedServer::credentials(ProtocolRegistry::options($type, $node));
+            $settings = ManagedServer::credentials($type, ProtocolRegistry::options($type, $node));
             Outbound::validate($type, $settings);
             $one = Outbound::render($node + ['type' => $type, 'name' => 'node'], ['id' => 11, 'uuid' => 'subscriber-one']);
             $two = Outbound::render($node + ['type' => $type, 'name' => 'node'], ['id' => 12, 'uuid' => 'subscriber-two']);
-            $this->assertSame('subscriber-one', $one['username']);
-            $this->assertSame('subscriber-two', $two['password']);
-            $this->assertNotSame($one['password'], $two['password']);
-            foreach (['username', 'password'] as $field) {
-                $this->assertTrue($definition['fields'][$field]['managed_credential']);
-                $this->assertSame(in_array($type, ['mieru', 'shadowquic'], true), $definition['fields'][$field]['required_external']);
+            Outbound::validate($type, array_diff_key($one, ['name' => 1, 'type' => 1]));
+            $credential = ['sudoku' => 'key', 'snell' => 'psk'][$type] ?? 'password';
+            $this->assertNotSame($one[$credential], $two[$credential], $type);
+            if ($type === 'snell') {
+                $this->assertSame('subscriber-one', $one['psk']);
+                $this->assertSame($one['psk'], $one['obfs-opts']['password']);
+            } elseif ($type !== 'sudoku') {
+                $this->assertSame('subscriber-one', $one['username']);
+                $this->assertSame('subscriber-two', $two['password']);
+            }
+            foreach (['sudoku' => ['key'], 'snell' => ['psk']][$type] ?? ['username', 'password'] as $field) {
+                $this->assertSame($type !== 'sudoku', $definition['fields'][$field]['managed_credential'] ?? false, $type . '/' . $field);
+                $this->assertSame(in_array($type, ['mieru', 'shadowquic', 'sudoku', 'snell'], true), $definition['fields'][$field]['required_external']);
             }
         }
     }

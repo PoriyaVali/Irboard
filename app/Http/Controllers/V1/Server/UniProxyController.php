@@ -380,7 +380,7 @@ class UniProxyController extends Controller
             abort_unless(\App\Protocols\Mihomo\ManagedServer::supports($this->nodeType) && $this->nodeInfo->managed, 501, 'این نود در حالت سرویس خارجی است یا هنوز ورودی سرور چندکاربره ندارد.');
         }
         switch ($this->nodeType) {
-            case 'http': case 'socks5': case 'mieru': case 'shadowquic':
+            case 'http': case 'socks5': case 'mieru': case 'shadowquic': case 'sudoku': case 'snell':
                 $response = \App\Protocols\Mihomo\ManagedServer::config($this->nodeType, $this->nodeInfo->toArray());
                 break;
             case 'mdns':

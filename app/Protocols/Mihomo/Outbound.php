@@ -123,7 +123,7 @@ class Outbound
     public static function render(array $server, $user): array
     {
         $settings = ProtocolRegistry::options($server['type'], $server);
-        if (!empty($server['managed'])) $settings = ManagedServer::credentials($settings);
+        if (!empty($server['managed'])) $settings = ManagedServer::forUser($server['type'], $settings, $user);
         if ($server['type'] === 'ssh' && !empty($settings['host-key']) && empty($settings['host-key-algorithms'])) {
             $algorithms = SshKeys::hostKeyAlgorithms($settings['host-key']);
             if ($algorithms) $settings['host-key-algorithms'] = $algorithms;
