@@ -29,6 +29,12 @@ class TunnelController extends Controller
         return $map;
     }
 
+    /** The foreign server a registration forwards to, for comparing two of them. */
+    private static function backend($direct): string
+    {
+        return strtolower(rtrim(trim((string) $direct), '.'));
+    }
+
     /** true=up, false=down, null=unknown/cannot probe */
     private function probe($ip, $port)
     {
@@ -57,12 +63,17 @@ class TunnelController extends Controller
         // probe below connects to relay:port and would report BOTH as live,
         // which is the most misleading answer available: two green lights for a
         // pair where one is silently dead.
+        //
+        // Two rows that send the relay port to the SAME foreign server do not
+        // conflict, though: one forwarding serves both. That is the usual case
+        // of one server listed twice, for two user groups or as a parent and
+        // its child, and it used to be flagged as a clash as well.
         $claims = [];
         foreach ($nodes as $n) {
             $id = (int) $n->id;
             if (!isset($map[$id])) continue;
             $key = $map[$id]['tunnel'] . ':' . (int) ($n->port ?: 0);
-            $claims[$key][] = $id;
+            $claims[$key][self::backend($map[$id]['direct'])][] = $id;
         }
 
         $data = [];
@@ -77,7 +88,10 @@ class TunnelController extends Controller
                 $live = Cache::remember("tun_live_{$id}", 8, function () use ($tunnel, $port) {
                     return $this->probe($tunnel, $port ?: 2087);
                 });
-                $conflict = array_values(array_diff($claims[$tunnel . ':' . $port] ?? [], [$id]));
+                $own = self::backend($map[$id]['direct']);
+                foreach ($claims[$tunnel . ':' . $port] ?? [] as $direct => $ids) {
+                    if ($direct !== $own) $conflict = array_merge($conflict, $ids);
+                }
             }
             $data[] = [
                 'id'       => $id,
@@ -89,8 +103,8 @@ class TunnelController extends Controller
                 'direct'   => $has ? $map[$id]['direct'] : null,
                 'tunnel'   => $has ? $map[$id]['tunnel'] : null,
                 'port'     => $port,
-                // Other node ids claiming this exact relay:port. Non-empty means
-                // at most one of them is really being served.
+                // Nodes of OTHER foreign servers claiming this exact relay:port.
+                // Non-empty means at most one of them is really being served.
                 'conflict' => $conflict,
             ];
         }
@@ -130,11 +144,12 @@ class TunnelController extends Controller
             return response(['message' => 'آدرس مستقیم و آی‌پی رله نباید یکی باشند.'], 400);
         }
 
-        // Refuse a collision at the door rather than reporting it afterwards.
+        // Refuse a collision at the door rather than reporting it afterwards:
+        // the same relay port for a different foreign server.
         $port = (int) ($node->port ?: 0);
         $clash = [];
         foreach ($this->loadMap() as $otherId => $row) {
-            if ($otherId === $id || $row['tunnel'] !== $tunnel) continue;
+            if ($otherId === $id || $row['tunnel'] !== $tunnel || self::backend($row['direct']) === self::backend($direct)) continue;
             $other = DB::table(self::TABLE)->where('id', $otherId)->first();
             if ($other && (int) ($other->port ?: 0) === $port) $clash[] = $otherId;
         }

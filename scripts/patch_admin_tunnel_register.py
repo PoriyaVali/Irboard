@@ -18,7 +18,9 @@ Two gaps in the tunnel pill, both hit in production:
    strictly by public port and can bind each one once, so two nodes on the same
    relay:port cannot both be served - but the health probe connects to
    relay:port and reported both as live. The backend now returns `conflict`
-   (the other node ids claiming that port) and the pill turns amber and says so.
+   (the node ids of OTHER foreign servers claiming that port) and the pill
+   turns amber and says so. Rows of the same foreign server share one
+   forwarding and are no conflict.
 
 Idempotent: the replacement is fenced, so a re-run replaces it rather than
 stacking a second copy.
@@ -56,7 +58,7 @@ L = {
     "ask_direct":  "آدرس مستقیم این نود (دامنه‌ای که بدون تانل سرویس می‌دهد):",
     "ask_relay":   "آی‌پی رلهٔ ایران:",
     "clash":       "تداخل پورت",
-    "clash_title": "این رله و پورت را نود دیگری هم گرفته است — رله هر پورت را فقط یک بار می‌گیرد، پس فقط یکی واقعاً سرویس می‌دهد. نود(های) درگیر: ",
+    "clash_title": "این رله و پورت را نودِ سرور خارجی دیگری هم گرفته است — رله هر پورت را فقط به یک سرور می‌فرستد، پس فقط یکی واقعاً سرویس می‌دهد. نود(های) درگیر: ",
     "saved":       "ثبت شد",
     "err":         "خطا",
 }
