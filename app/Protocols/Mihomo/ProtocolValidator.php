@@ -180,6 +180,17 @@ class ProtocolValidator
         foreach (['state-dir' => 'state_dir', 'planet' => 'planet'] as $option => $field) {
             if (($settings[$option] ?? '') !== '' && !self::clientPath($settings[$option])) self::fail($field, 'مسیر باید نسبی و داخل پوشهٔ پیکربندی کلاینت باشد، مانند zerotier/node1؛ کلاینت مسیر مطلق یا دارای .. را رد می‌کند و کل پروفایل بارگذاری نمی‌شود.');
         }
+        // The longest credentials any subscriber gets: Mieru refuses a user name
+        // or password over 64 bytes on both ends, and SOCKS5 (RFC 1929) carries
+        // at most 255. A longer one breaks every profile, and V2bX cannot add the
+        // node's users.
+        $limit = ['mieru' => 64, 'socks5' => 255][$type] ?? null;
+        if ($limit !== null) {
+            foreach (['username', 'password'] as $field) {
+                $longest = strlen(strtr((string)($settings[$field] ?? ''), ['{{uuid}}' => str_repeat('0', 36), '{{user_id}}' => '2147483647']));
+                if ($longest > $limit) self::fail($field, "نام کاربری و رمز عبور حداکثر {$limit} بایت هستند، با احتساب ۳۶ بایت برای هر {{uuid}} و ۱۰ بایت برای هر {{user_id}}؛ مقدار طولانی‌تر پروفایل همهٔ کاربران را از کار می‌اندازد.");
+            }
+        }
         if ($type === 'mieru' && ($settings['traffic-pattern'] ?? '') !== '') {
             $problem = MieruTrafficPattern::problem($settings['traffic-pattern']);
             if ($problem) self::fail('traffic_pattern', $problem);

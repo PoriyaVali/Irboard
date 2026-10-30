@@ -84,6 +84,44 @@ class MihomoNodesTest extends TestCase
         }
     }
 
+    // V2bX's Mihomo core applies only blocking routes and refuses to start a
+    // node with DNS or outbound routes, so the panel must not assign them.
+    public function testManagedNodesTakeOnlyRoutesTheMihomoCoreApplies(): void
+    {
+        $headers = $this->auth();
+        $route = function (string $action, array $match = ['example.com'], string $value = '') {
+            return DB::table('v2_server_route')->insertGetId(['remarks' => $action . ' route', 'match' => json_encode($match), 'action' => $action, 'action_value' => $value, 'created_at' => time(), 'updated_at' => time()]);
+        };
+        $block = $route('protocol', ['bittorrent']);
+        $dns = $route('dns', ['example.com'], '1.1.1.1');
+        $outbound = $route('route', ['example.com'], '{"type":"direct"}');
+        foreach (\App\Protocols\Mihomo\ManagedServer::TYPES as $type) {
+            $model = Registry::model($type);
+            foreach ([$dns, $outbound] as $refused) {
+                $node = $this->node($type, ['managed' => true, 'username' => '', 'password' => '', 'server_port' => 32001, 'route_id' => [$block, $refused]]);
+                $this->withHeaders($headers)->postJson($this->path($type, 'save'), $node)->assertUnprocessable()->assertJsonValidationErrors('route_id');
+                $this->assertSame(0, $model::count());
+            }
+            // An external service never reaches V2bX; its routes are its own.
+            $external = $this->node($type, ['managed' => false, 'route_id' => [$dns]]);
+            $this->withHeaders($headers)->postJson($this->path($type, 'save'), $external)->assertOk();
+            $managed = $this->node($type, ['name' => 'managed ' . $type, 'managed' => true, 'username' => '', 'password' => '', 'server_port' => 32001, 'route_id' => [$block]]);
+            $this->withHeaders($headers)->postJson($this->path($type, 'save'), $managed)->assertOk();
+            $root = $model::where('managed', true)->first();
+            // A relay's routes reach only subscriptions.
+            $relay = $this->node($type, ['name' => 'relay ' . $type, 'parent_id' => $root->id, 'server_port' => null, 'route_id' => [$outbound]]);
+            $this->withHeaders($headers)->postJson($this->path($type, 'save'), $relay)->assertOk();
+        }
+        // The route a managed root uses cannot become one the core refuses.
+        $edit = ['id' => $block, 'remarks' => 'now dns', 'match' => ['example.com'], 'action' => 'dns', 'action_value' => '1.1.1.1'];
+        $this->withHeaders($headers)->postJson($this->path('route', 'save'), $edit)->assertUnprocessable()->assertJsonValidationErrors('action');
+        $this->assertSame('protocol', DB::table('v2_server_route')->where('id', $block)->value('action'));
+        $edit = ['id' => $block, 'remarks' => 'block ip', 'match' => ['10.0.0.0/8'], 'action' => 'block_ip'];
+        $this->withHeaders($headers)->postJson($this->path('route', 'save'), $edit)->assertOk();
+        $edit = ['id' => $dns, 'remarks' => 'dns for externals', 'match' => ['example.org'], 'action' => 'dns', 'action_value' => '8.8.8.8'];
+        $this->withHeaders($headers)->postJson($this->path('route', 'save'), $edit)->assertOk();
+    }
+
     public function testManagedCredentialsNeedTheUuidAndRelaysNeedNoListenPort(): void
     {
         $headers = $this->auth();
@@ -284,6 +322,7 @@ class MihomoNodesTest extends TestCase
             ['socks5', ['fingerprint' => 'chrome']], ['socks5', ['fingerprint' => str_repeat('ab', 31)]], ['http', ['certificate' => 'client.crt', 'private_key' => 'client.key']],
             ['mieru', ['traffic_pattern' => 'GgIQZQ==']], ['zerotier', ['state_dir' => '/var/lib/zerotier']], ['zerotier', ['planet' => '../planet']], ['easytier', ['state_dir' => 'nodes/../../x']],
             ['mieru', ['port_range' => '8000-7000']], ['mieru', ['port_range' => '0-7000', 'port' => null]], ['mieru', ['transport' => 'udp']], ['mieru', ['handshake_mode' => 'invalid']],
+            ['mieru', ['username' => str_repeat('u', 65)]], ['mieru', ['password' => '{{uuid}}-{{uuid}}']], ['socks5', ['username' => str_repeat('u', 220) . '{{uuid}}']],
             ['sudoku', ['aead_method' => 'invalid']], ['sudoku', ['padding_min' => 8, 'padding_max' => 7]], ['sudoku', ['table_type' => 'invalid']], ['sudoku', ['httpmask' => ['path-root' => 'two/segments']]],
             ['masque', ['private_key' => base64_encode(str_repeat('a',32))]], ['masque', ['public_key' => base64_encode(str_repeat('b',32))]], ['masque', ['ip' => '10.0.0.2/32']],
             ['openvpn', ['ca' => 'not-a-certificate']], ['openvpn', ['cert' => 'not-a-certificate']], ['openvpn', ['cipher' => 'invalid']], ['openvpn', ['tls_auth' => 'a', 'tls_crypt' => 'b']],
