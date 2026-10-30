@@ -94,6 +94,19 @@ class MihomoNodesTest extends TestCase
             $runtimeNodes = (new ServerService())->getAllServers(false);
             $matches = array_values(array_filter($runtimeNodes, function ($row) use ($type) { return $row['type'] === $type; }));
             $this->assertSame(2, $matches[0]['available_status']);
+            // V2bX's own report decides: red when it cannot serve the node,
+            // amber when it serves it with a problem.
+            foreach ([[false, 0], [true, 1]] as [$serving, $status]) {
+                Cache::put(CacheKey::get('SERVER_' . strtoupper($type) . '_LOAD_STATUS', $stored->id),
+                    ['cpu' => 1, 'node' => ['serving' => $serving, 'users' => 1, 'error' => 'listen tcp :32001: bind: address already in use']], 300);
+                $row = array_values(array_filter((new ServerService())->getAllServers(false), function ($row) use ($type) { return $row['type'] === $type; }))[0];
+                $this->assertSame($status, $row['available_status'], $type . ($serving ? ' serving' : ' not serving'));
+            }
+            Cache::forget(CacheKey::get('SERVER_' . strtoupper($type) . '_LOAD_STATUS', $stored->id));
+            if ($type === 'shadowquic') {
+                // V2bX hands ShadowQUIC's probers to the site its clients name.
+                $this->assertSame($stored->sni ?: $stored->host, $body['server_name']);
+            }
 
             $outbound = Outbound::render($stored->toArray() + ['type' => $type], ['id' => 17, 'uuid' => 'individual-secret']);
             $other = Outbound::render($stored->toArray() + ['type' => $type], ['id' => 18, 'uuid' => 'another-secret']);

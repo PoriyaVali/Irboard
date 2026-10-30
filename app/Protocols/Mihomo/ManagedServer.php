@@ -152,7 +152,9 @@ class ManagedServer
             $obfs = $options['obfs-opts'];
             $response['obfs_opts'] = ['mode' => $obfs['mode'], 'host' => $obfs['host'], 'version' => (int)$obfs['version']];
         }
-        if (in_array($type, ['http', 'socks5'], true)) $response['server_name'] = $node['sni'] ?? $node['host'];
+        // ShadowQUIC's is the site V2bX hands probers to, unless config.json
+        // names another.
+        if (in_array($type, ['http', 'socks5', 'shadowquic'], true)) $response['server_name'] = $node['sni'] ?? $node['host'];
         return $response;
     }
 

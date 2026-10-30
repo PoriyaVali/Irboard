@@ -80,7 +80,29 @@ class UniProxyController extends Controller
             'swap' => $pair($status['swap'] ?? null),
             'disk' => $pair($status['disk'] ?? null),
             'version' => self::nodeVersion($userAgent),
+            'node' => self::nodeHealth($status['node'] ?? null),
             'updated_at' => time(),
+        ];
+    }
+
+    /**
+     * What V2bX says about the node itself (V2bX 1.12+): whether it serves,
+     * how many users it has, and its current problem, such as a port in use
+     * or a certificate it cannot get. Null when the report carries none. The
+     * problem is shown on the admin page, so it is plain bounded text.
+     *
+     * @return array|null
+     */
+    public static function nodeHealth($node): ?array
+    {
+        if (!is_array($node)) {
+            return null;
+        }
+        $error = is_string($node['error'] ?? null) ? trim(preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $node['error'])) : '';
+        return [
+            'serving' => (bool)($node['serving'] ?? false),
+            'users' => max(0, (int)($node['users'] ?? 0)),
+            'error' => $error === '' ? null : mb_substr($error, 0, 300),
         ];
     }
 
@@ -147,7 +169,9 @@ class UniProxyController extends Controller
             ]);
         }
         try {
-            Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_ONLINE_USER', $this->nodeInfo->id), count($data), 3600);
+            // Kept for a few report intervals, not an hour: a count from a node
+            // that stopped reporting must not keep showing users online.
+            Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_ONLINE_USER', $this->nodeInfo->id), count($data), max(180, 3 * (int)config('v2board.server_push_interval', 60)));
             Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_LAST_PUSH_AT', $this->nodeInfo->id), time(), 3600);
             if ($data) {
                 $userService = new UserService();

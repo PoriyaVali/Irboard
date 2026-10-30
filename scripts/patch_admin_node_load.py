@@ -19,6 +19,7 @@ Idempotent: the load cell is fenced, so a re-run replaces it rather than
 stacking a second copy, and the label fix is a no-op once applied.
 """
 
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -44,8 +45,16 @@ LOAD_CELL = START + (
     'var r=p(s.mem);if(r)parts.push("RAM "+r);'
     'var d=p(s.disk);if(d)parts.push("Disk "+d);'
     'if(s.version)parts.push(String(s.version));'
-    'return y.a.createElement("div",{style:{fontSize:11,opacity:.65,marginTop:2,direction:"ltr",textAlign:"right"}},'
-    'parts.join(" \\u00b7 "))'
+    'var h=s.node&&typeof s.node==="object"?s.node:null;'
+    'if(h&&h.serving)parts.push((Number(h.users)||0)+" users");'
+    'var load=y.a.createElement("div",{style:{fontSize:11,opacity:.65,marginTop:2,direction:"ltr",textAlign:"right"}},'
+    'parts.join(" \\u00b7 "));'
+    # V2bX 1.12+ reports the node's own problem; say it where the admin looks.
+    'var problem=h&&(h.error||!h.serving)?String(h.error||"V2bX is not serving this node"):null;'
+    'if(!problem)return load;'
+    'return y.a.createElement("div",null,load,y.a.createElement("div",{title:problem,"data-node-problem":true,'
+    'style:{fontSize:11,color:"#cf1322",marginTop:2,direction:"ltr",textAlign:"right",maxWidth:360,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},'
+    '"\\u26a0 V2bX: "+problem))'
     '})(t.load_status)'
 ) + END
 
@@ -71,8 +80,13 @@ def patch(path: Path) -> str:
         if b < 0:
             return "ABORT: fenced load cell has no end marker"
         b += len(END)
-        if out[a:b] != LOAD_CELL:
-            out = out[:a] + LOAD_CELL + out[b:]
+        # Another patch's fence may close right after START (the Mihomo
+        # node patch ends its row-name fence there); keep those markers or
+        # that patch can no longer find its own text.
+        foreign = "".join(re.findall(r"/\*__IMN_[A-Z_]+_END__\*/", out[a:b]))
+        cell = START + foreign + LOAD_CELL[len(START):]
+        if out[a:b] != cell:
+            out = out[:a] + cell + out[b:]
             notes.append("load cell replaced")
     else:
         if out.count(NAME_ANCHOR) != 1:
