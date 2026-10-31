@@ -67,6 +67,25 @@ class MihomoNodesTest extends TestCase
         return array_replace(['managed' => true, 'server_port' => 32001] + $fields, $attrs);
     }
 
+    /**
+     * A managed root left without a listen port listens on its connection
+     * port, so changing only the connection port can never leave V2bX on
+     * another one; a listen port that was given is kept.
+     */
+    public function testManagedNodeListensOnItsConnectionPortUnlessToldOtherwise(): void
+    {
+        $headers = $this->auth();
+        foreach (\App\Protocols\Mihomo\ManagedServer::TYPES as $type) {
+            $node = $this->node($type, $this->managed($type, ['server_port' => null, 'port' => 2443]));
+            $this->withHeaders($headers)->postJson($this->path($type, 'save'), $node)->assertOk()->assertJsonPath('id', 1);
+            $this->assertSame(2443, (int)Registry::model($type)::first()->server_port, $type);
+            $stored = Registry::model($type)::first()->toArray();
+            $edit = $this->node($type, $this->managed($type, ['id' => 1, 'server_port' => 3443, 'port' => 2443] + array_intersect_key($stored, ['key' => 1])));
+            $this->withHeaders($headers)->postJson($this->path($type, 'save'), $edit)->assertOk();
+            $this->assertSame(3443, (int)Registry::model($type)::first()->server_port, $type . ' behind NAT');
+        }
+    }
+
     /** The per-user template a managed node of $type is keyed by, if any. */
     private function template(string $type): ?string
     {
@@ -94,6 +113,20 @@ class MihomoNodesTest extends TestCase
             $runtimeNodes = (new ServerService())->getAllServers(false);
             $matches = array_values(array_filter($runtimeNodes, function ($row) use ($type) { return $row['type'] === $type; }));
             $this->assertSame(2, $matches[0]['available_status']);
+            // V2bX's own report decides: red when it cannot serve the node,
+            // with or without a reason, amber when it serves it with a problem.
+            $bind = 'listen tcp :32001: bind: address already in use';
+            foreach ([[false, $bind, 0], [false, null, 0], [true, $bind, 1], [true, null, 2]] as [$serving, $error, $status]) {
+                Cache::put(CacheKey::get('SERVER_' . strtoupper($type) . '_LOAD_STATUS', $stored->id),
+                    ['cpu' => 1, 'node' => ['serving' => $serving, 'users' => 1, 'error' => $error]], 300);
+                $row = array_values(array_filter((new ServerService())->getAllServers(false), function ($row) use ($type) { return $row['type'] === $type; }))[0];
+                $this->assertSame($status, $row['available_status'], $type . ($serving ? ' serving' : ' not serving') . ($error ? ' with an error' : ''));
+            }
+            Cache::forget(CacheKey::get('SERVER_' . strtoupper($type) . '_LOAD_STATUS', $stored->id));
+            if ($type === 'shadowquic') {
+                // V2bX hands ShadowQUIC's probers to the site its clients name.
+                $this->assertSame($stored->sni ?: $stored->host, $body['server_name']);
+            }
 
             $outbound = Outbound::render($stored->toArray() + ['type' => $type], ['id' => 17, 'uuid' => 'individual-secret']);
             $other = Outbound::render($stored->toArray() + ['type' => $type], ['id' => 18, 'uuid' => 'another-secret']);
@@ -284,7 +317,7 @@ class MihomoNodesTest extends TestCase
         $this->withHeaders($this->auth());
         $this->getJson($this->path())->assertOk()->assertJsonCount(15, 'data.protocols')->assertJsonPath('data.version', '1.19.33');
         foreach (Registry::all() as $type => $definition) {
-            $this->postJson($this->path($type, 'save'), $this->node($type))->assertOk()->assertExactJson(['data' => true]);
+            $this->postJson($this->path($type, 'save'), $this->node($type))->assertOk()->assertExactJson(['data' => true, 'id' => 1]);
             $model = $definition['model']; $saved = $model::firstOrFail();
             $this->assertSame(1, $saved->id, 'Each table owns its id sequence');
             $this->assertEquals(MihomoProfiles::settings($type), Registry::options($type, $saved->toArray()));

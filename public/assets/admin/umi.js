@@ -108073,6 +108073,8 @@ var imnProtocolNames = {
     ssh: 'SSH', mieru: 'Mieru', sudoku: 'Sudoku', masque: 'MASQUE', openvpn: 'OpenVPN',
     tailscale: 'Tailscale / Headscale', zerotier: 'ZeroTier', easytier: 'EasyTier'
 };
+// Ant Design's Modal, already in the bundle; this module did not import it.
+var imnModal = (n('2qtc'), n('kLXV'))['a'];
 function imnToken() { return localStorage.getItem('authorization') || ''; }
 function imnScope() { return location.pathname + '#' + location.hash; }
 function imnText(fa, en) { return /^fa/i.test(localStorage.getItem('umi_locale') || 'fa') ? fa : en; }
@@ -108081,7 +108083,7 @@ function imnLocale(value, fallback) {
     return value ? imnText(value.fa || value.en || fallback, value.en || value.fa || fallback) : (fallback || '');
 }
 function imnCopy(value) { return JSON.parse(JSON.stringify(value)); }
-async function imnApi(path, body, session, controller) {
+async function imnApi(path, body, session, controller, whole) {
     var secure = String((window.settings || {}).secure_path || '');
     if (session.token !== imnToken() || session.scope !== imnScope()) throw new Error('stale');
     if (!/^[A-Za-z0-9_-]+$/.test(secure) || !session.token) throw new Error(imnText('نشست مدیریت معتبر نیست.', 'An admin session is required.'));
@@ -108098,7 +108100,7 @@ async function imnApi(path, body, session, controller) {
         if (data.errors) message += '\n' + Object.keys(data.errors).map(key => data.errors[key].join(' ')).join('\n');
         var error = new Error(message); error.fields = data.errors || {}; throw error;
     }
-    return data.data;
+    return whole ? data : data.data;
 }
 async function imnMutation(owner, type, action, body) {
     if (owner.imnBusy) return;
@@ -108146,13 +108148,20 @@ class MihomoNodeDrawer extends y.a.Component {
             server.type = type;
             server.group_id = (server.group_id || []).map(String); server.route_id = (server.route_id || []).map(String);
             var advanced = !!this.props.record && Object.keys(definition.fields).some(column =>
-                definition.fields[column].section === 'advanced' && server[column] != null);
+                this.sectionOf(column, server, definition) === 'advanced' && server[column] != null);
             this.setState({catalog: data.protocols, server: server, drafts: {}, busy: false, advanced: advanced});
         } catch (error) { if (this.current(session)) this.setState({busy: false, error: error.message}); }
     }
     definition() { return this.state.catalog[this.state.server.type]; }
     // Only a managed root node runs a V2bX listener; external services and relays have no service port.
     listens(server) { return !!(this.definition().managed_server && !server.parent_id && server.managed); }
+    // On a node V2bX manages, the per-user credentials and the Sudoku key are
+    // generated, so they wait under the advanced settings.
+    sectionOf(column, server, definition) {
+        var field = (definition || this.definition()).fields[column];
+        if ((field.managed_credential || field.managed_auto) && server.managed && !server.parent_id) return 'advanced';
+        return field.section || 'advanced';
+    }
     source(server) {
         var source = server, seen = new Set();
         while (source.parent_id && !seen.has(Number(source.parent_id))) {
@@ -108257,10 +108266,11 @@ class MihomoNodeDrawer extends y.a.Component {
             help && y.a.createElement('p', {className: 'text-muted', 'data-mihomo-section-help': key, dir: imnText('rtl', 'ltr'), style: {fontSize: 12, lineHeight: 1.7, marginBottom: 12, textAlign: imnText('right', 'left')}}, help), content);
     }
     protocolSection(key) {
-        var definition = this.definition(), columns = Object.keys(definition.fields).filter(column => (definition.fields[column].section || 'advanced') === key);
-        if (!columns.length || this.state.server.parent_id) return null;
+        var definition = this.definition(), server = this.state.server, columns = Object.keys(definition.fields).filter(column => this.sectionOf(column, server) === key);
+        if (!columns.length || server.parent_id) return null;
         var section = ((definition.form || {}).sections || []).find(section => section.key === key) || {};
-        return this.section(key, imnLocale(section.label, imnText('تنظیمات پروتکل', 'Protocol settings')), imnLocale(section.help), columns.map(column => this.protocolField(column)));
+        var help = this.listens(server) && section.managed_help ? section.managed_help : section.help;
+        return this.section(key, imnLocale(section.label, imnText('تنظیمات پروتکل', 'Protocol settings')), imnLocale(help), columns.map(column => this.protocolField(column)));
     }
     validate() {
         var server = this.state.server, definition = this.definition(), effective = this.source(server), errors = {};
@@ -108274,7 +108284,8 @@ class MihomoNodeDrawer extends y.a.Component {
         if (!overlay && server.host && /[\s\x00-\x1f/]/.test(server.host)) errors.host = imnText('فقط دامنه یا IP وارد کنید؛ بدون https:// یا مسیر.', 'Enter only a domain or IP, without https:// or a path.');
         ['port', 'server_port'].forEach(key => {
             if (key === 'server_port' && !this.listens(server)) return;
-            var needed = key === 'port' ? !overlay && !(server.type === 'mieru' && effective.port_range) : true;
+            // A managed node listens on its connection port unless told otherwise.
+            var needed = key === 'port' ? !overlay && !(server.type === 'mieru' && effective.port_range) : false;
             if ((server[key] == null || server[key] === '') && !needed) return;
             if (!Number.isInteger(Number(server[key])) || Number(server[key]) < 1 || Number(server[key]) > 65535) errors[key] = imnText('یک پورت معتبر بین ۱ و ۶۵۵۳۵ وارد کنید.', 'Enter a port from 1 to 65535.');
         });
@@ -108301,7 +108312,7 @@ class MihomoNodeDrawer extends y.a.Component {
     }
     showErrors(errors, message) {
         var fields = this.definition().fields, first = Object.keys(errors)[0];
-        this.setState({errors: errors, error: message || imnText('بخش‌های مشخص‌شده را اصلاح کنید.', 'Correct the highlighted fields.'), advanced: this.state.advanced || Object.keys(errors).some(key => fields[key] && fields[key].section === 'advanced')}, () => {
+        this.setState({errors: errors, error: message || imnText('بخش‌های مشخص‌شده را اصلاح کنید.', 'Correct the highlighted fields.'), advanced: this.state.advanced || Object.keys(errors).some(key => fields[key] && this.sectionOf(key, this.state.server) === 'advanced')}, () => {
             var element = first && document.getElementById('imn-' + this.state.server.type + '-' + first);
             if (element) { element.scrollIntoView({block: 'center'}); element.focus(); }
         });
@@ -108319,9 +108330,12 @@ class MihomoNodeDrawer extends y.a.Component {
         ['port', 'server_port', 'parent_id'].forEach(key => { payload[key] = payload[key] === '' || payload[key] == null ? null : Number(payload[key]); });
         payload.host = payload.host || null; payload.rate = Number(payload.rate); payload.sort = Number(payload.sort); payload.show = !!payload.show;
         this.setState({busy: true, error: '', errors: {}});
+        // Decided before close(), which takes the catalog away.
+        var created = this.listens(server) && !server.id;
         try {
-            await imnApi(server.type + '/save', payload, session, this.controller); if (!this.current(session)) return;
+            var saved = await imnApi(server.type + '/save', payload, session, this.controller, true); if (!this.current(session)) return;
             this.props.dispatch({type: 'serverManage/getNodes'}); this.close();
+            if (created && saved && saved.id) this.nextSteps(server, saved.id);
         } catch (error) {
             if (!this.current(session)) return;
             var mapped = {};
@@ -108332,13 +108346,25 @@ class MihomoNodeDrawer extends y.a.Component {
             this.setState({busy: false}); this.showErrors(mapped, error.message);
         }
     }
+    // A new node V2bX will run: say what is left to do, with the ID V2bX asks for.
+    nextSteps(server, id) {
+        var name = imnProtocolNames[server.type] || server.type, p = (text, extra) => y.a.createElement('p', Object.assign({dir: imnText('rtl', 'ltr'), style: {lineHeight: 1.8}}, extra || {}), text);
+        imnModal.success({
+            title: imnText('نود ' + name + ' با ID ' + id + ' ثبت شد', name + ' node saved with ID ' + id),
+            okText: imnText('متوجه شدم', 'OK'),
+            content: y.a.createElement('div', {'data-mihomo-next-steps': id},
+                p(imnText('۱. روی سرور «v2bx config» را اجرا کنید و آدرس پنل، کلید ارتباط و ID ' + id + ' را بدهید؛ V2bX پروتکل و هسته را خودش تشخیص می‌دهد.', '1. On the server run "v2bx config" and give it this panel\'s address, the node key and ID ' + id + '; V2bX detects the protocol and core itself.')),
+                p(imnText('۲. وقتی V2bX نود را اجرا کند وضعیتش آبی می‌شود و هر مشکلی زیر نامش نمایش داده می‌شود.', '2. The node turns blue once V2bX serves it, and any problem shows under its name.')),
+                p(imnText('۳. سپس «نمایش در اشتراک» را روشن کنید.', '3. Then turn on Show in subscription.')))
+        });
+    }
     body() {
         var server = this.state.server; if (!server) return null;
         var definition = this.definition(), form = definition.form || {}, source = this.source(server);
         var overlay = ['tailscale', 'zerotier', 'easytier'].indexOf(server.type) >= 0 || (server.type === 'wireguard' && source.peers && source.peers.length);
-        var advanced = Object.keys(definition.fields).some(column => (definition.fields[column].section || 'advanced') === 'advanced');
+        var advanced = Object.keys(definition.fields).some(column => this.sectionOf(column, server) === 'advanced');
         return y.a.createElement('form', {'data-mihomo-form': server.type, onSubmit: event => this.save(event), noValidate: true, style: {overflowWrap: 'anywhere'}},
-            y.a.createElement('p', {className: 'text-muted', 'data-mihomo-description': true, dir: imnText('rtl', 'ltr'), style: {lineHeight: 1.8, textAlign: imnText('right', 'left')}}, imnLocale(form.description)),
+            y.a.createElement('p', {className: 'text-muted', 'data-mihomo-description': true, dir: imnText('rtl', 'ltr'), style: {lineHeight: 1.8, textAlign: imnText('right', 'left')}}, imnLocale(this.listens(server) && form.managed_description ? form.managed_description : form.description)),
             this.section('general', imnText('مشخصات و دسترسی', 'Node details and access'), imnText('نام قابل‌نمایش و گروه کاربرانی را تعیین کنید که اجازهٔ استفاده از این نود دارند.', 'Choose the display name and the subscriber groups allowed to use this node.'), [
                 y.a.createElement('div', {className: 'row', key: 'name-rate'}, this.field('name', this.input('name', {maxLength: 255}), {required: true, column: 'col-8'}), this.field('rate', this.input('rate', {type: 'number', min: 0, max: 99999999.99, step: '0.01', addonAfter: 'x', dir: 'ltr'}), {required: true, column: 'col-4'})),
                 this.field('group_id', this.select('group_id', this.props.groups.map(group => ({value: String(group.id), label: group.name})), {mode: 'multiple', 'data-mihomo-groups': true}), {required: true}),
@@ -108350,7 +108376,8 @@ class MihomoNodeDrawer extends y.a.Component {
                 !overlay && this.field('host', this.input('host', {dir: 'ltr'}), {required: true}),
                 !overlay && y.a.createElement('div', {className: 'row', key: 'ports'},
                     this.field('port', this.input('port', {type: 'number', min: 1, max: 65535, dir: 'ltr', disabled: this.state.busy || !!source.port_range}), {column: 'col-6', required: !source.port_range}),
-                    this.listens(server) && this.field('server_port', this.input('server_port', {type: 'number', min: 1, max: 65535, dir: 'ltr'}), {column: 'col-6', required: true})),
+                    this.listens(server) && this.field('server_port', this.input('server_port', {type: 'number', min: 1, max: 65535, dir: 'ltr',
+                        placeholder: server.port ? String(server.port) : imnText('همان پورت اتصال', 'Same as the connection port')}), {column: 'col-6'})),
                 server.parent_id && y.a.createElement('p', {key: 'inherited', className: 'text-muted', 'data-mihomo-inherited': true}, imnText('تنظیمات پروتکل و حالت مدیریت از نود والد گرفته می‌شود: ', 'Protocol settings and management mode are inherited from: ') + (source.name || '') + ' (#' + source.id + ')')
             ]),
             this.protocolSection('connection'), this.protocolSection('credentials'), this.protocolSection('security'),
@@ -108606,7 +108633,7 @@ var mMihomo = Object(_['c'])(state => ({groups: state.serverGroup.groups || [], 
                     render: (e,t)=>{
                         return y.a.createElement(y.a.Fragment, null, y.a.createElement(h["a"], {
                             /*__IMN_STATUS_START__*/status: imnProtocolNames[t.type] && t.available_status == null ? "default" : D[t.available_status]/*__IMN_STATUS_END__*/
-                        /*__IMN_ROW_NAME_START__*/}), imnProtocolNames[t.type] ? y.a.createElement(mMihomo,{record:t},y.a.createElement("a",{"data-mihomo-edit":t.id},e)) : y.a.createElement("span", null, e), /*__NODELOAD__*//*__IMN_ROW_NAME_END__*/(function(s){if(!s||typeof s!=="object")return null;var p=function(m){return m&&m.total>0?Math.round(m.used*100/m.total)+"%":null};var parts=["CPU "+Math.round(Number(s.cpu)||0)+"%"];var r=p(s.mem);if(r)parts.push("RAM "+r);var d=p(s.disk);if(d)parts.push("Disk "+d);if(s.version)parts.push(String(s.version));return y.a.createElement("div",{style:{fontSize:11,opacity:.65,marginTop:2,direction:"ltr",textAlign:"right"}},parts.join(" \u00b7 "))})(t.load_status)/*__NODELOAD_END__*/)
+                        /*__IMN_ROW_NAME_START__*/}), imnProtocolNames[t.type] ? y.a.createElement(mMihomo,{record:t},y.a.createElement("a",{"data-mihomo-edit":t.id},e)) : y.a.createElement("span", null, e), /*__NODELOAD__*//*__IMN_ROW_NAME_END__*/(function(s){if(!s||typeof s!=="object")return null;var p=function(m){return m&&m.total>0?Math.round(m.used*100/m.total)+"%":null};var parts=["CPU "+Math.round(Number(s.cpu)||0)+"%"];var r=p(s.mem);if(r)parts.push("RAM "+r);var d=p(s.disk);if(d)parts.push("Disk "+d);if(s.version)parts.push(String(s.version));var h=s.node&&typeof s.node==="object"?s.node:null;if(h&&h.serving)parts.push((Number(h.users)||0)+" users");var load=y.a.createElement("div",{style:{fontSize:11,opacity:.65,marginTop:2,direction:"ltr",textAlign:"right"}},parts.join(" \u00b7 "));var problem=h&&(h.error||!h.serving)?String(h.error||"V2bX is not serving this node"):null;if(!problem)return load;return y.a.createElement("div",null,load,y.a.createElement("div",{title:problem,"data-node-problem":true,style:{fontSize:11,color:"#cf1322",marginTop:2,direction:"ltr",textAlign:"right",maxWidth:360,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},"\u26a0 V2bX: "+problem))})(t.load_status)/*__NODELOAD_END__*/)
                     }
                 }, {
                     title: "آدرس",
@@ -118116,7 +118143,7 @@ console.log("🤖 Smart Bot Admin v2 Ready");
 
 
 /*__TUNTOG_START__*/
-;(function(){try{if(window.__tunTog)return;window.__tunTog=1;var SP=(location.pathname.match(/^\/([^\/?#]+)/)||[])[1]||'admin',API='/api/v1/'+SP,S={},SI={},loading=false;function tok(){return localStorage.getItem('authorization')||'';}function keyOf(t){t=(t||'').trim();var m=t.match(/([A-Za-z0-9._\-]+):(\d+)/);return m?m[1]+':'+m[2]:t;}function put(h,p,n){if(h&&p)S[h+':'+p]=n;}function load(cb){if(loading)return;loading=true;fetch(API+'/tunnel/status',{headers:{authorization:tok()}}).then(function(r){return r.json();}).then(function(d){loading=false;S={};SI={};(d.data||[]).forEach(function(n){SI[n.id]=n;put(n.host,n.port,n);if(n.detected){put(n.direct,n.port,n);put(n.tunnel,n.port,n);}});cb&&cb();}).catch(function(){loading=false;});}function dot(n){return n.live===true?'🟢':(n.live===false?'🔴':'⚪');}/*__TUNREG__*/function render(p,n){p.style.background='';p.style.color='';p.style.borderColor='#ddd';if(!n.detected){p.textContent='\u0628\u062f\u0648\u0646 \u062a\u0627\u0646\u0644 \u2014 \u06a9\u0644\u06cc\u06a9: \u062b\u0628\u062a';p.style.color='#999';p.style.cursor='pointer';p.title='\u0627\u06cc\u0646 \u0646\u0648\u062f \u062f\u0631 \u0646\u0642\u0634\u0647\u0654 \u062a\u0627\u0646\u0644 \u0646\u06cc\u0633\u062a. \u06a9\u0644\u06cc\u06a9 \u06a9\u0646\u06cc\u062f \u062a\u0627 \u062b\u0628\u062a \u0634\u0648\u062f.';return;}if(n.conflict&&n.conflict.length){p.style.background='#fff7e6';p.style.color='#ad6800';p.style.borderColor='#ffd591';p.textContent='\u26a0 \u062a\u062f\u0627\u062e\u0644 \u067e\u0648\u0631\u062a';p.title='\u0627\u06cc\u0646 \u0631\u0644\u0647 \u0648 \u067e\u0648\u0631\u062a \u0631\u0627 \u0646\u0648\u062f \u062f\u06cc\u06af\u0631\u06cc \u0647\u0645 \u06af\u0631\u0641\u062a\u0647 \u0627\u0633\u062a \u2014 \u0631\u0644\u0647 \u0647\u0631 \u067e\u0648\u0631\u062a \u0631\u0627 \u0641\u0642\u0637 \u06cc\u06a9 \u0628\u0627\u0631 \u0645\u06cc\u200c\u06af\u06cc\u0631\u062f\u060c \u067e\u0633 \u0641\u0642\u0637 \u06cc\u06a9\u06cc \u0648\u0627\u0642\u0639\u0627\u064b \u0633\u0631\u0648\u06cc\u0633 \u0645\u06cc\u200c\u062f\u0647\u062f. \u0646\u0648\u062f(\u0647\u0627\u06cc) \u062f\u0631\u06af\u06cc\u0631: '+n.conflict.join('\u060c')+' (\u067e\u0648\u0631\u062a '+n.port+')';return;}/*__TUNREG_END__*/p.textContent=dot(n)+' تانل: '+(n.is_on?'روشن':'خاموش');if(n.is_on){p.style.background='#e7f7ec';p.style.color='#0a7d31';p.style.borderColor='#9fdcb4';}else{p.style.background='#f2f2f2';p.style.color='#777';}if(n.live===false){p.style.borderColor='#e06666';p.title='رله پاسخ نمی‌دهد — تانل قطع است';}else if(n.live===true){p.title='رله زنده است — کلیک: روشن/خاموش';}else{p.title='وضعیت زنده‌بودن نامشخص';}}function upText(td,h){var w=document.createTreeWalker(td,NodeFilter.SHOW_TEXT,null),x;while((x=w.nextNode())){var t=x.nodeValue,i=t.lastIndexOf(':');if(i>0&&/^\d+$/.test((t.slice(i+1)||'').trim())){x.nodeValue=h+':'+t.slice(i+1).trim();return;}}}function doToggle(p,n){if(p.dataset.b)return;if(!n.detected){tunRegister(p,n);return;}var target=!n.is_on;if(target&&n.live===false){if(!confirm('تانل این نود زنده نیست (رله پاسخ نمی‌دهد). روشن‌کردن کاربران را قطع می‌کند. ادامه؟'))return;}p.dataset.b=1;var pv=p.textContent;p.textContent='...';fetch(API+'/tunnel/toggle',{method:'POST',headers:{authorization:tok(),'Content-Type':'application/json'},body:JSON.stringify({id:n.id,on:target})}).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});}).then(function(res){delete p.dataset.b;if(!res.ok){p.textContent=pv;alert((res.j&&res.j.message)||'خطا در تغییر');return;}n.is_on=target;n.host=res.j.data.host;render(p,n);var td=p.closest('td');if(td)upText(td,res.j.data.host);setTimeout(function(){load(refresh);},1500);}).catch(function(){delete p.dataset.b;p.textContent=pv;alert('خطای شبکه');});}function tunRegister(p,n){var d=prompt('\u0622\u062f\u0631\u0633 \u0645\u0633\u062a\u0642\u06cc\u0645 \u0627\u06cc\u0646 \u0646\u0648\u062f (\u062f\u0627\u0645\u0646\u0647\u200c\u0627\u06cc \u06a9\u0647 \u0628\u062f\u0648\u0646 \u062a\u0627\u0646\u0644 \u0633\u0631\u0648\u06cc\u0633 \u0645\u06cc\u200c\u062f\u0647\u062f):', n.host||'');if(!d)return;var t=prompt('\u0622\u06cc\u200c\u067e\u06cc \u0631\u0644\u0647\u0654 \u0627\u06cc\u0631\u0627\u0646:', '');if(!t)return;p.textContent='\u2026';fetch(API+'/tunnel/register',{method:'POST',headers:{authorization:tok(),'content-type':'application/json'},body:JSON.stringify({id:n.id,direct_host:d.trim(),tunnel_ip:t.trim()})}).then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j};});}).then(function(res){if(!res.ok){alert((res.j&&res.j.message)||'\u062e\u0637\u0627');render(p,n);return;}load(refresh);}).catch(function(){alert('\u062e\u0637\u0627');render(p,n);});}function setPill(p,n){p.__n=n;p.dataset.nid=n.id;render(p,n);p.style.cursor='pointer';}function mkPill(n){var p=document.createElement('span');p.className='tunp';p.style.cssText='display:inline-block;margin-inline-start:8px;padding:1px 8px;border-radius:10px;font-size:12px;line-height:18px;vertical-align:middle;border:1px solid #ddd;user-select:none';setPill(p,n);p.addEventListener('click',function(e){e.stopPropagation();var nn=p.__n;if(nn&&nn.detected)doToggle(p,nn);});return p;}function scan(){try{document.querySelectorAll('tr.ant-table-row').forEach(function(tr){var td=tr.querySelectorAll('td');if(td.length<4)return;var a=td[3];if(!a||a.querySelector('.tunp'))return;var n=S[keyOf(a.textContent)];if(!n)return;a.appendChild(mkPill(n));});}catch(e){}}function refresh(){try{document.querySelectorAll('.tunp').forEach(function(p){var n=SI[p.dataset.nid];if(n)setPill(p,n);});scan();}catch(e){}}var t;function sch(){clearTimeout(t);t=setTimeout(function(){if(Object.keys(S).length===0){load(scan);}else{scan();}},200);}function boot(){try{new MutationObserver(sch).observe(document.body,{childList:true,subtree:true});}catch(e){}setInterval(function(){load(refresh);},12000);load(function(){scan();});}if(document.body){boot();}else{document.addEventListener('DOMContentLoaded',boot);}}catch(e){}})();
+;(function(){try{if(window.__tunTog)return;window.__tunTog=1;var SP=(location.pathname.match(/^\/([^\/?#]+)/)||[])[1]||'admin',API='/api/v1/'+SP,S={},SI={},loading=false;function tok(){return localStorage.getItem('authorization')||'';}function keyOf(t){t=(t||'').trim();var m=t.match(/([A-Za-z0-9._\-]+):(\d+)/);return m?m[1]+':'+m[2]:t;}function put(h,p,n){if(h&&p)S[h+':'+p]=n;}function load(cb){if(loading)return;loading=true;fetch(API+'/tunnel/status',{headers:{authorization:tok()}}).then(function(r){return r.json();}).then(function(d){loading=false;S={};SI={};(d.data||[]).forEach(function(n){SI[n.id]=n;put(n.host,n.port,n);if(n.detected){put(n.direct,n.port,n);put(n.tunnel,n.port,n);}});cb&&cb();}).catch(function(){loading=false;});}function dot(n){return n.live===true?'🟢':(n.live===false?'🔴':'⚪');}/*__TUNREG__*/function render(p,n){p.style.background='';p.style.color='';p.style.borderColor='#ddd';if(!n.detected){p.textContent='\u0628\u062f\u0648\u0646 \u062a\u0627\u0646\u0644 \u2014 \u06a9\u0644\u06cc\u06a9: \u062b\u0628\u062a';p.style.color='#999';p.style.cursor='pointer';p.title='\u0627\u06cc\u0646 \u0646\u0648\u062f \u062f\u0631 \u0646\u0642\u0634\u0647\u0654 \u062a\u0627\u0646\u0644 \u0646\u06cc\u0633\u062a. \u06a9\u0644\u06cc\u06a9 \u06a9\u0646\u06cc\u062f \u062a\u0627 \u062b\u0628\u062a \u0634\u0648\u062f.';return;}if(n.conflict&&n.conflict.length){p.style.background='#fff7e6';p.style.color='#ad6800';p.style.borderColor='#ffd591';p.textContent='\u26a0 \u062a\u062f\u0627\u062e\u0644 \u067e\u0648\u0631\u062a';p.title='\u0627\u06cc\u0646 \u0631\u0644\u0647 \u0648 \u067e\u0648\u0631\u062a \u0631\u0627 \u0646\u0648\u062f\u0650 \u0633\u0631\u0648\u0631 \u062e\u0627\u0631\u062c\u06cc \u062f\u06cc\u06af\u0631\u06cc \u0647\u0645 \u06af\u0631\u0641\u062a\u0647 \u0627\u0633\u062a \u2014 \u0631\u0644\u0647 \u0647\u0631 \u067e\u0648\u0631\u062a \u0631\u0627 \u0641\u0642\u0637 \u0628\u0647 \u06cc\u06a9 \u0633\u0631\u0648\u0631 \u0645\u06cc\u200c\u0641\u0631\u0633\u062a\u062f\u060c \u067e\u0633 \u0641\u0642\u0637 \u06cc\u06a9\u06cc \u0648\u0627\u0642\u0639\u0627\u064b \u0633\u0631\u0648\u06cc\u0633 \u0645\u06cc\u200c\u062f\u0647\u062f. \u0646\u0648\u062f(\u0647\u0627\u06cc) \u062f\u0631\u06af\u06cc\u0631: '+n.conflict.join('\u060c')+' (\u067e\u0648\u0631\u062a '+n.port+')';return;}/*__TUNREG_END__*/p.textContent=dot(n)+' تانل: '+(n.is_on?'روشن':'خاموش');if(n.is_on){p.style.background='#e7f7ec';p.style.color='#0a7d31';p.style.borderColor='#9fdcb4';}else{p.style.background='#f2f2f2';p.style.color='#777';}if(n.live===false){p.style.borderColor='#e06666';p.title='رله پاسخ نمی‌دهد — تانل قطع است';}else if(n.live===true){p.title='رله زنده است — کلیک: روشن/خاموش';}else{p.title='وضعیت زنده‌بودن نامشخص';}}function upText(td,h){var w=document.createTreeWalker(td,NodeFilter.SHOW_TEXT,null),x;while((x=w.nextNode())){var t=x.nodeValue,i=t.lastIndexOf(':');if(i>0&&/^\d+$/.test((t.slice(i+1)||'').trim())){x.nodeValue=h+':'+t.slice(i+1).trim();return;}}}function doToggle(p,n){if(p.dataset.b)return;if(!n.detected){tunRegister(p,n);return;}var target=!n.is_on;if(target&&n.live===false){if(!confirm('تانل این نود زنده نیست (رله پاسخ نمی‌دهد). روشن‌کردن کاربران را قطع می‌کند. ادامه؟'))return;}p.dataset.b=1;var pv=p.textContent;p.textContent='...';fetch(API+'/tunnel/toggle',{method:'POST',headers:{authorization:tok(),'Content-Type':'application/json'},body:JSON.stringify({id:n.id,on:target})}).then(function(r){return r.json().then(function(j){return {ok:r.ok,j:j};});}).then(function(res){delete p.dataset.b;if(!res.ok){p.textContent=pv;alert((res.j&&res.j.message)||'خطا در تغییر');return;}n.is_on=target;n.host=res.j.data.host;render(p,n);var td=p.closest('td');if(td)upText(td,res.j.data.host);setTimeout(function(){load(refresh);},1500);}).catch(function(){delete p.dataset.b;p.textContent=pv;alert('خطای شبکه');});}function tunRegister(p,n){var d=prompt('\u0622\u062f\u0631\u0633 \u0645\u0633\u062a\u0642\u06cc\u0645 \u0627\u06cc\u0646 \u0646\u0648\u062f (\u062f\u0627\u0645\u0646\u0647\u200c\u0627\u06cc \u06a9\u0647 \u0628\u062f\u0648\u0646 \u062a\u0627\u0646\u0644 \u0633\u0631\u0648\u06cc\u0633 \u0645\u06cc\u200c\u062f\u0647\u062f):', n.host||'');if(!d)return;var t=prompt('\u0622\u06cc\u200c\u067e\u06cc \u0631\u0644\u0647\u0654 \u0627\u06cc\u0631\u0627\u0646:', '');if(!t)return;p.textContent='\u2026';fetch(API+'/tunnel/register',{method:'POST',headers:{authorization:tok(),'content-type':'application/json'},body:JSON.stringify({id:n.id,direct_host:d.trim(),tunnel_ip:t.trim()})}).then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j};});}).then(function(res){if(!res.ok){alert((res.j&&res.j.message)||'\u062e\u0637\u0627');render(p,n);return;}load(refresh);}).catch(function(){alert('\u062e\u0637\u0627');render(p,n);});}function setPill(p,n){p.__n=n;p.dataset.nid=n.id;render(p,n);p.style.cursor='pointer';}function mkPill(n){var p=document.createElement('span');p.className='tunp';p.style.cssText='display:inline-block;margin-inline-start:8px;padding:1px 8px;border-radius:10px;font-size:12px;line-height:18px;vertical-align:middle;border:1px solid #ddd;user-select:none';setPill(p,n);p.addEventListener('click',function(e){e.stopPropagation();var nn=p.__n;if(nn&&nn.detected)doToggle(p,nn);});return p;}function scan(){try{document.querySelectorAll('tr.ant-table-row').forEach(function(tr){var td=tr.querySelectorAll('td');if(td.length<4)return;var a=td[3];if(!a||a.querySelector('.tunp'))return;var n=S[keyOf(a.textContent)];if(!n)return;a.appendChild(mkPill(n));});}catch(e){}}function refresh(){try{document.querySelectorAll('.tunp').forEach(function(p){var n=SI[p.dataset.nid];if(n)setPill(p,n);});scan();}catch(e){}}var t;function sch(){clearTimeout(t);t=setTimeout(function(){if(Object.keys(S).length===0){load(scan);}else{scan();}},200);}function boot(){try{new MutationObserver(sch).observe(document.body,{childList:true,subtree:true});}catch(e){}setInterval(function(){load(refresh);},12000);load(function(){scan();});}if(document.body){boot();}else{document.addEventListener('DOMContentLoaded',boot);}}catch(e){}})();
 /*__TUNTOG_END__*/
 /*__EXTRAGROUPS_START__*/
 ;(function(){

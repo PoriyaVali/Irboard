@@ -123,9 +123,11 @@ before(async () => {
                 if (action === 'fetch') { res.end(JSON.stringify({ data: { version: '1.19.33', protocols: state.protocols,  } })); return; }
                 if (state.fail) { res.statusCode = 422; res.end(JSON.stringify({ message: 'Invalid settings', errors: { 'password': ['Required credential'] } })); return; }
                 const index = payload.id ? state.nodes.findIndex(row => row.id === payload.id && row.type === type) : -1;
+                let savedId;
                 if (action === 'save') {
                     const row = nativeNode({ ...payload, type, id: payload.id || Math.max(0, ...state.nodes.filter(row => row.type === type).map(row => row.id)) + 1 });
                     if (index >= 0) state.nodes[index] = row; else state.nodes.push(row);
+                    savedId = row.id;
                 }
                 if (action === 'update') state.nodes[index].show = Number(payload.show);
                 if (action === 'drop') state.nodes.splice(index, 1);
@@ -134,7 +136,7 @@ before(async () => {
                     for (const row of state.nodes) if (payload[row.type] && payload[row.type][row.id] !== undefined) row.sort = payload[row.type][row.id];
                     state.nodes.sort((a, b) => a.sort - b.sort);
                 }
-                res.end(JSON.stringify({ data: true })); return;
+                res.end(JSON.stringify(savedId ? { data: true, id: savedId } : { data: true })); return;
             }
             const user = { email: 'fixture@example.invalid', is_admin: 1, avatar_url: '', balance: 0, commission_balance: 0 };
             const data = /\/user\/(info|checkLogin)$/.test(url.pathname) ? user :
@@ -207,6 +209,12 @@ async function draft(page, protocol = 'socks5', name = 'Fictional node') {
 }
 async function saved(page, count) {
     await page.wait('!document.querySelector("[data-mihomo-form]") && document.querySelectorAll("#main-container tr.ant-table-row").length>=' + count);
+    // A new managed node explains its next steps once; acknowledge it.
+    await delay(150);
+    if (await page.evaluate('!!document.querySelector("[data-mihomo-next-steps]")')) {
+        await page.evaluate('document.querySelector("[data-mihomo-next-steps]").closest(".ant-modal-content").querySelector(".ant-btn-primary").click()');
+        await page.wait('!document.querySelector("[data-mihomo-next-steps]")');
+    }
 }
 async function rowAction(page, name, action) {
     await page.evaluate(`(()=>{const row=Array.from(document.querySelectorAll('#main-container tr.ant-table-row')).find(row=>row.textContent.includes(${JSON.stringify(name)}));if(!row)throw new Error('Missing native row');row.querySelector('a.ant-dropdown-trigger').click();})()`);
@@ -330,11 +338,11 @@ test('invalid advanced JSON and rejected saves retain ordinary form values', asy
 });
 
 test('route and account changes discard a drawer draft and stale credentials', async () => {
-    const page = await openPage(); await draft(page); await page.set('password', 'private-draft');
+    const page = await openPage(); await draft(page); await advanced(page); await page.set('password', 'private-draft');
     await page.evaluate('location.hash="/plan"'); await page.wait('!document.querySelector("[data-mihomo-form]")');
     await page.evaluate('location.hash="/server/manage"'); await page.wait('document.querySelector("[data-mihomo-add-menu]")');
     assert.equal(await page.evaluate('!!document.querySelector("[data-mihomo-form]")'), false);
-    await draft(page); await page.set('password', 'private-draft');
+    await draft(page); await advanced(page); await page.set('password', 'private-draft');
     const saves = state.requests.filter(request => request.action === 'save').length;
     await page.evaluate('localStorage.setItem("authorization","another-account")');
     await page.wait('!document.querySelector("[data-mihomo-form]")');
@@ -394,6 +402,9 @@ test('managed server mode is available only for the four implemented server prot
     for (const type of ['http','socks5','mieru','shadowquic']) {
         await draft(page,type,'Managed '+type);
         assert.equal(await page.fieldValue('managed'),true);
+        // A managed node's generated credentials wait under the advanced settings.
+        assert.equal(await page.evaluate('!!document.querySelector("[data-mihomo-field=username]")'),false);
+        await advanced(page);
         assert.match(await page.evaluate('document.querySelector("[data-mihomo-form]").textContent'), /\{\{uuid\}\}/);
         await page.set('username','{{uuid}}');await page.set('password','{{uuid}}');
         const expectedCount = state.nodes.length + 1;
@@ -482,6 +493,7 @@ test('managed forms reject shared fixed credentials before sending them to the s
     const page = await openPage();
     await draft(page, 'socks5', 'Managed credentials');
     assert.equal(await page.fieldValue('managed'), true);
+    await advanced(page);
     await page.set('username', 'shared-user');
     await page.set('password', 'shared-password');
     await page.click('[data-mihomo-save]');
@@ -524,4 +536,21 @@ test('the ten original protocol drawers keep their native controls and explain t
         }
         await page.close();
     }
+});
+
+test('a managed node needs only its name, groups, address and port, and says what comes next', async () => {
+    const page = await openPage();
+    await openForm(page, 'sudoku');
+    assert.equal(await page.fieldValue('managed'), true);
+    assert.match(await page.evaluate('document.querySelector("[data-mihomo-description]").textContent'), /V2bX runs this node/);
+    assert.equal(await page.evaluate('!!document.querySelector("[data-mihomo-field=key]")'), false, 'the generated key waits under the advanced settings');
+    await page.set('name', 'Simple Sudoku'); await selectGroup(page);
+    await page.set('host', 'new.example.test'); await page.set('port', '2443');
+    await page.click('[data-mihomo-save]');
+    await page.wait('document.querySelector("[data-mihomo-next-steps=\'1\']") && document.body.textContent.includes("v2bx config")');
+    assert.match(await page.evaluate('document.querySelector(".ant-modal-content").textContent'), /saved with ID 1/);
+    await saved(page, 1);
+    const payload = state.requests.find(request => request.action === 'save').payload;
+    assert.equal(payload.managed, true);
+    assert.equal(payload.server_port, null, 'the panel uses the connection port');
 });

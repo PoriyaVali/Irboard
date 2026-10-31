@@ -67,6 +67,20 @@ class NodeApiCompatTest extends TestCase
         $this->assertNull(UniProxyController::nodeLoad(['mem' => ['total' => 1]]));
     }
 
+    public function testNodeLoadKeepsTheNodesHealth()
+    {
+        $load = UniProxyController::nodeLoad(['cpu' => 1, 'node' => ['serving' => false, 'users' => 4,
+            'error' => "start: listen tcp :443:\nbind: address already in use " . str_repeat('x', 400)]]);
+        $this->assertFalse($load['node']['serving']);
+        $this->assertSame(4, $load['node']['users']);
+        $this->assertStringStartsWith('start: listen tcp :443: bind: address already in use', $load['node']['error']);
+        $this->assertSame(300, mb_strlen($load['node']['error']));
+
+        $this->assertNull(UniProxyController::nodeLoad(['cpu' => 1, 'node' => ['serving' => true, 'users' => 2]])['node']['error']);
+        // V2bX before 1.12 sends no health.
+        $this->assertNull(UniProxyController::nodeLoad(['cpu' => 1])['node']);
+    }
+
     public function testNodeLoadCarriesTheVersionTheNodeNames()
     {
         $load = UniProxyController::nodeLoad(['cpu' => 1], 'V2bX/v1.7.2');

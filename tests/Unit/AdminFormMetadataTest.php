@@ -56,9 +56,10 @@ class AdminFormMetadataTest extends TestCase
             }
             if (ManagedServer::supports($type)) $this->assertTrue($defaults['managed']);
             else $this->assertArrayNotHasKey('managed', $defaults);
-            // Only V2bX listens on a service port; an external service already has one.
-            if (isset($defaults['port']) && ManagedServer::supports($type)) $this->assertSame($defaults['port'], $defaults['server_port']);
-            else $this->assertArrayNotHasKey('server_port', $defaults, $type);
+            // No draft has a listen port of its own: a managed node's blank one
+            // follows the connection port when saved, and an external service
+            // already has its own.
+            $this->assertArrayNotHasKey('server_port', $defaults, $type);
             if (isset($defaults['skip_cert_verify'])) $this->assertFalse($defaults['skip_cert_verify']);
             if (in_array($type, ['http', 'socks5'], true)) $this->assertTrue($defaults['tls']);
         }

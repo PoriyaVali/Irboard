@@ -29,10 +29,16 @@ class ManagedServer
         return ['sudoku' => [], 'snell' => ['psk']][$type] ?? ['username', 'password'];
     }
 
-    /** A managed Sudoku root without a master key gets a new one. */
+    /**
+     * Fill what a managed root can do without: V2bX listens on the connection
+     * port unless told otherwise, and a Sudoku root without a master key gets
+     * a new one.
+     */
     public static function prepare(string $type, $node): void
     {
-        if ($type === 'sudoku' && !empty($node->managed) && empty($node->parent_id) && (string)($node->key ?? '') === '') $node->key = SudokuKeys::generate();
+        if (empty($node->managed) || !empty($node->parent_id)) return;
+        if (empty($node->server_port) && !empty($node->port) && ctype_digit((string)$node->port)) $node->server_port = (int)$node->port;
+        if ($type === 'sudoku' && (string)($node->key ?? '') === '') $node->key = SudokuKeys::generate();
     }
 
     public static function validate(string $type, array $node): void
@@ -152,7 +158,9 @@ class ManagedServer
             $obfs = $options['obfs-opts'];
             $response['obfs_opts'] = ['mode' => $obfs['mode'], 'host' => $obfs['host'], 'version' => (int)$obfs['version']];
         }
-        if (in_array($type, ['http', 'socks5'], true)) $response['server_name'] = $node['sni'] ?? $node['host'];
+        // ShadowQUIC's is the site V2bX hands probers to, unless config.json
+        // names another.
+        if (in_array($type, ['http', 'socks5', 'shadowquic'], true)) $response['server_name'] = $node['sni'] ?? $node['host'];
         return $response;
     }
 
