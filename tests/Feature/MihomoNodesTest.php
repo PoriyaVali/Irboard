@@ -114,12 +114,13 @@ class MihomoNodesTest extends TestCase
             $matches = array_values(array_filter($runtimeNodes, function ($row) use ($type) { return $row['type'] === $type; }));
             $this->assertSame(2, $matches[0]['available_status']);
             // V2bX's own report decides: red when it cannot serve the node,
-            // amber when it serves it with a problem.
-            foreach ([[false, 0], [true, 1]] as [$serving, $status]) {
+            // with or without a reason, amber when it serves it with a problem.
+            $bind = 'listen tcp :32001: bind: address already in use';
+            foreach ([[false, $bind, 0], [false, null, 0], [true, $bind, 1], [true, null, 2]] as [$serving, $error, $status]) {
                 Cache::put(CacheKey::get('SERVER_' . strtoupper($type) . '_LOAD_STATUS', $stored->id),
-                    ['cpu' => 1, 'node' => ['serving' => $serving, 'users' => 1, 'error' => 'listen tcp :32001: bind: address already in use']], 300);
+                    ['cpu' => 1, 'node' => ['serving' => $serving, 'users' => 1, 'error' => $error]], 300);
                 $row = array_values(array_filter((new ServerService())->getAllServers(false), function ($row) use ($type) { return $row['type'] === $type; }))[0];
-                $this->assertSame($status, $row['available_status'], $type . ($serving ? ' serving' : ' not serving'));
+                $this->assertSame($status, $row['available_status'], $type . ($serving ? ' serving' : ' not serving') . ($error ? ' with an error' : ''));
             }
             Cache::forget(CacheKey::get('SERVER_' . strtoupper($type) . '_LOAD_STATUS', $stored->id));
             if ($type === 'shadowquic') {

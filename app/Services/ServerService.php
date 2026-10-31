@@ -755,11 +755,12 @@ class ServerService
             $health = is_array($servers[$k]['load_status']) ? ($servers[$k]['load_status']['node'] ?? null) : null;
             if ((time() - 300) >= $servers[$k]['last_check_at']) {
                 $servers[$k]['available_status'] = 0;
-            } else if ($health && !empty($health['error'])) {
+            } else if ($health && (empty($health['serving']) || !empty($health['error']))) {
                 // V2bX reports a problem: red when it cannot serve the node at
-                // all (a port in use, a failed start), amber when it still does
-                // (a certificate renewal that keeps failing).
-                $servers[$k]['available_status'] = $health['serving'] ? 1 : 0;
+                // all (a port in use, a failed start), with or without a
+                // reason, amber when it still does (a certificate renewal that
+                // keeps failing).
+                $servers[$k]['available_status'] = empty($health['serving']) ? 0 : 1;
             } else if ((time() - 300) >= $servers[$k]['last_push_at']) {
                 $servers[$k]['available_status'] = 1;
             } else {
