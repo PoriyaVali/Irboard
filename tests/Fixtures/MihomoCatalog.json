@@ -375,6 +375,7 @@
                 "fa": "اتصال ShadowsocksR؛ رمزگذاری، پروتکل و استتار باید دقیقاً با سرور SSR یکسان باشند.",
                 "en": "A ShadowsocksR connection; cipher, protocol and obfuscation must exactly match the SSR server."
             },
+            "managed_description": null,
             "capability": {
                 "fa": "ابتدا سرویس یا شبکهٔ مقصد و اطلاعات کلاینت را بیرون V2bX آماده کنید و سپس پروفایل آن را اینجا وارد کنید. این نوع در حال حاضر ورودی سرور چندکاربرهٔ مدیریت‌شده ندارد؛ ذخیرهٔ این فرم به‌تنهایی سرور، حساب یا محدودیت سمت سرویس ایجاد نمی‌کند.",
                 "en": "Provision the destination service or network and client credentials outside V2bX first, then enter its profile here. This type currently has no managed multi-user server inbound; saving this form alone does not create its server, accounts or service-side limits."
@@ -443,8 +444,8 @@
                         "en": "Service listening port"
                     },
                     "help": {
-                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. معمولاً با پورت اتصال یکسان است؛ برای پروفایل بیرونی سرویس جدیدی راه نمی‌اندازد.",
-                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. It usually matches the client port. For an external profile it does not start a service."
+                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. خالی بگذارید تا همان پورت اتصال باشد؛ فقط وقتی NAT یا انتقال پورت دارید عدد دیگری بنویسید.",
+                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. Leave blank to use the connection port; enter another only behind NAT or port forwarding."
                     },
                     "min": 1,
                     "max": 65535
@@ -545,6 +546,10 @@
                     "help": {
                         "fa": "نوع انتقال و تنظیمات اتصال باید با سرویس مقصد یکسان باشند.",
                         "en": "Match the transport and connection settings to the destination service."
+                    },
+                    "managed_help": {
+                        "fa": "V2bX همین تنظیمات را روی سرور و در اشتراک کاربران اعمال می‌کند؛ پیش‌فرض‌ها کار می‌کنند.",
+                        "en": "V2bX applies these settings to the server and to the subscriptions alike; the defaults work."
                     }
                 },
                 {
@@ -556,6 +561,10 @@
                     "help": {
                         "fa": "اطلاعات ورود یا کلید پروفایل را از همان سرویس بگیرید؛ نمونه‌ها مقدار واقعی نیستند.",
                         "en": "Obtain credentials or profile keys from that service; examples are not real values."
+                    },
+                    "managed_help": {
+                        "fa": "هر کاربر مشخصات ورود جداگانهٔ خودش را از پنل می‌گیرد.",
+                        "en": "Each subscriber gets their own credentials from the panel."
                     }
                 },
                 {
@@ -567,6 +576,10 @@
                     "help": {
                         "fa": "اعتبارسنجی گواهی را فعال نگه دارید؛ تنظیمات گواهی کلاینت با گواهی سرور متفاوت است.",
                         "en": "Keep certificate validation enabled; client certificates differ from server certificates."
+                    },
+                    "managed_help": {
+                        "fa": "گواهی سرور را V2bX با تنظیم CertConfig خودش می‌گیرد و تمدید می‌کند؛ دامنهٔ گواهی همین آدرس یا SNI نود است.",
+                        "en": "V2bX obtains and renews the server certificate through its own CertConfig; the certificate is for this node's address or SNI."
                     }
                 },
                 {
@@ -578,6 +591,10 @@
                     "help": {
                         "fa": "فقط گزینه‌هایی را تغییر دهید که سرویس مقصد لازم دارد. گزینهٔ خالی به اشتراک اضافه نمی‌شود.",
                         "en": "Change only options required by the destination service. Empty options are omitted from the subscription."
+                    },
+                    "managed_help": {
+                        "fa": "فقط برای نیاز مشخصی تغییر دهید؛ V2bX و اشتراک‌ها همین مقادیر را می‌گیرند. مشخصات ورود هر کاربر و کلید Sudoku خودکار ساخته می‌شوند.",
+                        "en": "Change only for a specific need; V2bX and the subscriptions take the same values. Each subscriber's credentials and the Sudoku key are generated for you."
                     }
                 }
             ]
@@ -815,6 +832,10 @@
                 "fa": "پراکسی SOCKS5 برای TCP و، در صورت فعال‌بودن، UDP؛ TLS اتصال کلاینت به سرویس را رمز می‌کند.",
                 "en": "A SOCKS5 proxy for TCP and optional UDP; TLS encrypts the client-to-proxy connection."
             },
+            "managed_description": {
+                "fa": "این نود را V2bX روی سرور خودتان اجرا می‌کند: کاربران، مصرف، محدودیت‌ها و کلیدها از پنل می‌آیند و تنظیمات پروتکل برای سرور و اشتراک کاربران یکسان اعمال می‌شود. فقط نام، گروه، آدرس و پورت لازم است؛ بقیه پیش‌فرض‌های آمادهٔ کار دارند.",
+                "en": "V2bX runs this node on your own server: users, usage, limits and keys come from the panel, and the protocol settings apply to the server and to every subscription alike. Only the name, groups, address and port are needed; everything else has working defaults."
+            },
             "capability": {
                 "fa": "برای ساخت سرور، V2bX نسخهٔ 1.10.0 یا جدیدتر با هستهٔ mihomo را نصب و نوع و ID نود اصلی را ثبت کنید؛ کاربران، مصرف و محدودیت‌ها از پنل می‌آیند. در صورت فعال‌بودن TLS، دامنه و گواهی سرور را در CertConfig همان V2bX تنظیم کنید.",
                 "en": "To provision the server, install V2bX 1.10.0 or later with the mihomo core and register the root node type and ID. The panel supplies users, usage and limits. With TLS enabled, configure the server domain and certificate in that V2bX node CertConfig."
@@ -831,7 +852,6 @@
                 "show": false,
                 "sort": 0,
                 "port": 443,
-                "server_port": 443,
                 "managed": true,
                 "tls": true,
                 "udp": true,
@@ -884,8 +904,8 @@
                         "en": "Service listening port"
                     },
                     "help": {
-                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. معمولاً با پورت اتصال یکسان است؛ برای پروفایل بیرونی سرویس جدیدی راه نمی‌اندازد.",
-                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. It usually matches the client port. For an external profile it does not start a service."
+                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. خالی بگذارید تا همان پورت اتصال باشد؛ فقط وقتی NAT یا انتقال پورت دارید عدد دیگری بنویسید.",
+                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. Leave blank to use the connection port; enter another only behind NAT or port forwarding."
                     },
                     "min": 1,
                     "max": 65535
@@ -986,6 +1006,10 @@
                     "help": {
                         "fa": "نوع انتقال و تنظیمات اتصال باید با سرویس مقصد یکسان باشند.",
                         "en": "Match the transport and connection settings to the destination service."
+                    },
+                    "managed_help": {
+                        "fa": "V2bX همین تنظیمات را روی سرور و در اشتراک کاربران اعمال می‌کند؛ پیش‌فرض‌ها کار می‌کنند.",
+                        "en": "V2bX applies these settings to the server and to the subscriptions alike; the defaults work."
                     }
                 },
                 {
@@ -997,6 +1021,10 @@
                     "help": {
                         "fa": "اطلاعات ورود یا کلید پروفایل را از همان سرویس بگیرید؛ نمونه‌ها مقدار واقعی نیستند.",
                         "en": "Obtain credentials or profile keys from that service; examples are not real values."
+                    },
+                    "managed_help": {
+                        "fa": "هر کاربر مشخصات ورود جداگانهٔ خودش را از پنل می‌گیرد.",
+                        "en": "Each subscriber gets their own credentials from the panel."
                     }
                 },
                 {
@@ -1008,6 +1036,10 @@
                     "help": {
                         "fa": "اعتبارسنجی گواهی را فعال نگه دارید؛ تنظیمات گواهی کلاینت با گواهی سرور متفاوت است.",
                         "en": "Keep certificate validation enabled; client certificates differ from server certificates."
+                    },
+                    "managed_help": {
+                        "fa": "گواهی سرور را V2bX با تنظیم CertConfig خودش می‌گیرد و تمدید می‌کند؛ دامنهٔ گواهی همین آدرس یا SNI نود است.",
+                        "en": "V2bX obtains and renews the server certificate through its own CertConfig; the certificate is for this node's address or SNI."
                     }
                 },
                 {
@@ -1019,6 +1051,10 @@
                     "help": {
                         "fa": "فقط گزینه‌هایی را تغییر دهید که سرویس مقصد لازم دارد. گزینهٔ خالی به اشتراک اضافه نمی‌شود.",
                         "en": "Change only options required by the destination service. Empty options are omitted from the subscription."
+                    },
+                    "managed_help": {
+                        "fa": "فقط برای نیاز مشخصی تغییر دهید؛ V2bX و اشتراک‌ها همین مقادیر را می‌گیرند. مشخصات ورود هر کاربر و کلید Sudoku خودکار ساخته می‌شوند.",
+                        "en": "Change only for a specific need; V2bX and the subscriptions take the same values. Each subscriber's credentials and the Sudoku key are generated for you."
                     }
                 }
             ]
@@ -1278,6 +1314,10 @@
                 "fa": "پراکسی HTTP/HTTPS برای TCP و CONNECT؛ روشن‌بودن TLS یعنی اتصال امن HTTPS به خود پراکسی.",
                 "en": "An HTTP/HTTPS proxy for TCP and CONNECT; TLS secures the connection to the proxy itself."
             },
+            "managed_description": {
+                "fa": "این نود را V2bX روی سرور خودتان اجرا می‌کند: کاربران، مصرف، محدودیت‌ها و کلیدها از پنل می‌آیند و تنظیمات پروتکل برای سرور و اشتراک کاربران یکسان اعمال می‌شود. فقط نام، گروه، آدرس و پورت لازم است؛ بقیه پیش‌فرض‌های آمادهٔ کار دارند.",
+                "en": "V2bX runs this node on your own server: users, usage, limits and keys come from the panel, and the protocol settings apply to the server and to every subscription alike. Only the name, groups, address and port are needed; everything else has working defaults."
+            },
             "capability": {
                 "fa": "برای ساخت سرور، V2bX نسخهٔ 1.10.0 یا جدیدتر با هستهٔ mihomo را نصب و نوع و ID نود اصلی را ثبت کنید؛ کاربران، مصرف و محدودیت‌ها از پنل می‌آیند. در صورت فعال‌بودن TLS، دامنه و گواهی سرور را در CertConfig همان V2bX تنظیم کنید.",
                 "en": "To provision the server, install V2bX 1.10.0 or later with the mihomo core and register the root node type and ID. The panel supplies users, usage and limits. With TLS enabled, configure the server domain and certificate in that V2bX node CertConfig."
@@ -1294,7 +1334,6 @@
                 "show": false,
                 "sort": 0,
                 "port": 443,
-                "server_port": 443,
                 "managed": true,
                 "tls": true,
                 "skip_cert_verify": false
@@ -1346,8 +1385,8 @@
                         "en": "Service listening port"
                     },
                     "help": {
-                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. معمولاً با پورت اتصال یکسان است؛ برای پروفایل بیرونی سرویس جدیدی راه نمی‌اندازد.",
-                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. It usually matches the client port. For an external profile it does not start a service."
+                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. خالی بگذارید تا همان پورت اتصال باشد؛ فقط وقتی NAT یا انتقال پورت دارید عدد دیگری بنویسید.",
+                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. Leave blank to use the connection port; enter another only behind NAT or port forwarding."
                     },
                     "min": 1,
                     "max": 65535
@@ -1448,6 +1487,10 @@
                     "help": {
                         "fa": "نوع انتقال و تنظیمات اتصال باید با سرویس مقصد یکسان باشند.",
                         "en": "Match the transport and connection settings to the destination service."
+                    },
+                    "managed_help": {
+                        "fa": "V2bX همین تنظیمات را روی سرور و در اشتراک کاربران اعمال می‌کند؛ پیش‌فرض‌ها کار می‌کنند.",
+                        "en": "V2bX applies these settings to the server and to the subscriptions alike; the defaults work."
                     }
                 },
                 {
@@ -1459,6 +1502,10 @@
                     "help": {
                         "fa": "اطلاعات ورود یا کلید پروفایل را از همان سرویس بگیرید؛ نمونه‌ها مقدار واقعی نیستند.",
                         "en": "Obtain credentials or profile keys from that service; examples are not real values."
+                    },
+                    "managed_help": {
+                        "fa": "هر کاربر مشخصات ورود جداگانهٔ خودش را از پنل می‌گیرد.",
+                        "en": "Each subscriber gets their own credentials from the panel."
                     }
                 },
                 {
@@ -1470,6 +1517,10 @@
                     "help": {
                         "fa": "اعتبارسنجی گواهی را فعال نگه دارید؛ تنظیمات گواهی کلاینت با گواهی سرور متفاوت است.",
                         "en": "Keep certificate validation enabled; client certificates differ from server certificates."
+                    },
+                    "managed_help": {
+                        "fa": "گواهی سرور را V2bX با تنظیم CertConfig خودش می‌گیرد و تمدید می‌کند؛ دامنهٔ گواهی همین آدرس یا SNI نود است.",
+                        "en": "V2bX obtains and renews the server certificate through its own CertConfig; the certificate is for this node's address or SNI."
                     }
                 },
                 {
@@ -1481,6 +1532,10 @@
                     "help": {
                         "fa": "فقط گزینه‌هایی را تغییر دهید که سرویس مقصد لازم دارد. گزینهٔ خالی به اشتراک اضافه نمی‌شود.",
                         "en": "Change only options required by the destination service. Empty options are omitted from the subscription."
+                    },
+                    "managed_help": {
+                        "fa": "فقط برای نیاز مشخصی تغییر دهید؛ V2bX و اشتراک‌ها همین مقادیر را می‌گیرند. مشخصات ورود هر کاربر و کلید Sudoku خودکار ساخته می‌شوند.",
+                        "en": "Change only for a specific need; V2bX and the subscriptions take the same values. Each subscriber's credentials and the Sudoku key are generated for you."
                     }
                 }
             ]
@@ -1717,6 +1772,10 @@
                 "fa": "اتصال Snell با کلید PSK؛ نسخه و استتار را از تنظیمات سرور بگیرید.",
                 "en": "A Snell connection using a PSK; obtain the version and obfuscation settings from the server."
             },
+            "managed_description": {
+                "fa": "این نود را V2bX روی سرور خودتان اجرا می‌کند: کاربران، مصرف، محدودیت‌ها و کلیدها از پنل می‌آیند و تنظیمات پروتکل برای سرور و اشتراک کاربران یکسان اعمال می‌شود. فقط نام، گروه، آدرس و پورت لازم است؛ بقیه پیش‌فرض‌های آمادهٔ کار دارند.",
+                "en": "V2bX runs this node on your own server: users, usage, limits and keys come from the panel, and the protocol settings apply to the server and to every subscription alike. Only the name, groups, address and port are needed; everything else has working defaults."
+            },
             "capability": {
                 "fa": "برای ساخت سرور، V2bX نسخهٔ 1.11.0 یا جدیدتر با هستهٔ mihomo را نصب و ID نود اصلی را ثبت کنید؛ کاربران، مصرف و محدودیت‌ها از پنل می‌آیند. دست‌دهی ShadowTLS به host:443 در obfs-opts می‌رود، یا به MihomoOptions.ShadowTLSHandshake سرور؛ آن سرور باید گواهی همان host را داشته باشد. کلاینت باید Snell روی ShadowTLS را پشتیبانی کند، مثل Surge یا mihomo نسخهٔ 1.19.33.",
                 "en": "To provision the server, install V2bX 1.11.0 or later with the mihomo core and register the root node ID; the panel supplies users, usage and limits. The ShadowTLS handshake goes to the obfs-opts host on port 443, or to the server's MihomoOptions.ShadowTLSHandshake, which must serve that host's certificate. Clients must support Snell over ShadowTLS, as Surge and Mihomo v1.19.33 do."
@@ -1733,7 +1792,6 @@
                 "show": false,
                 "sort": 0,
                 "port": 443,
-                "server_port": 443,
                 "managed": true,
                 "version": 3,
                 "udp": true,
@@ -1790,8 +1848,8 @@
                         "en": "Service listening port"
                     },
                     "help": {
-                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. معمولاً با پورت اتصال یکسان است؛ برای پروفایل بیرونی سرویس جدیدی راه نمی‌اندازد.",
-                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. It usually matches the client port. For an external profile it does not start a service."
+                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. خالی بگذارید تا همان پورت اتصال باشد؛ فقط وقتی NAT یا انتقال پورت دارید عدد دیگری بنویسید.",
+                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. Leave blank to use the connection port; enter another only behind NAT or port forwarding."
                     },
                     "min": 1,
                     "max": 65535
@@ -1892,6 +1950,10 @@
                     "help": {
                         "fa": "نوع انتقال و تنظیمات اتصال باید با سرویس مقصد یکسان باشند.",
                         "en": "Match the transport and connection settings to the destination service."
+                    },
+                    "managed_help": {
+                        "fa": "V2bX همین تنظیمات را روی سرور و در اشتراک کاربران اعمال می‌کند؛ پیش‌فرض‌ها کار می‌کنند.",
+                        "en": "V2bX applies these settings to the server and to the subscriptions alike; the defaults work."
                     }
                 },
                 {
@@ -1903,6 +1965,10 @@
                     "help": {
                         "fa": "اطلاعات ورود یا کلید پروفایل را از همان سرویس بگیرید؛ نمونه‌ها مقدار واقعی نیستند.",
                         "en": "Obtain credentials or profile keys from that service; examples are not real values."
+                    },
+                    "managed_help": {
+                        "fa": "هر کاربر مشخصات ورود جداگانهٔ خودش را از پنل می‌گیرد.",
+                        "en": "Each subscriber gets their own credentials from the panel."
                     }
                 },
                 {
@@ -1914,6 +1980,10 @@
                     "help": {
                         "fa": "اعتبارسنجی گواهی را فعال نگه دارید؛ تنظیمات گواهی کلاینت با گواهی سرور متفاوت است.",
                         "en": "Keep certificate validation enabled; client certificates differ from server certificates."
+                    },
+                    "managed_help": {
+                        "fa": "گواهی سرور را V2bX با تنظیم CertConfig خودش می‌گیرد و تمدید می‌کند؛ دامنهٔ گواهی همین آدرس یا SNI نود است.",
+                        "en": "V2bX obtains and renews the server certificate through its own CertConfig; the certificate is for this node's address or SNI."
                     }
                 },
                 {
@@ -1925,6 +1995,10 @@
                     "help": {
                         "fa": "فقط گزینه‌هایی را تغییر دهید که سرویس مقصد لازم دارد. گزینهٔ خالی به اشتراک اضافه نمی‌شود.",
                         "en": "Change only options required by the destination service. Empty options are omitted from the subscription."
+                    },
+                    "managed_help": {
+                        "fa": "فقط برای نیاز مشخصی تغییر دهید؛ V2bX و اشتراک‌ها همین مقادیر را می‌گیرند. مشخصات ورود هر کاربر و کلید Sudoku خودکار ساخته می‌شوند.",
+                        "en": "Change only for a specific need; V2bX and the subscriptions take the same values. Each subscriber's credentials and the Sudoku key are generated for you."
                     }
                 }
             ]
@@ -2302,6 +2376,7 @@
                 "fa": "پروفایل کلاینت WireGuard یا AmneziaWG؛ آدرس تونل و کلیدهای کلاینت/همتا را از مدیر همان شبکه بگیرید.",
                 "en": "A WireGuard or AmneziaWG client profile; obtain tunnel addresses and client/peer keys from that network administrator."
             },
+            "managed_description": null,
             "capability": {
                 "fa": "ابتدا سرویس یا شبکهٔ مقصد و اطلاعات کلاینت را بیرون V2bX آماده کنید و سپس پروفایل آن را اینجا وارد کنید. این نوع در حال حاضر ورودی سرور چندکاربرهٔ مدیریت‌شده ندارد؛ ذخیرهٔ این فرم به‌تنهایی سرور، حساب یا محدودیت سمت سرویس ایجاد نمی‌کند.",
                 "en": "Provision the destination service or network and client credentials outside V2bX first, then enter its profile here. This type currently has no managed multi-user server inbound; saving this form alone does not create its server, accounts or service-side limits."
@@ -2367,8 +2442,8 @@
                         "en": "Service listening port"
                     },
                     "help": {
-                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. معمولاً با پورت اتصال یکسان است؛ برای پروفایل بیرونی سرویس جدیدی راه نمی‌اندازد.",
-                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. It usually matches the client port. For an external profile it does not start a service."
+                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. خالی بگذارید تا همان پورت اتصال باشد؛ فقط وقتی NAT یا انتقال پورت دارید عدد دیگری بنویسید.",
+                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. Leave blank to use the connection port; enter another only behind NAT or port forwarding."
                     },
                     "min": 1,
                     "max": 65535
@@ -2469,6 +2544,10 @@
                     "help": {
                         "fa": "نوع انتقال و تنظیمات اتصال باید با سرویس مقصد یکسان باشند.",
                         "en": "Match the transport and connection settings to the destination service."
+                    },
+                    "managed_help": {
+                        "fa": "V2bX همین تنظیمات را روی سرور و در اشتراک کاربران اعمال می‌کند؛ پیش‌فرض‌ها کار می‌کنند.",
+                        "en": "V2bX applies these settings to the server and to the subscriptions alike; the defaults work."
                     }
                 },
                 {
@@ -2480,6 +2559,10 @@
                     "help": {
                         "fa": "اطلاعات ورود یا کلید پروفایل را از همان سرویس بگیرید؛ نمونه‌ها مقدار واقعی نیستند.",
                         "en": "Obtain credentials or profile keys from that service; examples are not real values."
+                    },
+                    "managed_help": {
+                        "fa": "هر کاربر مشخصات ورود جداگانهٔ خودش را از پنل می‌گیرد.",
+                        "en": "Each subscriber gets their own credentials from the panel."
                     }
                 },
                 {
@@ -2491,6 +2574,10 @@
                     "help": {
                         "fa": "اعتبارسنجی گواهی را فعال نگه دارید؛ تنظیمات گواهی کلاینت با گواهی سرور متفاوت است.",
                         "en": "Keep certificate validation enabled; client certificates differ from server certificates."
+                    },
+                    "managed_help": {
+                        "fa": "گواهی سرور را V2bX با تنظیم CertConfig خودش می‌گیرد و تمدید می‌کند؛ دامنهٔ گواهی همین آدرس یا SNI نود است.",
+                        "en": "V2bX obtains and renews the server certificate through its own CertConfig; the certificate is for this node's address or SNI."
                     }
                 },
                 {
@@ -2502,6 +2589,10 @@
                     "help": {
                         "fa": "فقط گزینه‌هایی را تغییر دهید که سرویس مقصد لازم دارد. گزینهٔ خالی به اشتراک اضافه نمی‌شود.",
                         "en": "Change only options required by the destination service. Empty options are omitted from the subscription."
+                    },
+                    "managed_help": {
+                        "fa": "فقط برای نیاز مشخصی تغییر دهید؛ V2bX و اشتراک‌ها همین مقادیر را می‌گیرند. مشخصات ورود هر کاربر و کلید Sudoku خودکار ساخته می‌شوند.",
+                        "en": "Change only for a specific need; V2bX and the subscriptions take the same values. Each subscriber's credentials and the Sudoku key are generated for you."
                     }
                 }
             ]
@@ -2877,6 +2968,10 @@
                 "fa": "اتصال QUIC با احراز هویت JLS؛ دامنه و ALPN باید با مقصد پوششی QUIC هماهنگ باشند.",
                 "en": "A QUIC connection authenticated with JLS; its domain and ALPN must match the QUIC decoy destination."
             },
+            "managed_description": {
+                "fa": "این نود را V2bX روی سرور خودتان اجرا می‌کند: کاربران، مصرف، محدودیت‌ها و کلیدها از پنل می‌آیند و تنظیمات پروتکل برای سرور و اشتراک کاربران یکسان اعمال می‌شود. فقط نام، گروه، آدرس و پورت لازم است؛ بقیه پیش‌فرض‌های آمادهٔ کار دارند.",
+                "en": "V2bX runs this node on your own server: users, usage, limits and keys come from the panel, and the protocol settings apply to the server and to every subscription alike. Only the name, groups, address and port are needed; everything else has working defaults."
+            },
             "capability": {
                 "fa": "برای ساخت سرور، V2bX نسخهٔ 1.10.0 یا جدیدتر با هستهٔ mihomo را نصب و ID نود اصلی را ثبت کنید. مقصد پوششی دارای QUIC را در MihomoOptions.JLSUpstream سرور تنظیم و پورت UDP را باز کنید؛ کاربران از پنل دریافت می‌شوند.",
                 "en": "To provision the server, install V2bX 1.10.0 or later with the mihomo core and register the root node ID. Configure a working QUIC decoy in the server MihomoOptions.JLSUpstream and open its UDP port; the panel supplies users."
@@ -2893,7 +2988,6 @@
                 "show": false,
                 "sort": 0,
                 "port": 443,
-                "server_port": 443,
                 "managed": true,
                 "zero_rtt": false
             },
@@ -2944,8 +3038,8 @@
                         "en": "Service listening port"
                     },
                     "help": {
-                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. معمولاً با پورت اتصال یکسان است؛ برای پروفایل بیرونی سرویس جدیدی راه نمی‌اندازد.",
-                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. It usually matches the client port. For an external profile it does not start a service."
+                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. خالی بگذارید تا همان پورت اتصال باشد؛ فقط وقتی NAT یا انتقال پورت دارید عدد دیگری بنویسید.",
+                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. Leave blank to use the connection port; enter another only behind NAT or port forwarding."
                     },
                     "min": 1,
                     "max": 65535
@@ -3046,6 +3140,10 @@
                     "help": {
                         "fa": "نوع انتقال و تنظیمات اتصال باید با سرویس مقصد یکسان باشند.",
                         "en": "Match the transport and connection settings to the destination service."
+                    },
+                    "managed_help": {
+                        "fa": "V2bX همین تنظیمات را روی سرور و در اشتراک کاربران اعمال می‌کند؛ پیش‌فرض‌ها کار می‌کنند.",
+                        "en": "V2bX applies these settings to the server and to the subscriptions alike; the defaults work."
                     }
                 },
                 {
@@ -3057,6 +3155,10 @@
                     "help": {
                         "fa": "اطلاعات ورود یا کلید پروفایل را از همان سرویس بگیرید؛ نمونه‌ها مقدار واقعی نیستند.",
                         "en": "Obtain credentials or profile keys from that service; examples are not real values."
+                    },
+                    "managed_help": {
+                        "fa": "هر کاربر مشخصات ورود جداگانهٔ خودش را از پنل می‌گیرد.",
+                        "en": "Each subscriber gets their own credentials from the panel."
                     }
                 },
                 {
@@ -3068,6 +3170,10 @@
                     "help": {
                         "fa": "اعتبارسنجی گواهی را فعال نگه دارید؛ تنظیمات گواهی کلاینت با گواهی سرور متفاوت است.",
                         "en": "Keep certificate validation enabled; client certificates differ from server certificates."
+                    },
+                    "managed_help": {
+                        "fa": "گواهی سرور را V2bX با تنظیم CertConfig خودش می‌گیرد و تمدید می‌کند؛ دامنهٔ گواهی همین آدرس یا SNI نود است.",
+                        "en": "V2bX obtains and renews the server certificate through its own CertConfig; the certificate is for this node's address or SNI."
                     }
                 },
                 {
@@ -3079,6 +3185,10 @@
                     "help": {
                         "fa": "فقط گزینه‌هایی را تغییر دهید که سرویس مقصد لازم دارد. گزینهٔ خالی به اشتراک اضافه نمی‌شود.",
                         "en": "Change only options required by the destination service. Empty options are omitted from the subscription."
+                    },
+                    "managed_help": {
+                        "fa": "فقط برای نیاز مشخصی تغییر دهید؛ V2bX و اشتراک‌ها همین مقادیر را می‌گیرند. مشخصات ورود هر کاربر و کلید Sudoku خودکار ساخته می‌شوند.",
+                        "en": "Change only for a specific need; V2bX and the subscriptions take the same values. Each subscriber's credentials and the Sudoku key are generated for you."
                     }
                 }
             ]
@@ -3372,6 +3482,7 @@
                 "fa": "پروفایل GOST Relay؛ حساب، TLS و قابلیت‌های انتقال را مطابق سرویس GOST تنظیم کنید.",
                 "en": "A GOST Relay profile; match credentials, TLS and forwarding capabilities to the GOST service."
             },
+            "managed_description": null,
             "capability": {
                 "fa": "ابتدا سرویس یا شبکهٔ مقصد و اطلاعات کلاینت را بیرون V2bX آماده کنید و سپس پروفایل آن را اینجا وارد کنید. این نوع در حال حاضر ورودی سرور چندکاربرهٔ مدیریت‌شده ندارد؛ ذخیرهٔ این فرم به‌تنهایی سرور، حساب یا محدودیت سمت سرویس ایجاد نمی‌کند.",
                 "en": "Provision the destination service or network and client credentials outside V2bX first, then enter its profile here. This type currently has no managed multi-user server inbound; saving this form alone does not create its server, accounts or service-side limits."
@@ -3438,8 +3549,8 @@
                         "en": "Service listening port"
                     },
                     "help": {
-                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. معمولاً با پورت اتصال یکسان است؛ برای پروفایل بیرونی سرویس جدیدی راه نمی‌اندازد.",
-                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. It usually matches the client port. For an external profile it does not start a service."
+                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. خالی بگذارید تا همان پورت اتصال باشد؛ فقط وقتی NAT یا انتقال پورت دارید عدد دیگری بنویسید.",
+                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. Leave blank to use the connection port; enter another only behind NAT or port forwarding."
                     },
                     "min": 1,
                     "max": 65535
@@ -3540,6 +3651,10 @@
                     "help": {
                         "fa": "نوع انتقال و تنظیمات اتصال باید با سرویس مقصد یکسان باشند.",
                         "en": "Match the transport and connection settings to the destination service."
+                    },
+                    "managed_help": {
+                        "fa": "V2bX همین تنظیمات را روی سرور و در اشتراک کاربران اعمال می‌کند؛ پیش‌فرض‌ها کار می‌کنند.",
+                        "en": "V2bX applies these settings to the server and to the subscriptions alike; the defaults work."
                     }
                 },
                 {
@@ -3551,6 +3666,10 @@
                     "help": {
                         "fa": "اطلاعات ورود یا کلید پروفایل را از همان سرویس بگیرید؛ نمونه‌ها مقدار واقعی نیستند.",
                         "en": "Obtain credentials or profile keys from that service; examples are not real values."
+                    },
+                    "managed_help": {
+                        "fa": "هر کاربر مشخصات ورود جداگانهٔ خودش را از پنل می‌گیرد.",
+                        "en": "Each subscriber gets their own credentials from the panel."
                     }
                 },
                 {
@@ -3562,6 +3681,10 @@
                     "help": {
                         "fa": "اعتبارسنجی گواهی را فعال نگه دارید؛ تنظیمات گواهی کلاینت با گواهی سرور متفاوت است.",
                         "en": "Keep certificate validation enabled; client certificates differ from server certificates."
+                    },
+                    "managed_help": {
+                        "fa": "گواهی سرور را V2bX با تنظیم CertConfig خودش می‌گیرد و تمدید می‌کند؛ دامنهٔ گواهی همین آدرس یا SNI نود است.",
+                        "en": "V2bX obtains and renews the server certificate through its own CertConfig; the certificate is for this node's address or SNI."
                     }
                 },
                 {
@@ -3573,6 +3696,10 @@
                     "help": {
                         "fa": "فقط گزینه‌هایی را تغییر دهید که سرویس مقصد لازم دارد. گزینهٔ خالی به اشتراک اضافه نمی‌شود.",
                         "en": "Change only options required by the destination service. Empty options are omitted from the subscription."
+                    },
+                    "managed_help": {
+                        "fa": "فقط برای نیاز مشخصی تغییر دهید؛ V2bX و اشتراک‌ها همین مقادیر را می‌گیرند. مشخصات ورود هر کاربر و کلید Sudoku خودکار ساخته می‌شوند.",
+                        "en": "Change only for a specific need; V2bX and the subscriptions take the same values. Each subscriber's credentials and the Sudoku key are generated for you."
                     }
                 }
             ]
@@ -3771,6 +3898,7 @@
                 "fa": "اتصال SSH به حساب دارای اجازهٔ TCP forwarding؛ از رمز یا کلید خصوصی کلاینت استفاده کنید.",
                 "en": "An SSH account with TCP forwarding permission; authenticate using a password or client private key."
             },
+            "managed_description": null,
             "capability": {
                 "fa": "ابتدا سرویس یا شبکهٔ مقصد و اطلاعات کلاینت را بیرون V2bX آماده کنید و سپس پروفایل آن را اینجا وارد کنید. این نوع در حال حاضر ورودی سرور چندکاربرهٔ مدیریت‌شده ندارد؛ ذخیرهٔ این فرم به‌تنهایی سرور، حساب یا محدودیت سمت سرویس ایجاد نمی‌کند.",
                 "en": "Provision the destination service or network and client credentials outside V2bX first, then enter its profile here. This type currently has no managed multi-user server inbound; saving this form alone does not create its server, accounts or service-side limits."
@@ -3835,8 +3963,8 @@
                         "en": "Service listening port"
                     },
                     "help": {
-                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. معمولاً با پورت اتصال یکسان است؛ برای پروفایل بیرونی سرویس جدیدی راه نمی‌اندازد.",
-                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. It usually matches the client port. For an external profile it does not start a service."
+                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. خالی بگذارید تا همان پورت اتصال باشد؛ فقط وقتی NAT یا انتقال پورت دارید عدد دیگری بنویسید.",
+                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. Leave blank to use the connection port; enter another only behind NAT or port forwarding."
                     },
                     "min": 1,
                     "max": 65535
@@ -3937,6 +4065,10 @@
                     "help": {
                         "fa": "نوع انتقال و تنظیمات اتصال باید با سرویس مقصد یکسان باشند.",
                         "en": "Match the transport and connection settings to the destination service."
+                    },
+                    "managed_help": {
+                        "fa": "V2bX همین تنظیمات را روی سرور و در اشتراک کاربران اعمال می‌کند؛ پیش‌فرض‌ها کار می‌کنند.",
+                        "en": "V2bX applies these settings to the server and to the subscriptions alike; the defaults work."
                     }
                 },
                 {
@@ -3948,6 +4080,10 @@
                     "help": {
                         "fa": "اطلاعات ورود یا کلید پروفایل را از همان سرویس بگیرید؛ نمونه‌ها مقدار واقعی نیستند.",
                         "en": "Obtain credentials or profile keys from that service; examples are not real values."
+                    },
+                    "managed_help": {
+                        "fa": "هر کاربر مشخصات ورود جداگانهٔ خودش را از پنل می‌گیرد.",
+                        "en": "Each subscriber gets their own credentials from the panel."
                     }
                 },
                 {
@@ -3970,6 +4106,10 @@
                     "help": {
                         "fa": "فقط گزینه‌هایی را تغییر دهید که سرویس مقصد لازم دارد. گزینهٔ خالی به اشتراک اضافه نمی‌شود.",
                         "en": "Change only options required by the destination service. Empty options are omitted from the subscription."
+                    },
+                    "managed_help": {
+                        "fa": "فقط برای نیاز مشخصی تغییر دهید؛ V2bX و اشتراک‌ها همین مقادیر را می‌گیرند. مشخصات ورود هر کاربر و کلید Sudoku خودکار ساخته می‌شوند.",
+                        "en": "Change only for a specific need; V2bX and the subscriptions take the same values. Each subscriber's credentials and the Sudoku key are generated for you."
                     }
                 }
             ]
@@ -4274,6 +4414,10 @@
                 "fa": "اتصال Mieru با انتقال TCP یا UDP؛ مشخصات ورود و انتقال باید با سرور یکسان باشند.",
                 "en": "A Mieru connection over TCP or UDP; credentials and transport must match the server."
             },
+            "managed_description": {
+                "fa": "این نود را V2bX روی سرور خودتان اجرا می‌کند: کاربران، مصرف، محدودیت‌ها و کلیدها از پنل می‌آیند و تنظیمات پروتکل برای سرور و اشتراک کاربران یکسان اعمال می‌شود. فقط نام، گروه، آدرس و پورت لازم است؛ بقیه پیش‌فرض‌های آمادهٔ کار دارند.",
+                "en": "V2bX runs this node on your own server: users, usage, limits and keys come from the panel, and the protocol settings apply to the server and to every subscription alike. Only the name, groups, address and port are needed; everything else has working defaults."
+            },
             "capability": {
                 "fa": "برای ساخت سرور، V2bX نسخهٔ 1.10.0 یا جدیدتر با هستهٔ mihomo را نصب و نوع و ID نود اصلی را ثبت کنید؛ کاربران، مصرف و محدودیت‌ها از پنل می‌آیند. در صورت فعال‌بودن TLS، دامنه و گواهی سرور را در CertConfig همان V2bX تنظیم کنید.",
                 "en": "To provision the server, install V2bX 1.10.0 or later with the mihomo core and register the root node type and ID. The panel supplies users, usage and limits. With TLS enabled, configure the server domain and certificate in that V2bX node CertConfig."
@@ -4290,7 +4434,6 @@
                 "show": false,
                 "sort": 0,
                 "port": 443,
-                "server_port": 443,
                 "managed": true,
                 "transport": "TCP",
                 "udp": true
@@ -4342,8 +4485,8 @@
                         "en": "Service listening port"
                     },
                     "help": {
-                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. معمولاً با پورت اتصال یکسان است؛ برای پروفایل بیرونی سرویس جدیدی راه نمی‌اندازد.",
-                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. It usually matches the client port. For an external profile it does not start a service."
+                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. خالی بگذارید تا همان پورت اتصال باشد؛ فقط وقتی NAT یا انتقال پورت دارید عدد دیگری بنویسید.",
+                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. Leave blank to use the connection port; enter another only behind NAT or port forwarding."
                     },
                     "min": 1,
                     "max": 65535
@@ -4444,6 +4587,10 @@
                     "help": {
                         "fa": "نوع انتقال و تنظیمات اتصال باید با سرویس مقصد یکسان باشند.",
                         "en": "Match the transport and connection settings to the destination service."
+                    },
+                    "managed_help": {
+                        "fa": "V2bX همین تنظیمات را روی سرور و در اشتراک کاربران اعمال می‌کند؛ پیش‌فرض‌ها کار می‌کنند.",
+                        "en": "V2bX applies these settings to the server and to the subscriptions alike; the defaults work."
                     }
                 },
                 {
@@ -4455,6 +4602,10 @@
                     "help": {
                         "fa": "اطلاعات ورود یا کلید پروفایل را از همان سرویس بگیرید؛ نمونه‌ها مقدار واقعی نیستند.",
                         "en": "Obtain credentials or profile keys from that service; examples are not real values."
+                    },
+                    "managed_help": {
+                        "fa": "هر کاربر مشخصات ورود جداگانهٔ خودش را از پنل می‌گیرد.",
+                        "en": "Each subscriber gets their own credentials from the panel."
                     }
                 },
                 {
@@ -4466,6 +4617,10 @@
                     "help": {
                         "fa": "اعتبارسنجی گواهی را فعال نگه دارید؛ تنظیمات گواهی کلاینت با گواهی سرور متفاوت است.",
                         "en": "Keep certificate validation enabled; client certificates differ from server certificates."
+                    },
+                    "managed_help": {
+                        "fa": "گواهی سرور را V2bX با تنظیم CertConfig خودش می‌گیرد و تمدید می‌کند؛ دامنهٔ گواهی همین آدرس یا SNI نود است.",
+                        "en": "V2bX obtains and renews the server certificate through its own CertConfig; the certificate is for this node's address or SNI."
                     }
                 },
                 {
@@ -4477,6 +4632,10 @@
                     "help": {
                         "fa": "فقط گزینه‌هایی را تغییر دهید که سرویس مقصد لازم دارد. گزینهٔ خالی به اشتراک اضافه نمی‌شود.",
                         "en": "Change only options required by the destination service. Empty options are omitted from the subscription."
+                    },
+                    "managed_help": {
+                        "fa": "فقط برای نیاز مشخصی تغییر دهید؛ V2bX و اشتراک‌ها همین مقادیر را می‌گیرند. مشخصات ورود هر کاربر و کلید Sudoku خودکار ساخته می‌شوند.",
+                        "en": "Change only for a specific need; V2bX and the subscriptions take the same values. Each subscriber's credentials and the Sudoku key are generated for you."
                     }
                 }
             ]
@@ -4508,6 +4667,7 @@
                 },
                 "section": "credentials",
                 "required": false,
+                "managed_auto": true,
                 "required_external": true
             },
             "aead_method": {
@@ -4959,6 +5119,10 @@
                 "fa": "اتصال Sudoku؛ کلید و تنظیمات AEAD، جدول و HTTP mask باید با سرویس مقصد هماهنگ باشند.",
                 "en": "A Sudoku connection; match its key, AEAD, table and HTTP-mask settings to the destination service."
             },
+            "managed_description": {
+                "fa": "این نود را V2bX روی سرور خودتان اجرا می‌کند: کاربران، مصرف، محدودیت‌ها و کلیدها از پنل می‌آیند و تنظیمات پروتکل برای سرور و اشتراک کاربران یکسان اعمال می‌شود. فقط نام، گروه، آدرس و پورت لازم است؛ بقیه پیش‌فرض‌های آمادهٔ کار دارند.",
+                "en": "V2bX runs this node on your own server: users, usage, limits and keys come from the panel, and the protocol settings apply to the server and to every subscription alike. Only the name, groups, address and port are needed; everything else has working defaults."
+            },
             "capability": {
                 "fa": "برای ساخت سرور، V2bX نسخهٔ 1.11.0 یا جدیدتر با هستهٔ mihomo را نصب و ID نود اصلی را ثبت کنید؛ کاربران، مصرف و محدودیت‌ها از پنل می‌آیند. V2bX کاوشگرها را به سایت پوششی خودش می‌برد. TLS ندارد؛ برای http-mask-tls یک CDN یا پراکسی TLS جلوی نود لازم است.",
                 "en": "To provision the server, install V2bX 1.11.0 or later with the mihomo core and register the root node ID; the panel supplies users, usage and limits. V2bX hands probers to its own cover site. The node has no TLS: http-mask-tls needs a CDN or TLS proxy in front of it."
@@ -4975,7 +5139,6 @@
                 "show": false,
                 "sort": 0,
                 "port": 443,
-                "server_port": 443,
                 "managed": true,
                 "aead_method": "chacha20-poly1305",
                 "padding_min": 10,
@@ -5029,8 +5192,8 @@
                         "en": "Service listening port"
                     },
                     "help": {
-                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. معمولاً با پورت اتصال یکسان است؛ برای پروفایل بیرونی سرویس جدیدی راه نمی‌اندازد.",
-                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. It usually matches the client port. For an external profile it does not start a service."
+                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. خالی بگذارید تا همان پورت اتصال باشد؛ فقط وقتی NAT یا انتقال پورت دارید عدد دیگری بنویسید.",
+                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. Leave blank to use the connection port; enter another only behind NAT or port forwarding."
                     },
                     "min": 1,
                     "max": 65535
@@ -5131,6 +5294,10 @@
                     "help": {
                         "fa": "نوع انتقال و تنظیمات اتصال باید با سرویس مقصد یکسان باشند.",
                         "en": "Match the transport and connection settings to the destination service."
+                    },
+                    "managed_help": {
+                        "fa": "V2bX همین تنظیمات را روی سرور و در اشتراک کاربران اعمال می‌کند؛ پیش‌فرض‌ها کار می‌کنند.",
+                        "en": "V2bX applies these settings to the server and to the subscriptions alike; the defaults work."
                     }
                 },
                 {
@@ -5142,6 +5309,10 @@
                     "help": {
                         "fa": "اطلاعات ورود یا کلید پروفایل را از همان سرویس بگیرید؛ نمونه‌ها مقدار واقعی نیستند.",
                         "en": "Obtain credentials or profile keys from that service; examples are not real values."
+                    },
+                    "managed_help": {
+                        "fa": "هر کاربر مشخصات ورود جداگانهٔ خودش را از پنل می‌گیرد.",
+                        "en": "Each subscriber gets their own credentials from the panel."
                     }
                 },
                 {
@@ -5153,6 +5324,10 @@
                     "help": {
                         "fa": "اعتبارسنجی گواهی را فعال نگه دارید؛ تنظیمات گواهی کلاینت با گواهی سرور متفاوت است.",
                         "en": "Keep certificate validation enabled; client certificates differ from server certificates."
+                    },
+                    "managed_help": {
+                        "fa": "گواهی سرور را V2bX با تنظیم CertConfig خودش می‌گیرد و تمدید می‌کند؛ دامنهٔ گواهی همین آدرس یا SNI نود است.",
+                        "en": "V2bX obtains and renews the server certificate through its own CertConfig; the certificate is for this node's address or SNI."
                     }
                 },
                 {
@@ -5164,6 +5339,10 @@
                     "help": {
                         "fa": "فقط گزینه‌هایی را تغییر دهید که سرویس مقصد لازم دارد. گزینهٔ خالی به اشتراک اضافه نمی‌شود.",
                         "en": "Change only options required by the destination service. Empty options are omitted from the subscription."
+                    },
+                    "managed_help": {
+                        "fa": "فقط برای نیاز مشخصی تغییر دهید؛ V2bX و اشتراک‌ها همین مقادیر را می‌گیرند. مشخصات ورود هر کاربر و کلید Sudoku خودکار ساخته می‌شوند.",
+                        "en": "Change only for a specific need; V2bX and the subscriptions take the same values. Each subscriber's credentials and the Sudoku key are generated for you."
                     }
                 }
             ]
@@ -5565,6 +5744,7 @@
                 "fa": "پروفایل MASQUE؛ کلیدهای EC، آدرس تونل و نوع HTTP/QUIC را از ارائه‌دهندهٔ سرویس دریافت کنید.",
                 "en": "A MASQUE profile; obtain EC keys, tunnel addresses and the HTTP/QUIC mode from the service provider."
             },
+            "managed_description": null,
             "capability": {
                 "fa": "ابتدا سرویس یا شبکهٔ مقصد و اطلاعات کلاینت را بیرون V2bX آماده کنید و سپس پروفایل آن را اینجا وارد کنید. این نوع در حال حاضر ورودی سرور چندکاربرهٔ مدیریت‌شده ندارد؛ ذخیرهٔ این فرم به‌تنهایی سرور، حساب یا محدودیت سمت سرویس ایجاد نمی‌کند.",
                 "en": "Provision the destination service or network and client credentials outside V2bX first, then enter its profile here. This type currently has no managed multi-user server inbound; saving this form alone does not create its server, accounts or service-side limits."
@@ -5631,8 +5811,8 @@
                         "en": "Service listening port"
                     },
                     "help": {
-                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. معمولاً با پورت اتصال یکسان است؛ برای پروفایل بیرونی سرویس جدیدی راه نمی‌اندازد.",
-                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. It usually matches the client port. For an external profile it does not start a service."
+                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. خالی بگذارید تا همان پورت اتصال باشد؛ فقط وقتی NAT یا انتقال پورت دارید عدد دیگری بنویسید.",
+                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. Leave blank to use the connection port; enter another only behind NAT or port forwarding."
                     },
                     "min": 1,
                     "max": 65535
@@ -5733,6 +5913,10 @@
                     "help": {
                         "fa": "نوع انتقال و تنظیمات اتصال باید با سرویس مقصد یکسان باشند.",
                         "en": "Match the transport and connection settings to the destination service."
+                    },
+                    "managed_help": {
+                        "fa": "V2bX همین تنظیمات را روی سرور و در اشتراک کاربران اعمال می‌کند؛ پیش‌فرض‌ها کار می‌کنند.",
+                        "en": "V2bX applies these settings to the server and to the subscriptions alike; the defaults work."
                     }
                 },
                 {
@@ -5744,6 +5928,10 @@
                     "help": {
                         "fa": "اطلاعات ورود یا کلید پروفایل را از همان سرویس بگیرید؛ نمونه‌ها مقدار واقعی نیستند.",
                         "en": "Obtain credentials or profile keys from that service; examples are not real values."
+                    },
+                    "managed_help": {
+                        "fa": "هر کاربر مشخصات ورود جداگانهٔ خودش را از پنل می‌گیرد.",
+                        "en": "Each subscriber gets their own credentials from the panel."
                     }
                 },
                 {
@@ -5755,6 +5943,10 @@
                     "help": {
                         "fa": "اعتبارسنجی گواهی را فعال نگه دارید؛ تنظیمات گواهی کلاینت با گواهی سرور متفاوت است.",
                         "en": "Keep certificate validation enabled; client certificates differ from server certificates."
+                    },
+                    "managed_help": {
+                        "fa": "گواهی سرور را V2bX با تنظیم CertConfig خودش می‌گیرد و تمدید می‌کند؛ دامنهٔ گواهی همین آدرس یا SNI نود است.",
+                        "en": "V2bX obtains and renews the server certificate through its own CertConfig; the certificate is for this node's address or SNI."
                     }
                 },
                 {
@@ -5766,6 +5958,10 @@
                     "help": {
                         "fa": "فقط گزینه‌هایی را تغییر دهید که سرویس مقصد لازم دارد. گزینهٔ خالی به اشتراک اضافه نمی‌شود.",
                         "en": "Change only options required by the destination service. Empty options are omitted from the subscription."
+                    },
+                    "managed_help": {
+                        "fa": "فقط برای نیاز مشخصی تغییر دهید؛ V2bX و اشتراک‌ها همین مقادیر را می‌گیرند. مشخصات ورود هر کاربر و کلید Sudoku خودکار ساخته می‌شوند.",
+                        "en": "Change only for a specific need; V2bX and the subscriptions take the same values. Each subscriber's credentials and the Sudoku key are generated for you."
                     }
                 }
             ]
@@ -6329,6 +6525,7 @@
                 "fa": "تنظیمات کلاینت OpenVPN را از فایل سرویس بگیرید؛ متن CA، گواهی و کلید را در فیلدهای مربوط وارد کنید.",
                 "en": "Copy the client settings from the service OpenVPN profile; paste CA, certificate and key contents into the matching fields."
             },
+            "managed_description": null,
             "capability": {
                 "fa": "ابتدا سرویس یا شبکهٔ مقصد و اطلاعات کلاینت را بیرون V2bX آماده کنید و سپس پروفایل آن را اینجا وارد کنید. این نوع در حال حاضر ورودی سرور چندکاربرهٔ مدیریت‌شده ندارد؛ ذخیرهٔ این فرم به‌تنهایی سرور، حساب یا محدودیت سمت سرویس ایجاد نمی‌کند.",
                 "en": "Provision the destination service or network and client credentials outside V2bX first, then enter its profile here. This type currently has no managed multi-user server inbound; saving this form alone does not create its server, accounts or service-side limits."
@@ -6396,8 +6593,8 @@
                         "en": "Service listening port"
                     },
                     "help": {
-                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. معمولاً با پورت اتصال یکسان است؛ برای پروفایل بیرونی سرویس جدیدی راه نمی‌اندازد.",
-                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. It usually matches the client port. For an external profile it does not start a service."
+                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. خالی بگذارید تا همان پورت اتصال باشد؛ فقط وقتی NAT یا انتقال پورت دارید عدد دیگری بنویسید.",
+                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. Leave blank to use the connection port; enter another only behind NAT or port forwarding."
                     },
                     "min": 1,
                     "max": 65535
@@ -6498,6 +6695,10 @@
                     "help": {
                         "fa": "نوع انتقال و تنظیمات اتصال باید با سرویس مقصد یکسان باشند.",
                         "en": "Match the transport and connection settings to the destination service."
+                    },
+                    "managed_help": {
+                        "fa": "V2bX همین تنظیمات را روی سرور و در اشتراک کاربران اعمال می‌کند؛ پیش‌فرض‌ها کار می‌کنند.",
+                        "en": "V2bX applies these settings to the server and to the subscriptions alike; the defaults work."
                     }
                 },
                 {
@@ -6509,6 +6710,10 @@
                     "help": {
                         "fa": "اطلاعات ورود یا کلید پروفایل را از همان سرویس بگیرید؛ نمونه‌ها مقدار واقعی نیستند.",
                         "en": "Obtain credentials or profile keys from that service; examples are not real values."
+                    },
+                    "managed_help": {
+                        "fa": "هر کاربر مشخصات ورود جداگانهٔ خودش را از پنل می‌گیرد.",
+                        "en": "Each subscriber gets their own credentials from the panel."
                     }
                 },
                 {
@@ -6520,6 +6725,10 @@
                     "help": {
                         "fa": "اعتبارسنجی گواهی را فعال نگه دارید؛ تنظیمات گواهی کلاینت با گواهی سرور متفاوت است.",
                         "en": "Keep certificate validation enabled; client certificates differ from server certificates."
+                    },
+                    "managed_help": {
+                        "fa": "گواهی سرور را V2bX با تنظیم CertConfig خودش می‌گیرد و تمدید می‌کند؛ دامنهٔ گواهی همین آدرس یا SNI نود است.",
+                        "en": "V2bX obtains and renews the server certificate through its own CertConfig; the certificate is for this node's address or SNI."
                     }
                 },
                 {
@@ -6531,6 +6740,10 @@
                     "help": {
                         "fa": "فقط گزینه‌هایی را تغییر دهید که سرویس مقصد لازم دارد. گزینهٔ خالی به اشتراک اضافه نمی‌شود.",
                         "en": "Change only options required by the destination service. Empty options are omitted from the subscription."
+                    },
+                    "managed_help": {
+                        "fa": "فقط برای نیاز مشخصی تغییر دهید؛ V2bX و اشتراک‌ها همین مقادیر را می‌گیرند. مشخصات ورود هر کاربر و کلید Sudoku خودکار ساخته می‌شوند.",
+                        "en": "Change only for a specific need; V2bX and the subscriptions take the same values. Each subscriber's credentials and the Sudoku key are generated for you."
                     }
                 }
             ]
@@ -6763,6 +6976,7 @@
                 "fa": "عضویت کلاینت در Tailscale یا Headscale؛ کلید ثبت و نود خروجی را در کنترلر همان شبکه آماده کنید.",
                 "en": "Enroll a client in Tailscale or Headscale; prepare its registration key and exit node in that network controller."
             },
+            "managed_description": null,
             "capability": {
                 "fa": "ابتدا سرویس یا شبکهٔ مقصد و اطلاعات کلاینت را بیرون V2bX آماده کنید و سپس پروفایل آن را اینجا وارد کنید. این نوع در حال حاضر ورودی سرور چندکاربرهٔ مدیریت‌شده ندارد؛ ذخیرهٔ این فرم به‌تنهایی سرور، حساب یا محدودیت سمت سرویس ایجاد نمی‌کند.",
                 "en": "Provision the destination service or network and client credentials outside V2bX first, then enter its profile here. This type currently has no managed multi-user server inbound; saving this form alone does not create its server, accounts or service-side limits."
@@ -6827,8 +7041,8 @@
                         "en": "Service listening port"
                     },
                     "help": {
-                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. معمولاً با پورت اتصال یکسان است؛ برای پروفایل بیرونی سرویس جدیدی راه نمی‌اندازد.",
-                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. It usually matches the client port. For an external profile it does not start a service."
+                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. خالی بگذارید تا همان پورت اتصال باشد؛ فقط وقتی NAT یا انتقال پورت دارید عدد دیگری بنویسید.",
+                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. Leave blank to use the connection port; enter another only behind NAT or port forwarding."
                     },
                     "min": 1,
                     "max": 65535
@@ -6929,6 +7143,10 @@
                     "help": {
                         "fa": "نوع انتقال و تنظیمات اتصال باید با سرویس مقصد یکسان باشند.",
                         "en": "Match the transport and connection settings to the destination service."
+                    },
+                    "managed_help": {
+                        "fa": "V2bX همین تنظیمات را روی سرور و در اشتراک کاربران اعمال می‌کند؛ پیش‌فرض‌ها کار می‌کنند.",
+                        "en": "V2bX applies these settings to the server and to the subscriptions alike; the defaults work."
                     }
                 },
                 {
@@ -6940,6 +7158,10 @@
                     "help": {
                         "fa": "اطلاعات ورود یا کلید پروفایل را از همان سرویس بگیرید؛ نمونه‌ها مقدار واقعی نیستند.",
                         "en": "Obtain credentials or profile keys from that service; examples are not real values."
+                    },
+                    "managed_help": {
+                        "fa": "هر کاربر مشخصات ورود جداگانهٔ خودش را از پنل می‌گیرد.",
+                        "en": "Each subscriber gets their own credentials from the panel."
                     }
                 },
                 {
@@ -6951,6 +7173,10 @@
                     "help": {
                         "fa": "اعتبارسنجی گواهی را فعال نگه دارید؛ تنظیمات گواهی کلاینت با گواهی سرور متفاوت است.",
                         "en": "Keep certificate validation enabled; client certificates differ from server certificates."
+                    },
+                    "managed_help": {
+                        "fa": "گواهی سرور را V2bX با تنظیم CertConfig خودش می‌گیرد و تمدید می‌کند؛ دامنهٔ گواهی همین آدرس یا SNI نود است.",
+                        "en": "V2bX obtains and renews the server certificate through its own CertConfig; the certificate is for this node's address or SNI."
                     }
                 },
                 {
@@ -6962,6 +7188,10 @@
                     "help": {
                         "fa": "فقط گزینه‌هایی را تغییر دهید که سرویس مقصد لازم دارد. گزینهٔ خالی به اشتراک اضافه نمی‌شود.",
                         "en": "Change only options required by the destination service. Empty options are omitted from the subscription."
+                    },
+                    "managed_help": {
+                        "fa": "فقط برای نیاز مشخصی تغییر دهید؛ V2bX و اشتراک‌ها همین مقادیر را می‌گیرند. مشخصات ورود هر کاربر و کلید Sudoku خودکار ساخته می‌شوند.",
+                        "en": "Change only for a specific need; V2bX and the subscriptions take the same values. Each subscriber's credentials and the Sudoku key are generated for you."
                     }
                 }
             ]
@@ -7381,6 +7611,7 @@
                 "fa": "عضویت کلاینت در شبکهٔ ZeroTier؛ شناسهٔ شبکه را وارد و دستگاه را در کنترلر شبکه مجاز کنید.",
                 "en": "Join a ZeroTier network; enter its network ID and authorize the device in the network controller."
             },
+            "managed_description": null,
             "capability": {
                 "fa": "ابتدا سرویس یا شبکهٔ مقصد و اطلاعات کلاینت را بیرون V2bX آماده کنید و سپس پروفایل آن را اینجا وارد کنید. این نوع در حال حاضر ورودی سرور چندکاربرهٔ مدیریت‌شده ندارد؛ ذخیرهٔ این فرم به‌تنهایی سرور، حساب یا محدودیت سمت سرویس ایجاد نمی‌کند.",
                 "en": "Provision the destination service or network and client credentials outside V2bX first, then enter its profile here. This type currently has no managed multi-user server inbound; saving this form alone does not create its server, accounts or service-side limits."
@@ -7445,8 +7676,8 @@
                         "en": "Service listening port"
                     },
                     "help": {
-                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. معمولاً با پورت اتصال یکسان است؛ برای پروفایل بیرونی سرویس جدیدی راه نمی‌اندازد.",
-                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. It usually matches the client port. For an external profile it does not start a service."
+                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. خالی بگذارید تا همان پورت اتصال باشد؛ فقط وقتی NAT یا انتقال پورت دارید عدد دیگری بنویسید.",
+                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. Leave blank to use the connection port; enter another only behind NAT or port forwarding."
                     },
                     "min": 1,
                     "max": 65535
@@ -7547,6 +7778,10 @@
                     "help": {
                         "fa": "نوع انتقال و تنظیمات اتصال باید با سرویس مقصد یکسان باشند.",
                         "en": "Match the transport and connection settings to the destination service."
+                    },
+                    "managed_help": {
+                        "fa": "V2bX همین تنظیمات را روی سرور و در اشتراک کاربران اعمال می‌کند؛ پیش‌فرض‌ها کار می‌کنند.",
+                        "en": "V2bX applies these settings to the server and to the subscriptions alike; the defaults work."
                     }
                 },
                 {
@@ -7558,6 +7793,10 @@
                     "help": {
                         "fa": "اطلاعات ورود یا کلید پروفایل را از همان سرویس بگیرید؛ نمونه‌ها مقدار واقعی نیستند.",
                         "en": "Obtain credentials or profile keys from that service; examples are not real values."
+                    },
+                    "managed_help": {
+                        "fa": "هر کاربر مشخصات ورود جداگانهٔ خودش را از پنل می‌گیرد.",
+                        "en": "Each subscriber gets their own credentials from the panel."
                     }
                 },
                 {
@@ -7569,6 +7808,10 @@
                     "help": {
                         "fa": "اعتبارسنجی گواهی را فعال نگه دارید؛ تنظیمات گواهی کلاینت با گواهی سرور متفاوت است.",
                         "en": "Keep certificate validation enabled; client certificates differ from server certificates."
+                    },
+                    "managed_help": {
+                        "fa": "گواهی سرور را V2bX با تنظیم CertConfig خودش می‌گیرد و تمدید می‌کند؛ دامنهٔ گواهی همین آدرس یا SNI نود است.",
+                        "en": "V2bX obtains and renews the server certificate through its own CertConfig; the certificate is for this node's address or SNI."
                     }
                 },
                 {
@@ -7580,6 +7823,10 @@
                     "help": {
                         "fa": "فقط گزینه‌هایی را تغییر دهید که سرویس مقصد لازم دارد. گزینهٔ خالی به اشتراک اضافه نمی‌شود.",
                         "en": "Change only options required by the destination service. Empty options are omitted from the subscription."
+                    },
+                    "managed_help": {
+                        "fa": "فقط برای نیاز مشخصی تغییر دهید؛ V2bX و اشتراک‌ها همین مقادیر را می‌گیرند. مشخصات ورود هر کاربر و کلید Sudoku خودکار ساخته می‌شوند.",
+                        "en": "Change only for a specific need; V2bX and the subscriptions take the same values. Each subscriber's credentials and the Sudoku key are generated for you."
                     }
                 }
             ]
@@ -8133,6 +8380,7 @@
                 "fa": "عضویت کلاینت در شبکهٔ EasyTier؛ نام و رمز شبکه و نشانی همتاهای واقعی را از همان شبکه بگیرید.",
                 "en": "Join an EasyTier network; obtain the network name, secret and real peer addresses from that network."
             },
+            "managed_description": null,
             "capability": {
                 "fa": "ابتدا سرویس یا شبکهٔ مقصد و اطلاعات کلاینت را بیرون V2bX آماده کنید و سپس پروفایل آن را اینجا وارد کنید. این نوع در حال حاضر ورودی سرور چندکاربرهٔ مدیریت‌شده ندارد؛ ذخیرهٔ این فرم به‌تنهایی سرور، حساب یا محدودیت سمت سرویس ایجاد نمی‌کند.",
                 "en": "Provision the destination service or network and client credentials outside V2bX first, then enter its profile here. This type currently has no managed multi-user server inbound; saving this form alone does not create its server, accounts or service-side limits."
@@ -8197,8 +8445,8 @@
                         "en": "Service listening port"
                     },
                     "help": {
-                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. معمولاً با پورت اتصال یکسان است؛ برای پروفایل بیرونی سرویس جدیدی راه نمی‌اندازد.",
-                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. It usually matches the client port. For an external profile it does not start a service."
+                        "fa": "در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. خالی بگذارید تا همان پورت اتصال باشد؛ فقط وقتی NAT یا انتقال پورت دارید عدد دیگری بنویسید.",
+                        "en": "For a managed node, V2bX listens on this port; allow it through the firewall. Leave blank to use the connection port; enter another only behind NAT or port forwarding."
                     },
                     "min": 1,
                     "max": 65535
@@ -8299,6 +8547,10 @@
                     "help": {
                         "fa": "نوع انتقال و تنظیمات اتصال باید با سرویس مقصد یکسان باشند.",
                         "en": "Match the transport and connection settings to the destination service."
+                    },
+                    "managed_help": {
+                        "fa": "V2bX همین تنظیمات را روی سرور و در اشتراک کاربران اعمال می‌کند؛ پیش‌فرض‌ها کار می‌کنند.",
+                        "en": "V2bX applies these settings to the server and to the subscriptions alike; the defaults work."
                     }
                 },
                 {
@@ -8310,6 +8562,10 @@
                     "help": {
                         "fa": "اطلاعات ورود یا کلید پروفایل را از همان سرویس بگیرید؛ نمونه‌ها مقدار واقعی نیستند.",
                         "en": "Obtain credentials or profile keys from that service; examples are not real values."
+                    },
+                    "managed_help": {
+                        "fa": "هر کاربر مشخصات ورود جداگانهٔ خودش را از پنل می‌گیرد.",
+                        "en": "Each subscriber gets their own credentials from the panel."
                     }
                 },
                 {
@@ -8321,6 +8577,10 @@
                     "help": {
                         "fa": "اعتبارسنجی گواهی را فعال نگه دارید؛ تنظیمات گواهی کلاینت با گواهی سرور متفاوت است.",
                         "en": "Keep certificate validation enabled; client certificates differ from server certificates."
+                    },
+                    "managed_help": {
+                        "fa": "گواهی سرور را V2bX با تنظیم CertConfig خودش می‌گیرد و تمدید می‌کند؛ دامنهٔ گواهی همین آدرس یا SNI نود است.",
+                        "en": "V2bX obtains and renews the server certificate through its own CertConfig; the certificate is for this node's address or SNI."
                     }
                 },
                 {
@@ -8332,6 +8592,10 @@
                     "help": {
                         "fa": "فقط گزینه‌هایی را تغییر دهید که سرویس مقصد لازم دارد. گزینهٔ خالی به اشتراک اضافه نمی‌شود.",
                         "en": "Change only options required by the destination service. Empty options are omitted from the subscription."
+                    },
+                    "managed_help": {
+                        "fa": "فقط برای نیاز مشخصی تغییر دهید؛ V2bX و اشتراک‌ها همین مقادیر را می‌گیرند. مشخصات ورود هر کاربر و کلید Sudoku خودکار ساخته می‌شوند.",
+                        "en": "Change only for a specific need; V2bX and the subscriptions take the same values. Each subscriber's credentials and the Sudoku key are generated for you."
                     }
                 }
             ]

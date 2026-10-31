@@ -24,17 +24,27 @@ class AdminForm
         foreach ($catalog as $type => &$definition) {
             $definition['form'] = [
                 'description' => self::descriptions()[$type],
+                // Shown instead while V2bX manages the node: nothing about it
+                // has to match a service elsewhere.
+                'managed_description' => ManagedServer::supports($type) ? self::text(
+                    'این نود را V2bX روی سرور خودتان اجرا می‌کند: کاربران، مصرف، محدودیت‌ها و کلیدها از پنل می‌آیند و تنظیمات پروتکل برای سرور و اشتراک کاربران یکسان اعمال می‌شود. فقط نام، گروه، آدرس و پورت لازم است؛ بقیه پیش‌فرض‌های آمادهٔ کار دارند.',
+                    'V2bX runs this node on your own server: users, usage, limits and keys come from the panel, and the protocol settings apply to the server and to every subscription alike. Only the name, groups, address and port are needed; everything else has working defaults.'
+                ) : null,
                 'capability' => self::capability($type),
                 'endpoint' => !in_array($type, ['tailscale', 'zerotier', 'easytier'], true),
                 'defaults' => self::defaults($type),
                 'common' => self::common(),
                 'sections' => [
-                    ['key' => 'connection', 'label' => self::text('اتصال و انتقال', 'Connection and transport'), 'help' => self::text('نوع انتقال و تنظیمات اتصال باید با سرویس مقصد یکسان باشند.', 'Match the transport and connection settings to the destination service.')],
-                    ['key' => 'credentials', 'label' => self::text('مشخصات ورود', 'Authentication'), 'help' => self::text('اطلاعات ورود یا کلید پروفایل را از همان سرویس بگیرید؛ نمونه‌ها مقدار واقعی نیستند.', 'Obtain credentials or profile keys from that service; examples are not real values.')],
+                    ['key' => 'connection', 'label' => self::text('اتصال و انتقال', 'Connection and transport'), 'help' => self::text('نوع انتقال و تنظیمات اتصال باید با سرویس مقصد یکسان باشند.', 'Match the transport and connection settings to the destination service.'),
+                        'managed_help' => self::text('V2bX همین تنظیمات را روی سرور و در اشتراک کاربران اعمال می‌کند؛ پیش‌فرض‌ها کار می‌کنند.', 'V2bX applies these settings to the server and to the subscriptions alike; the defaults work.')],
+                    ['key' => 'credentials', 'label' => self::text('مشخصات ورود', 'Authentication'), 'help' => self::text('اطلاعات ورود یا کلید پروفایل را از همان سرویس بگیرید؛ نمونه‌ها مقدار واقعی نیستند.', 'Obtain credentials or profile keys from that service; examples are not real values.'),
+                        'managed_help' => self::text('هر کاربر مشخصات ورود جداگانهٔ خودش را از پنل می‌گیرد.', 'Each subscriber gets their own credentials from the panel.')],
                     $type === 'ssh'
                         ? ['key' => 'security', 'label' => self::text('تأیید هویت سرور SSH', 'SSH server verification'), 'help' => self::text('کلید میزبان سرور را وارد کنید تا کلاینت به سرور جعلی وصل نشود؛ بدون آن هر کلید میزبانی پذیرفته می‌شود.', 'Pin the server host key so clients refuse an impostor server; without it any host key is accepted.')]
-                        : ['key' => 'security', 'label' => self::text('TLS و امنیت اتصال', 'TLS and connection security'), 'help' => self::text('اعتبارسنجی گواهی را فعال نگه دارید؛ تنظیمات گواهی کلاینت با گواهی سرور متفاوت است.', 'Keep certificate validation enabled; client certificates differ from server certificates.')],
-                    ['key' => 'advanced', 'label' => self::text('تنظیمات پیشرفته', 'Advanced settings'), 'help' => self::text('فقط گزینه‌هایی را تغییر دهید که سرویس مقصد لازم دارد. گزینهٔ خالی به اشتراک اضافه نمی‌شود.', 'Change only options required by the destination service. Empty options are omitted from the subscription.')],
+                        : ['key' => 'security', 'label' => self::text('TLS و امنیت اتصال', 'TLS and connection security'), 'help' => self::text('اعتبارسنجی گواهی را فعال نگه دارید؛ تنظیمات گواهی کلاینت با گواهی سرور متفاوت است.', 'Keep certificate validation enabled; client certificates differ from server certificates.'),
+                            'managed_help' => self::text('گواهی سرور را V2bX با تنظیم CertConfig خودش می‌گیرد و تمدید می‌کند؛ دامنهٔ گواهی همین آدرس یا SNI نود است.', 'V2bX obtains and renews the server certificate through its own CertConfig; the certificate is for this node\'s address or SNI.')],
+                    ['key' => 'advanced', 'label' => self::text('تنظیمات پیشرفته', 'Advanced settings'), 'help' => self::text('فقط گزینه‌هایی را تغییر دهید که سرویس مقصد لازم دارد. گزینهٔ خالی به اشتراک اضافه نمی‌شود.', 'Change only options required by the destination service. Empty options are omitted from the subscription.'),
+                        'managed_help' => self::text('فقط برای نیاز مشخصی تغییر دهید؛ V2bX و اشتراک‌ها همین مقادیر را می‌گیرند. مشخصات ورود هر کاربر و کلید Sudoku خودکار ساخته می‌شوند.', 'Change only for a specific need; V2bX and the subscriptions take the same values. Each subscriber\'s credentials and the Sudoku key are generated for you.')],
                 ],
             ];
             foreach ($definition['fields'] as $column => &$field) {
@@ -58,6 +68,7 @@ class AdminForm
                     $field['help'] = self::text('در حالت مدیریت با V2bX خالی بگذارید یا {{uuid}} بنویسید تا هر کاربر کلید خودش را داشته باشد؛ همین کلید رمز ShadowTLS او هم هست. برای سرویس بیرونی، PSK همان سرویس را کپی کنید.', 'When V2bX manages users, leave blank or enter {{uuid}} so each subscriber has their own key, which is also their ShadowTLS password. For an external service, copy that service\'s PSK.');
                 }
                 if ($type === 'sudoku' && $option === 'key') {
+                    $field['managed_auto'] = true;
                     $field['required'] = false;
                     $field['required_external'] = true;
                     $field['help'] = self::text('در حالت مدیریت با V2bX، کلید خصوصی اصلی (۶۴ رقم hex) است؛ خالی بگذارید تا هنگام ذخیره ساخته شود. هر کاربر تکهٔ جداگانه‌ای از آن را در اشتراک می‌گیرد و با حذف او همان تکه از کار می‌افتد. برای سرویس بیرونی، کلید همان سرویس را کپی کنید.', 'When V2bX manages users this is the master private key (64 hex digits); leave blank to generate one on save. Each subscriber receives their own split of it, which stops working when they are removed. For an external service, copy that service\'s key.');
@@ -86,8 +97,10 @@ class AdminForm
         if (!in_array($type, ['tailscale', 'zerotier', 'easytier'], true)) {
             $port = ['ssh' => 22, 'wireguard' => 51820, 'openvpn' => 1194][$type] ?? 443;
             $defaults['port'] = $port;
-            // Only V2bX listens; an external service already has its own port.
-            if (ManagedServer::supports($type)) $defaults['server_port'] = $port;
+            // No listen port of its own: a blank one follows the connection
+            // port when saved. A default 443 here stayed behind when the admin
+            // changed only the connection port, and V2bX listened where no
+            // client connected.
         }
         if (ManagedServer::supports($type)) $defaults['managed'] = true;
         $protocol = [
@@ -114,7 +127,7 @@ class AdminForm
             'name' => self::item('نام نود', 'Node name', 'نامی قابل تشخیص برای ادمین و کاربران بنویسید؛ این نام در اشتراک نمایش داده می‌شود.', 'Use a recognizable name for administrators and subscribers; it is displayed in subscriptions.'),
             'host' => self::item('آدرس اتصال', 'Connection address', 'دامنه یا IP قابل دسترس برای کاربر را بدون https://، پورت یا مسیر وارد کنید. در حالت TLS، دامنه باید با گواهی مطابقت داشته باشد.', 'Enter the subscriber-reachable domain or IP without https://, a port or a path. With TLS, the certificate must match the domain.'),
             'port' => self::item('پورت اتصال کاربر', 'Subscriber connection port', 'پورتی که کلاینت به آن وصل می‌شود؛ اگر NAT، CDN یا انتقال پورت دارید، پورت بیرونی را بنویسید.', 'The port clients connect to; with NAT, a CDN or port forwarding, enter the public-facing port.'),
-            'server_port' => self::item('پورت شنود سرویس', 'Service listening port', 'در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. معمولاً با پورت اتصال یکسان است؛ برای پروفایل بیرونی سرویس جدیدی راه نمی‌اندازد.', 'For a managed node, V2bX listens on this port; allow it through the firewall. It usually matches the client port. For an external profile it does not start a service.'),
+            'server_port' => self::item('پورت شنود سرویس', 'Service listening port', 'در نود مدیریت‌شده، V2bX روی این پورت گوش می‌دهد؛ آن را در فایروال باز کنید. خالی بگذارید تا همان پورت اتصال باشد؛ فقط وقتی NAT یا انتقال پورت دارید عدد دیگری بنویسید.', 'For a managed node, V2bX listens on this port; allow it through the firewall. Leave blank to use the connection port; enter another only behind NAT or port forwarding.'),
             'rate' => self::item('ضریب مصرف', 'Traffic multiplier', '۱: مصرف واقعی؛ ۱٫۵: مصرف ×۱٫۵؛ ۰: رایگان. محدودیت سرعت نیست.', '1 = actual usage; 1.5 = 50% more; 0 = unmetered. Not a speed limit.'),
             'group_id' => self::item('گروه دسترسی', 'Access groups', 'حداقل یک گروه انتخاب کنید. فقط کاربران پلن‌هایی که به این گروه دسترسی دارند این نود را در اشتراک می‌بینند.', 'Select at least one group. Only subscribers whose plans grant access to these groups receive this node.'),
             'route_id' => self::item('قواعد مسیریابی', 'Routing rules', 'قواعد موجود پنل را انتخاب کنید؛ خالی یعنی قاعدهٔ اضافه‌ای از این فهرست به نود اختصاص ندارد. اعمال هر نوع قاعده به پشتیبانی هسته نیاز دارد.', 'Select existing panel rules; empty assigns no additional rules from this list. Applying a rule requires support in the selected core.'),

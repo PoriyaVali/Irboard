@@ -57,7 +57,8 @@ abstract class ProtocolNodeController extends Controller
         $params['group_id'] = array_map('strval', $params['group_id']);
         $params['route_id'] = array_map('strval', $params['route_id'] ?? []);
         $params['tags'] = $params['tags'] ?? [];
-        DB::transaction(function () use ($model, $params) {
+        $savedId = null;
+        DB::transaction(function () use ($model, $params, &$savedId) {
             // Serialize hierarchy writes so concurrent reparent/drop cannot
             // leave a cycle or a dangling parent in this protocol table.
             $rows = $model::orderBy('id')->lockForUpdate()->get()->keyBy('id');
@@ -85,8 +86,10 @@ abstract class ProtocolNodeController extends Controller
                 Outbound::validate($this->type, $settings);
             }
             $node->save();
+            $savedId = $node->id;
         });
-        return response(['data' => true]);
+        // The id lets the form tell the admin which node ID to give V2bX.
+        return response(['data' => true, 'id' => $savedId]);
     }
 
     public function update(Request $request)
