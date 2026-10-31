@@ -837,8 +837,8 @@
                 "en": "V2bX runs this node on your own server: users, usage, limits and keys come from the panel, and the protocol settings apply to the server and to every subscription alike. Only the name, groups, address and port are needed; everything else has working defaults."
             },
             "capability": {
-                "fa": "برای ساخت سرور، V2bX نسخهٔ 1.10.0 یا جدیدتر با هستهٔ mihomo را نصب و نوع و ID نود اصلی را ثبت کنید؛ کاربران، مصرف و محدودیت‌ها از پنل می‌آیند. در صورت فعال‌بودن TLS، دامنه و گواهی سرور را در CertConfig همان V2bX تنظیم کنید.",
-                "en": "To provision the server, install V2bX 1.10.0 or later with the mihomo core and register the root node type and ID. The panel supplies users, usage and limits. With TLS enabled, configure the server domain and certificate in that V2bX node CertConfig."
+                "fa": "برای ساخت سرور، V2bX نسخهٔ 1.12.0 یا جدیدتر با هستهٔ mihomo را نصب و نوع و ID نود اصلی را ثبت کنید؛ کاربران، مصرف و محدودیت‌ها از پنل می‌آیند. در صورت فعال‌بودن TLS، V2bX گواهی دامنهٔ نود را با CertConfig خودش می‌گیرد و تمدید می‌کند.",
+                "en": "To provision the server, install V2bX 1.12.0 or later with the mihomo core and register the root node type and ID. The panel supplies users, usage and limits. With TLS enabled, V2bX obtains and renews the node domain certificate through its CertConfig."
             },
             "endpoint": true,
             "defaults": {
@@ -1319,8 +1319,8 @@
                 "en": "V2bX runs this node on your own server: users, usage, limits and keys come from the panel, and the protocol settings apply to the server and to every subscription alike. Only the name, groups, address and port are needed; everything else has working defaults."
             },
             "capability": {
-                "fa": "برای ساخت سرور، V2bX نسخهٔ 1.10.0 یا جدیدتر با هستهٔ mihomo را نصب و نوع و ID نود اصلی را ثبت کنید؛ کاربران، مصرف و محدودیت‌ها از پنل می‌آیند. در صورت فعال‌بودن TLS، دامنه و گواهی سرور را در CertConfig همان V2bX تنظیم کنید.",
-                "en": "To provision the server, install V2bX 1.10.0 or later with the mihomo core and register the root node type and ID. The panel supplies users, usage and limits. With TLS enabled, configure the server domain and certificate in that V2bX node CertConfig."
+                "fa": "برای ساخت سرور، V2bX نسخهٔ 1.12.0 یا جدیدتر با هستهٔ mihomo را نصب و نوع و ID نود اصلی را ثبت کنید؛ کاربران، مصرف و محدودیت‌ها از پنل می‌آیند. در صورت فعال‌بودن TLS، V2bX گواهی دامنهٔ نود را با CertConfig خودش می‌گیرد و تمدید می‌کند.",
+                "en": "To provision the server, install V2bX 1.12.0 or later with the mihomo core and register the root node type and ID. The panel supplies users, usage and limits. With TLS enabled, V2bX obtains and renews the node domain certificate through its CertConfig."
             },
             "endpoint": true,
             "defaults": {
@@ -1777,8 +1777,8 @@
                 "en": "V2bX runs this node on your own server: users, usage, limits and keys come from the panel, and the protocol settings apply to the server and to every subscription alike. Only the name, groups, address and port are needed; everything else has working defaults."
             },
             "capability": {
-                "fa": "برای ساخت سرور، V2bX نسخهٔ 1.11.0 یا جدیدتر با هستهٔ mihomo را نصب و ID نود اصلی را ثبت کنید؛ کاربران، مصرف و محدودیت‌ها از پنل می‌آیند. دست‌دهی ShadowTLS به host:443 در obfs-opts می‌رود، یا به MihomoOptions.ShadowTLSHandshake سرور؛ آن سرور باید گواهی همان host را داشته باشد. کلاینت باید Snell روی ShadowTLS را پشتیبانی کند، مثل Surge یا mihomo نسخهٔ 1.19.33.",
-                "en": "To provision the server, install V2bX 1.11.0 or later with the mihomo core and register the root node ID; the panel supplies users, usage and limits. The ShadowTLS handshake goes to the obfs-opts host on port 443, or to the server's MihomoOptions.ShadowTLSHandshake, which must serve that host's certificate. Clients must support Snell over ShadowTLS, as Surge and Mihomo v1.19.33 do."
+                "fa": "برای ساخت سرور، V2bX نسخهٔ 1.12.0 یا جدیدتر با هستهٔ mihomo را نصب و ID نود اصلی را ثبت کنید؛ کاربران، مصرف و محدودیت‌ها از پنل می‌آیند. دست‌دهی ShadowTLS به host:443 در obfs-opts می‌رود، یا به MihomoOptions.ShadowTLSHandshake سرور؛ آن سرور باید گواهی همان host را داشته باشد. کلاینت باید Snell روی ShadowTLS را پشتیبانی کند، مثل Surge یا mihomo نسخهٔ 1.19.33.",
+                "en": "To provision the server, install V2bX 1.12.0 or later with the mihomo core and register the root node ID; the panel supplies users, usage and limits. The ShadowTLS handshake goes to the obfs-opts host on port 443, or to the server's MihomoOptions.ShadowTLSHandshake, which must serve that host's certificate. Clients must support Snell over ShadowTLS, as Surge and Mihomo v1.19.33 do."
             },
             "endpoint": true,
             "defaults": {
@@ -2973,8 +2973,8 @@
                 "en": "V2bX runs this node on your own server: users, usage, limits and keys come from the panel, and the protocol settings apply to the server and to every subscription alike. Only the name, groups, address and port are needed; everything else has working defaults."
             },
             "capability": {
-                "fa": "برای ساخت سرور، V2bX نسخهٔ 1.10.0 یا جدیدتر با هستهٔ mihomo را نصب و ID نود اصلی را ثبت کنید. مقصد پوششی دارای QUIC را در MihomoOptions.JLSUpstream سرور تنظیم و پورت UDP را باز کنید؛ کاربران از پنل دریافت می‌شوند.",
-                "en": "To provision the server, install V2bX 1.10.0 or later with the mihomo core and register the root node ID. Configure a working QUIC decoy in the server MihomoOptions.JLSUpstream and open its UDP port; the panel supplies users."
+                "fa": "برای ساخت سرور، V2bX نسخهٔ 1.12.0 یا جدیدتر با هستهٔ mihomo را نصب و ID نود اصلی را ثبت کنید و پورت UDP را باز کنید؛ کاربران از پنل دریافت می‌شوند. V2bX کاوشگرها را به سایتی که در SNI نود آمده (پورت ۴۴۳) می‌فرستد، پس SNI را دامنهٔ سایتی با QUIC (HTTP/3) بگذارید؛ MihomoOptions.JLSUpstream سرور می‌تواند سایت دیگری تعیین کند.",
+                "en": "To provision the server, install V2bX 1.12.0 or later with the mihomo core, register the root node ID and open its UDP port; the panel supplies users. V2bX hands probers to the site named in the node SNI on port 443, so set the SNI to a domain whose site serves QUIC (HTTP/3); the server MihomoOptions.JLSUpstream can name another."
             },
             "endpoint": true,
             "defaults": {
@@ -4419,8 +4419,8 @@
                 "en": "V2bX runs this node on your own server: users, usage, limits and keys come from the panel, and the protocol settings apply to the server and to every subscription alike. Only the name, groups, address and port are needed; everything else has working defaults."
             },
             "capability": {
-                "fa": "برای ساخت سرور، V2bX نسخهٔ 1.10.0 یا جدیدتر با هستهٔ mihomo را نصب و نوع و ID نود اصلی را ثبت کنید؛ کاربران، مصرف و محدودیت‌ها از پنل می‌آیند. در صورت فعال‌بودن TLS، دامنه و گواهی سرور را در CertConfig همان V2bX تنظیم کنید.",
-                "en": "To provision the server, install V2bX 1.10.0 or later with the mihomo core and register the root node type and ID. The panel supplies users, usage and limits. With TLS enabled, configure the server domain and certificate in that V2bX node CertConfig."
+                "fa": "برای ساخت سرور، V2bX نسخهٔ 1.12.0 یا جدیدتر با هستهٔ mihomo را نصب و نوع و ID نود اصلی را ثبت کنید؛ کاربران، مصرف و محدودیت‌ها از پنل می‌آیند. در صورت فعال‌بودن TLS، V2bX گواهی دامنهٔ نود را با CertConfig خودش می‌گیرد و تمدید می‌کند.",
+                "en": "To provision the server, install V2bX 1.12.0 or later with the mihomo core and register the root node type and ID. The panel supplies users, usage and limits. With TLS enabled, V2bX obtains and renews the node domain certificate through its CertConfig."
             },
             "endpoint": true,
             "defaults": {
@@ -5124,8 +5124,8 @@
                 "en": "V2bX runs this node on your own server: users, usage, limits and keys come from the panel, and the protocol settings apply to the server and to every subscription alike. Only the name, groups, address and port are needed; everything else has working defaults."
             },
             "capability": {
-                "fa": "برای ساخت سرور، V2bX نسخهٔ 1.11.0 یا جدیدتر با هستهٔ mihomo را نصب و ID نود اصلی را ثبت کنید؛ کاربران، مصرف و محدودیت‌ها از پنل می‌آیند. V2bX کاوشگرها را به سایت پوششی خودش می‌برد. TLS ندارد؛ برای http-mask-tls یک CDN یا پراکسی TLS جلوی نود لازم است.",
-                "en": "To provision the server, install V2bX 1.11.0 or later with the mihomo core and register the root node ID; the panel supplies users, usage and limits. V2bX hands probers to its own cover site. The node has no TLS: http-mask-tls needs a CDN or TLS proxy in front of it."
+                "fa": "برای ساخت سرور، V2bX نسخهٔ 1.12.0 یا جدیدتر با هستهٔ mihomo را نصب و ID نود اصلی را ثبت کنید؛ کاربران، مصرف و محدودیت‌ها از پنل می‌آیند. کلاینت باید mihomo نسخهٔ 1.19.33 یا جدیدتر باشد؛ فرمت Sudoku در این نسخه عوض شد. V2bX کاوشگرها را به سایت پوششی خودش می‌برد. TLS ندارد؛ برای http-mask-tls یک CDN یا پراکسی TLS جلوی نود لازم است.",
+                "en": "To provision the server, install V2bX 1.12.0 or later with the mihomo core and register the root node ID; the panel supplies users, usage and limits. Clients need Mihomo v1.19.33 or later, which changed the Sudoku wire format. V2bX hands probers to its own cover site. The node has no TLS: http-mask-tls needs a CDN or TLS proxy in front of it."
             },
             "endpoint": true,
             "defaults": {
