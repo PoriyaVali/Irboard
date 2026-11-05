@@ -101,13 +101,7 @@ final class Xhttp
     public static function forNode($settings)
     {
         $settings = self::normalize($settings);
-        if (!is_array($settings)) {
-            return $settings;
-        }
-        if (isset($settings['extra']) && is_array($settings['extra'])) {
-            $settings['extra'] = self::asObject($settings['extra']);
-        }
-        return $settings === [] ? new \stdClass() : $settings;
+        return is_array($settings) ? self::asObject($settings) : $settings;
     }
 
     /**
@@ -139,9 +133,10 @@ final class Xhttp
 
     /**
      * mihomo's xhttp-opts for the node, or null when the client cannot reach
-     * it. $client is 'mihomo' or 'stash'.
+     * it. $client is 'mihomo' or 'stash'; $reality says whether the node's
+     * own connection is REALITY.
      */
-    public static function clashOpts($settings, string $client = 'mihomo'): ?array
+    public static function clashOpts($settings, string $client = 'mihomo', bool $reality = false): ?array
     {
         $settings = self::normalize($settings);
         $settings = is_array($settings) ? $settings : [];
@@ -174,7 +169,7 @@ final class Xhttp
             }
         }
         if (isset($extra['downloadSettings']) && is_array($extra['downloadSettings'])) {
-            $download = self::clashDownload($extra['downloadSettings'], $client);
+            $download = self::clashDownload($extra['downloadSettings'], $client, $reality);
             if ($download === null) {
                 return null;
             }
@@ -223,54 +218,80 @@ final class Xhttp
 
     /**
      * download-settings from Xray's downloadSettings, a stream setting of its
-     * own; null when it uses a security the profile cannot carry.
+     * own; null when the profile cannot carry it.
+     *
+     * Whatever download-settings leaves out, mihomo takes from the node's own
+     * connection: its path, host and headers, its server name and certificate
+     * check, its REALITY and its ECH. Xray builds the download leg from
+     * downloadSettings alone, so each of these is said as Xray decides it.
      */
-    private static function clashDownload(array $download, string $client): ?array
+    private static function clashDownload(array $download, string $client, bool $reality): ?array
     {
-        $out = [];
         $xhttp = isset($download['xhttpSettings']) && is_array($download['xhttpSettings']) ? $download['xhttpSettings'] : [];
-        foreach (['path', 'host'] as $key) {
-            if (isset($xhttp[$key]) && $xhttp[$key] !== '') {
-                $out[$key] = (string)$xhttp[$key];
-            }
+        // Path and host come from the leg's top level, the rest from its
+        // extra when present, as for the node's own settings.
+        $effective = self::clientSettings($xhttp);
+        $security = $download['security'] ?? 'none';
+        $secure = $download[$security === 'reality' ? 'realitySettings' : 'tlsSettings'] ?? [];
+        $secure = is_array($secure) ? $secure : [];
+        $address = isset($download['address']) && $download['address'] !== '' ? (string)$download['address'] : null;
+        $encrypted = $security === 'tls' || $security === 'reality';
+        // The leg's server name: its own, else its address.
+        $serverName = $encrypted && !empty($secure['serverName']) ? (string)$secure['serverName'] : $address;
+
+        $out = ['path' => isset($xhttp['path']) && $xhttp['path'] !== '' ? (string)$xhttp['path'] : '/'];
+        // Host: the leg's own, else its server name, else its address.
+        $host = isset($xhttp['host']) && $xhttp['host'] !== '' ? (string)$xhttp['host'] : $serverName;
+        if ($host !== null) {
+            $out['host'] = $host;
         }
-        if (isset($xhttp['headers']) && is_array($xhttp['headers']) && $xhttp['headers'] !== []) {
-            $out['headers'] = array_map('strval', $xhttp['headers']);
+        if (isset($effective['headers']) && is_array($effective['headers']) && $effective['headers'] !== []) {
+            $out['headers'] = array_map('strval', $effective['headers']);
         }
-        if (isset($xhttp['xmux']) && is_array($xhttp['xmux']) && $client !== 'stash') {
-            $reuse = self::clashReuse($xhttp['xmux']);
+        if (isset($effective['xmux']) && is_array($effective['xmux']) && $client !== 'stash') {
+            $reuse = self::clashReuse($effective['xmux']);
             if ($reuse !== []) {
                 $out['reuse-settings'] = $reuse;
             }
         }
-        if (isset($download['address']) && $download['address'] !== '') {
-            $out['server'] = (string)$download['address'];
+        if ($address !== null) {
+            $out['server'] = $address;
         }
         if (isset($download['port']) && is_numeric($download['port'])) {
             $out['port'] = (int)$download['port'];
         }
-        $sni = $client === 'stash' ? 'sni' : 'servername';
-        $security = $download['security'] ?? 'none';
-        if ($security === 'tls') {
-            $tls = isset($download['tlsSettings']) && is_array($download['tlsSettings']) ? $download['tlsSettings'] : [];
-            $out['tls'] = true;
-            if (!empty($tls['serverName'])) $out[$sni] = (string)$tls['serverName'];
-            if (!empty($tls['fingerprint'])) $out['client-fingerprint'] = (string)$tls['fingerprint'];
-            if (!empty($tls['alpn'])) $out['alpn'] = array_values(array_map('strval', (array)$tls['alpn']));
-            if (!empty($tls['allowInsecure'])) $out['skip-cert-verify'] = true;
-        } elseif ($security === 'reality') {
-            $reality = isset($download['realitySettings']) && is_array($download['realitySettings']) ? $download['realitySettings'] : [];
-            $out['tls'] = true;
-            if (!empty($reality['serverName'])) $out[$sni] = (string)$reality['serverName'];
-            $out['client-fingerprint'] = !empty($reality['fingerprint']) ? (string)$reality['fingerprint'] : 'chrome';
-            $out['reality-opts'] = [
-                'public-key' => (string)($reality['password'] ?? ($reality['publicKey'] ?? '')),
-                'short-id' => (string)($reality['shortId'] ?? ''),
-            ];
-        } elseif ($security !== 'none' && $security !== '') {
+        if (!$encrypted && $security !== 'none' && $security !== '') {
             return null;
-        } elseif (array_key_exists('security', $download)) {
-            $out['tls'] = false;
+        }
+        $out['tls'] = $encrypted;
+        if ($encrypted && $serverName !== null) {
+            $out[$client === 'stash' ? 'sni' : 'servername'] = $serverName;
+        }
+        if ($security === 'reality') {
+            $out['client-fingerprint'] = !empty($secure['fingerprint']) ? (string)$secure['fingerprint'] : 'chrome';
+            $out['reality-opts'] = [
+                'public-key' => (string)($secure['password'] ?? ($secure['publicKey'] ?? '')),
+                'short-id' => (string)($secure['shortId'] ?? ''),
+            ];
+        } else {
+            if ($security === 'tls') {
+                if (!empty($secure['fingerprint'])) $out['client-fingerprint'] = (string)$secure['fingerprint'];
+                if (!empty($secure['alpn'])) $out['alpn'] = array_values(array_map('strval', (array)$secure['alpn']));
+                $out['skip-cert-verify'] = !empty($secure['allowInsecure']);
+            }
+            if ($reality) {
+                // Not the node's REALITY: an empty key turns it off in
+                // mihomo. Stash documents no such override.
+                if ($client === 'stash') {
+                    return null;
+                }
+                $out['reality-opts'] = ['public-key' => ''];
+            }
+        }
+        if ($client !== 'stash') {
+            // Nor the node's ECH, which Xray's leg does not have unless its
+            // own tlsSettings give it one; that is not carried over.
+            $out['ech-opts'] = ['enable' => false];
         }
         return $out;
     }
@@ -315,9 +336,6 @@ final class Xhttp
         }
         if (isset($download['xhttpSettings']) && is_array($download['xhttpSettings'])) {
             $download['xhttpSettings'] = self::normalize($download['xhttpSettings']);
-            if (isset($download['xhttpSettings']['extra']) && is_array($download['xhttpSettings']['extra'])) {
-                $download['xhttpSettings']['extra'] = self::asObject($download['xhttpSettings']['extra']);
-            }
         }
         $typed = [
             'tlsSettings' => ['bools' => ['allowInsecure', 'disableSystemRoot', 'enableSessionResumption'], 'ints' => []],

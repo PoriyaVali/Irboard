@@ -266,7 +266,7 @@ class Stash
         if ($server['network'] === 'xhttp') {
             // Without this the node went out as plain TCP. Null when the node
             // makes its clients use an option Stash has no word for.
-            $opts = Xhttp::clashOpts($server['network_settings'] ?? [], 'stash');
+            $opts = Xhttp::clashOpts($server['network_settings'] ?? [], 'stash', (int)$server['tls'] === 2);
             if ($opts === null) {
                 return null;
             }

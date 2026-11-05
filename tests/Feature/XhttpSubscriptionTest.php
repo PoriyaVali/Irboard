@@ -131,11 +131,19 @@ class XhttpSubscriptionTest extends TestCase
         $download = ['address' => 'dl.example.test', 'port' => '443', 'network' => 'xhttp', 'security' => 'tls',
             'tlsSettings' => ['serverName' => 'dl.example.test', 'alpn' => ['h2'], 'fingerprint' => 'chrome'],
             'xhttpSettings' => ['path' => '/dl', 'host' => 'dl.example.test']];
+        // A REALITY node whose download leg is TLS, with the leg's headers
+        // and XMUX in its own extra, and one whose leg is plain.
+        $tlsLeg = ['address' => 'dl.example.test', 'port' => '443', 'network' => 'xhttp', 'security' => 'tls',
+            'xhttpSettings' => ['path' => '/dl', 'extra' => ['headers' => ['X-Leg' => 'down'], 'xmux' => ['maxConnections' => '2']]]];
+        $plainLeg = ['address' => '192.0.2.20', 'port' => '80', 'network' => 'xhttp', 'xhttpSettings' => ['host' => 'plain.example.test']];
         $servers = [
             self::reality('xhttp reality', self::PADDED),
             self::tls('xhttp tls', ['path' => '/xh', 'mode' => 'packet-up', 'extra' => [
                 'uplinkHTTPMethod' => 'PUT', 'sessionIDPlacement' => 'header', 'seqPlacement' => 'query',
                 'uplinkDataPlacement' => 'body', 'downloadSettings' => $download]]),
+            self::reality('reality tls leg', ['path' => '/xh', 'host' => 'up.example.test', 'mode' => 'packet-up',
+                'extra' => ['headers' => ['X-Leg' => 'up'], 'downloadSettings' => $tlsLeg]]),
+            self::reality('reality plain leg', ['path' => '/xh', 'mode' => 'packet-up', 'extra' => ['downloadSettings' => $plainLeg]]),
             self::vmess('vmess xhttp'),
             self::websocket('vless ws'),
         ];
@@ -162,10 +170,24 @@ class XhttpSubscriptionTest extends TestCase
             $this->assertSame('header', $tls['session-placement'], $class);
             $this->assertSame('query', $tls['seq-placement'], $class);
             $this->assertSame(['path' => '/dl', 'host' => 'dl.example.test', 'server' => 'dl.example.test', 'port' => 443,
-                'tls' => true, 'servername' => 'dl.example.test', 'client-fingerprint' => 'chrome', 'alpn' => ['h2']],
+                'tls' => true, 'servername' => 'dl.example.test', 'client-fingerprint' => 'chrome', 'alpn' => ['h2'],
+                'skip-cert-verify' => false, 'ech-opts' => ['enable' => false]],
                 $tls['download-settings'], $class);
+
+            // mihomo fills in whatever download-settings leaves out from the
+            // node's own connection; Xray builds the leg from its own settings.
+            // So the leg's host and server name are its address, its headers
+            // and XMUX those of its extra, and it is not the node's REALITY.
+            $this->assertSame(['path' => '/dl', 'host' => 'dl.example.test', 'headers' => ['X-Leg' => 'down'],
+                'reuse-settings' => ['max-connections' => '2'], 'server' => 'dl.example.test', 'port' => 443,
+                'tls' => true, 'servername' => 'dl.example.test', 'skip-cert-verify' => false,
+                'reality-opts' => ['public-key' => ''], 'ech-opts' => ['enable' => false]],
+                $byName['reality tls leg']['xhttp-opts']['download-settings'], $class);
+            $this->assertSame(['path' => '/', 'host' => 'plain.example.test', 'server' => '192.0.2.20', 'port' => 80,
+                'tls' => false, 'reality-opts' => ['public-key' => ''], 'ech-opts' => ['enable' => false]],
+                $byName['reality plain leg']['xhttp-opts']['download-settings'], $class);
             if ($class === ClashMeta::class) {
-                $exported = [$reality, $byName['xhttp tls']];
+                $exported = [$reality, $byName['xhttp tls'], $byName['reality tls leg'], $byName['reality plain leg']];
             }
         }
         // Checked by tests/ValidateMihomoConfig.py with the pinned Mihomo.
@@ -183,6 +205,9 @@ class XhttpSubscriptionTest extends TestCase
         $servers = [
             self::reality('xhttp reality', self::PADDED),
             self::tls('xhttp put', ['path' => '/xh', 'mode' => 'packet-up', 'extra' => ['uplinkHTTPMethod' => 'PUT']]),
+            // Stash documents no way to turn the node's REALITY off for it.
+            self::reality('reality tls leg', ['path' => '/xh', 'mode' => 'packet-up', 'extra' => ['downloadSettings' => [
+                'address' => 'dl.example.test', 'port' => 443, 'security' => 'tls', 'xhttpSettings' => ['path' => '/dl']]]]),
             self::vmess('vmess xhttp'),
             self::websocket('vless ws'),
         ];

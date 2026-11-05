@@ -40,8 +40,8 @@ def main():
     xhttp = args.profiles.with_name('Xhttp.json')
     if xhttp.exists():
         extra = json.loads(xhttp.read_text())
-        if [p.get('network') for p in extra] != ['xhttp', 'xhttp']:
-            raise SystemExit('Xhttp.json must contain the REALITY and the TLS XHTTP profiles.')
+        if len(extra) < 2 or any(p.get('network') != 'xhttp' for p in extra):
+            raise SystemExit('Xhttp.json must contain the exported XHTTP profiles.')
         profiles = profiles + extra
     with tempfile.TemporaryDirectory(prefix='irboard-mihomo-') as folder:
         root = pathlib.Path(folder)

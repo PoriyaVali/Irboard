@@ -336,7 +336,7 @@ class ClashVerge
             // Everything the node is configured with, extra included: a
             // client left to its defaults is refused by a node whose padding,
             // placements or uplink method differ.
-            $opts = Xhttp::clashOpts($server['network_settings'] ?? []);
+            $opts = Xhttp::clashOpts($server['network_settings'] ?? [], 'mihomo', (int)$server['tls'] === 2);
             if ($opts === null) {
                 return null;
             }
