@@ -136,11 +136,16 @@ before(async () => {
     const executable = candidates.find(file => fs.existsSync(file));
     assert.ok(executable, 'An installed Chromium browser is required; set CHROME_BIN');
     profile = fs.mkdtempSync(path.join(os.tmpdir(), 'doctor-tailored-browser-'));
-    chrome = spawn(executable, ['--headless=new', '--remote-debugging-port=0', '--no-first-run', '--no-default-browser-check', '--disable-background-networking', '--disable-component-update', '--disable-extensions', '--disable-sync', '--no-sandbox', '--user-data-dir=' + profile, 'about:blank'], { windowsHide: true, stdio: 'ignore' });
+    chrome = spawn(executable, ['--headless=new', '--remote-debugging-port=0', '--no-first-run', '--no-default-browser-check', '--disable-background-networking', '--disable-component-update', '--disable-extensions', '--disable-sync', '--no-sandbox', '--user-data-dir=' + profile, 'about:blank'], { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] });
+    // Chromium's own output, kept for when it does not start: the runner image
+    // is not ours, and a browser that exits or hangs says why only there.
+    let chromeLog = '', chromeExit = null;
+    chrome.stderr.on('data', chunk => { chromeLog = (chromeLog + chunk).slice(-8000); });
+    chrome.on('exit', (code, signal) => { chromeExit = signal || code; });
     const activePort = path.join(profile, 'DevToolsActivePort');
-    const deadline = Date.now() + 15000;
-    while (!fs.existsSync(activePort) && Date.now() < deadline) await delay(50);
-    assert.ok(fs.existsSync(activePort), 'Chromium remote debugging started');
+    const deadline = Date.now() + 60000;
+    while (!fs.existsSync(activePort) && chromeExit === null && Date.now() < deadline) await delay(50);
+    assert.ok(fs.existsSync(activePort), `Chromium remote debugging did not start (${executable}, exit ${chromeExit}):\n${chromeLog}`);
     const [port, endpoint] = fs.readFileSync(activePort, 'utf8').trim().split(/\r?\n/);
     cdp = new CDP(`ws://127.0.0.1:${port}${endpoint}`); await cdp.ready;
 });

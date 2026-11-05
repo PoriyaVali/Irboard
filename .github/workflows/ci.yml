@@ -644,6 +644,8 @@ jobs:
           set -e
           export CHROME_BIN="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
           test -x "$CHROME_BIN"
+          echo "Browser: $CHROME_BIN -> $(readlink -f "$CHROME_BIN")"
+          "$CHROME_BIN" --version || true
           python3 scripts/patch_admin_tailored_pricing.py --check
           python3 scripts/patch_admin_smartbot_credentials.py --check
           node --check public/assets/admin/umi.js
