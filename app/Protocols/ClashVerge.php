@@ -3,6 +3,7 @@
 namespace App\Protocols;
 
 use App\Utils\Helper;
+use App\Utils\Xhttp;
 use Symfony\Component\Yaml\Yaml;
 
 class ClashVerge
@@ -52,12 +53,20 @@ class ClashVerge
                     $proxies[] = $item['name'];
                     break;
                 case 'vmess':
-                    $proxy[] = self::buildVmess($user['uuid'], $item);
-                    $proxies[] = $item['name'];
+                    // Null for a node this client cannot reach.
+                    $built = self::buildVmess($user['uuid'], $item);
+                    if ($built !== null) {
+                        $proxy[] = $built;
+                        $proxies[] = $item['name'];
+                    }
                     break;
                 case 'vless':
-                    $proxy[] = self::buildVless($user['uuid'], $item);
-                    $proxies[] = $item['name'];
+                    // Null for a node this client cannot reach.
+                    $built = self::buildVless($user['uuid'], $item);
+                    if ($built !== null) {
+                        $proxy[] = $built;
+                        $proxies[] = $item['name'];
+                    }
                     break;
                 case 'trojan':
                     $proxy[] = self::buildTrojan($user['uuid'], $item);
@@ -180,6 +189,11 @@ class ClashVerge
 
     public static function buildVmess($uuid, $server)
     {
+        // mihomo carries XHTTP for VLESS only: the node would be dialled as
+        // plain TCP and refused.
+        if (($server['network'] ?? null) === 'xhttp') {
+            return null;
+        }
         $array = [];
         $array['name'] = $server['name'];
         $array['type'] = 'vmess';
@@ -319,22 +333,15 @@ class ClashVerge
             }
         }
         if ($server['network'] === 'xhttp') {
-            $array['network'] = 'xhttp';
-            if ($server['network_settings']) {
-                $xhttpSettings = $server['network_settings'];
-                $array['xhttp-opts'] = [];
-                if (isset($xhttpSettings['path'])) $array['xhttp-opts']['path'] = $xhttpSettings['path'];
-                if (isset($xhttpSettings['host'])) $array['xhttp-opts']['host'] = $xhttpSettings['host'];
-                if (isset($xhttpSettings['mode'])) $array['xhttp-opts']['mode'] = $xhttpSettings['mode'];
-                // 暂不支持extra
-                //if (isset($xhttpSettings['extra'])) {
-                    //$array['xhttp-opts']['headers'] = $xhttpSettings['extra']['headers'] ?? [];
-                    //if (isset($xhttpSettings['extra']['xmux'])) {
-                    //    $array['xhttp-opts']['sc-max-concurrent-posts'] = $xhttpSettings['extra']['xmux']['maxConcurrency'] ?? [];
-                    //}
-
-                //}
+            // Everything the node is configured with, extra included: a
+            // client left to its defaults is refused by a node whose padding,
+            // placements or uplink method differ.
+            $opts = Xhttp::clashOpts($server['network_settings'] ?? [], 'mihomo', (int)$server['tls'] === 2);
+            if ($opts === null) {
+                return null;
             }
+            $array['network'] = 'xhttp';
+            $array['xhttp-opts'] = $opts;
         }
         if (isset($server['encryption']) && !empty($server['encryption']) && isset($server['encryption_settings']) && !empty($server['encryption_settings'])) {
             $encryptionSettings = $server['encryption_settings'];

@@ -7,6 +7,7 @@ use App\Models\ServerV2node;
 use Illuminate\Http\Request;
 use ParagonIE_Sodium_Compat as SodiumCompat;
 use App\Utils\Helper;
+use App\Utils\Xhttp;
 
 class V2nodeController extends Controller
 {
@@ -93,38 +94,7 @@ class V2nodeController extends Controller
             $params['flow'] = null;
         }
         if ($params['network'] == 'xhttp' && isset($params['network_settings'])) {
-            $ns = $params['network_settings'];
-            if (isset($ns['extra']) && is_array($ns['extra'])) {
-                $extra = $ns['extra'];
-                if (isset($extra['xPaddingObfsMode'])) {
-                    $extra['xPaddingObfsMode'] = filter_var($extra['xPaddingObfsMode'], FILTER_VALIDATE_BOOLEAN);
-                }
-                if (isset($extra['noGRPCHeader'])) {
-                    $extra['noGRPCHeader'] = filter_var($extra['noGRPCHeader'], FILTER_VALIDATE_BOOLEAN);
-                }
-                if (isset($extra['noSSEHeader'])) {
-                    $extra['noSSEHeader'] = filter_var($extra['noSSEHeader'], FILTER_VALIDATE_BOOLEAN);
-                }
-                if (isset($extra['scMaxBufferedPosts'])) {
-                    $extra['scMaxBufferedPosts'] = (int)$extra['scMaxBufferedPosts'];
-                }
-                if (isset($extra['xmux']) && is_array($extra['xmux'])) {
-                    $xmux = $extra['xmux'];
-                    if (isset($xmux['hKeepAlivePeriod'])) {
-                        $xmux['hKeepAlivePeriod'] = (int)$xmux['hKeepAlivePeriod'];
-                    }
-                    $extra['xmux'] = $xmux;
-                }
-                if (isset($extra['downloadSettings']) && is_array($extra['downloadSettings'])) {
-                    $downloadSettings = $extra['downloadSettings'];
-                    if (isset($downloadSettings['port'])) {
-                        $downloadSettings['port'] = (int)$downloadSettings['port'];
-                    }
-                    $extra['downloadSettings'] = $downloadSettings;
-                }
-                $ns['extra'] = $extra;
-            }
-            $params['network_settings'] = $ns;
+            $params['network_settings'] = Xhttp::normalize($params['network_settings']);
         }
         if (isset($params['encryption']) && $params['encryption'] == 'mlkem768x25519plus') {
             $keyPair = SodiumCompat::crypto_box_keypair();

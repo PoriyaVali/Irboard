@@ -48,6 +48,11 @@ class SingboxOld
             if ($item['type'] === 'v2node') {
                 $item['type'] = $item['protocol'];
             }
+            // sing-box has no XHTTP transport: the node went out as plain
+            // VLESS or VMess, which the node refuses.
+            if (in_array($item['type'], ['vless', 'vmess'], true) && ($item['network'] ?? null) === 'xhttp') {
+                continue;
+            }
             $result = null;
             switch ($item['type']) {
                 case 'shadowsocks':

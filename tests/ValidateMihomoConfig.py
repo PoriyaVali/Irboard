@@ -3,7 +3,8 @@
 
 First run MihomoSubscriptionTest with IRBOARD_MIHOMO_CONTRACT_DIR set, then:
 python3 tests/ValidateMihomoConfig.py --binary /path/to/mihomo --profiles /path/to/ClashMeta.json
-Managed.json in the same directory, the managed profiles, is validated too.
+Managed.json in the same directory, the managed profiles, is validated too, and so is
+Xhttp.json, the XHTTP profiles.
 Exported credentials are validated without substitution. State lives in a temporary directory.
 """
 import argparse
@@ -33,6 +34,14 @@ def main():
         extra = json.loads(managed.read_text())
         if {p['type'] for p in extra} != {'http', 'socks5', 'mieru', 'shadowquic', 'sudoku', 'snell'}:
             raise SystemExit('Managed.json must contain the six managed protocols.')
+        profiles = profiles + extra
+    # VLESS over XHTTP with the node's settings mapped into xhttp-opts, from
+    # XhttpSubscriptionTest.
+    xhttp = args.profiles.with_name('Xhttp.json')
+    if xhttp.exists():
+        extra = json.loads(xhttp.read_text())
+        if len(extra) < 2 or any(p.get('network') != 'xhttp' for p in extra):
+            raise SystemExit('Xhttp.json must contain the exported XHTTP profiles.')
         profiles = profiles + extra
     with tempfile.TemporaryDirectory(prefix='irboard-mihomo-') as folder:
         root = pathlib.Path(folder)
