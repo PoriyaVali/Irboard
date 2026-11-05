@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\V1\Admin\Server;
 
+use App\Utils\Xhttp;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ServerVmessSave;
 use App\Http\Requests\Admin\ServerVmessUpdate;
@@ -13,6 +14,9 @@ class VmessController extends Controller
     public function save(ServerVmessSave $request)
     {
         $params = $request->validated();
+        if (($params['network'] ?? null) === 'xhttp' && isset($params['networkSettings'])) {
+            $params['networkSettings'] = Xhttp::normalize($params['networkSettings']);
+        }
 
         if ($request->input('id')) {
             $server = ServerVmess::find($request->input('id'));

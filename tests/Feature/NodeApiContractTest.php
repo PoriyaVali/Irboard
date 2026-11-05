@@ -119,6 +119,38 @@ class NodeApiContractTest extends TestCase
         }
     }
 
+    /**
+     * XHTTP settings as V2bX's Xray core reads them. Saved through the admin
+     * form, every value is a string; saved as JSON, {} is stored as []. Xray
+     * rejects both, and the node never came up.
+     */
+    public function testXhttpSettingsReachTheNodeAsXrayReadsThem(): void
+    {
+        DB::table('v2_server_vless')->where('id', 1)->update(['network' => 'xhttp', 'flow' => null, 'network_settings' => json_encode([
+            'path' => '/xh', 'host' => '', 'mode' => 'auto',
+            'extra' => ['xPaddingObfsMode' => 'true', 'scMaxBufferedPosts' => '20', 'headers' => [], 'xmux' => ['hKeepAlivePeriod' => '30']],
+        ])]);
+        $settings = json_decode($this->getJson($this->endpoint('config', 'vless'))->assertOk()->getContent())->networkSettings;
+        $this->assertSame('/xh', $settings->path);
+        $this->assertTrue($settings->extra->xPaddingObfsMode);
+        $this->assertSame(20, $settings->extra->scMaxBufferedPosts);
+        $this->assertSame(30, $settings->extra->xmux->hKeepAlivePeriod);
+        $this->assertFalse(property_exists($settings->extra, 'headers'), 'an empty map is left out');
+
+        DB::table('v2_server_vless')->where('id', 1)->update(['network_settings' => '{"path":"/","host":"xtls.github.io","mode":"auto","extra":[]}']);
+        $settings = json_decode($this->getJson($this->endpoint('config', 'vless'))->assertOk()->getContent())->networkSettings;
+        $this->assertEquals(new \stdClass(), $settings->extra, 'an empty extra is an object');
+
+        DB::table('v2_server_vmess')->where('id', 1)->update(['network' => 'xhttp', 'networkSettings' => '{"path":"/vm","extra":[]}']);
+        $settings = json_decode($this->getJson($this->endpoint('config', 'vmess'))->assertOk()->getContent())->networkSettings;
+        $this->assertEquals(new \stdClass(), $settings->extra);
+
+        // Other transports are served as stored.
+        DB::table('v2_server_vless')->where('id', 1)->update(['network' => 'ws', 'network_settings' => '{"path":"/ws","headers":{"Host":"a.example.test"}}']);
+        $this->getJson($this->endpoint('config', 'vless'))->assertOk()
+            ->assertJsonPath('networkSettings', ['path' => '/ws', 'headers' => ['Host' => 'a.example.test']]);
+    }
+
     public function testCertificateHostIsIndependentOfSniAndRealityTarget(): void
     {
         foreach (['vmess', 'vless', 'trojan', 'tuic', 'hysteria', 'anytls'] as $type) {

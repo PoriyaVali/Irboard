@@ -399,7 +399,10 @@ class Helper
                 $config['path'] = $networkSettings['path'] ?? null;
                 $config['host'] = $networkSettings['host'] ?? null;
                 $config['mode'] = $networkSettings['mode'] ?? 'auto';
-                $config['extra'] = isset($networkSettings['extra']) ? json_encode($networkSettings['extra'], JSON_UNESCAPED_SLASHES) : null;
+                $extra = Xhttp::linkExtra($networkSettings);
+                if ($extra !== null) {
+                    $config['extra'] = $extra;
+                }
                 break;
         }
 
@@ -712,6 +715,11 @@ class Helper
         $config['path'] = $settings['path'] ?? '';
         $config['host'] = $settings['host'] ?? '';
         $config['mode'] = $settings['mode'] ?? 'auto';
-        $config['extra'] = isset($settings['extra']) ? json_encode($settings['extra'], JSON_UNESCAPED_SLASHES) : null;
+        // Everything the node is configured with beyond path, host and mode,
+        // whether it sits in extra or beside it, as an object.
+        $extra = Xhttp::linkExtra($settings);
+        if ($extra !== null) {
+            $config['extra'] = $extra;
+        }
     }
 }

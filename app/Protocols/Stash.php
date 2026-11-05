@@ -3,6 +3,7 @@
 namespace App\Protocols;
 
 use App\Utils\Helper;
+use App\Utils\Xhttp;
 use Symfony\Component\Yaml\Yaml;
 
 class Stash
@@ -45,12 +46,20 @@ class Stash
                 array_push($proxies, $item['name']);
             }
             if ($item['type'] === 'vmess') {
-                array_push($proxy, self::buildVmess($user['uuid'], $item));
-                array_push($proxies, $item['name']);
+                // Null for a node Stash cannot reach.
+                $built = self::buildVmess($user['uuid'], $item);
+                if ($built !== null) {
+                    array_push($proxy, $built);
+                    array_push($proxies, $item['name']);
+                }
             }
             if ($item['type'] === 'vless') {
-                array_push($proxy, self::buildVless($user['uuid'], $item));
-                array_push($proxies, $item['name']);
+                // Null for a node Stash cannot reach.
+                $built = self::buildVless($user['uuid'], $item);
+                if ($built !== null) {
+                    array_push($proxy, $built);
+                    array_push($proxies, $item['name']);
+                }
             }
             if ($item['type'] === 'trojan') {
                 array_push($proxy, self::buildTrojan($user['uuid'], $item));
@@ -133,6 +142,11 @@ class Stash
 
     public static function buildVmess($uuid, $server)
     {
+        // Stash carries XHTTP for VLESS only: the node would be dialled as
+        // plain TCP and refused.
+        if (($server['network'] ?? null) === 'xhttp') {
+            return null;
+        }
         $array = [];
         $array['name'] = $server['name'];
         $array['type'] = 'vmess';
@@ -248,6 +262,16 @@ class Stash
                 $array['grpc-opts'] = [];
                 if (isset($grpcSettings['serviceName'])) $array['grpc-opts']['grpc-service-name'] = $grpcSettings['serviceName'];
             }
+        }
+        if ($server['network'] === 'xhttp') {
+            // Without this the node went out as plain TCP. Null when the node
+            // makes its clients use an option Stash has no word for.
+            $opts = Xhttp::clashOpts($server['network_settings'] ?? [], 'stash');
+            if ($opts === null) {
+                return null;
+            }
+            $array['network'] = 'xhttp';
+            $array['xhttp-opts'] = $opts;
         }
 
         return $array;

@@ -7,6 +7,7 @@ use App\Services\ServerService;
 use App\Services\UserService;
 use App\Utils\CacheKey;
 use App\Utils\Helper;
+use App\Utils\Xhttp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
@@ -383,6 +384,16 @@ class UniProxyController extends Controller
      * because of it - that node never came up. Newer nodes accept either;
      * this keeps the ones not yet updated working.
      */
+    /**
+     * The node's network settings as V2bX's Xray core reads them. For XHTTP,
+     * values typed as Xray types them and empty objects written as objects:
+     * stored as the form sent them, an XHTTP node never came up.
+     */
+    private static function nodeNetworkSettings($network, $settings)
+    {
+        return $network === 'xhttp' ? Xhttp::forNode($settings) : $settings;
+    }
+
     public static function nodeTlsSettings($settings)
     {
         if (!is_array($settings)) {
@@ -453,7 +464,7 @@ class UniProxyController extends Controller
                 $response = [
                     'server_port' => $this->nodeInfo->server_port,
                     'network' => $this->nodeInfo->network,
-                    'networkSettings' => $this->nodeInfo->networkSettings,
+                    'networkSettings' => self::nodeNetworkSettings($this->nodeInfo->network, $this->nodeInfo->networkSettings),
                     'tls' => $this->nodeInfo->tls
                 ];
                 break;
@@ -461,7 +472,7 @@ class UniProxyController extends Controller
                 $response = [
                     'server_port' => $this->nodeInfo->server_port,
                     'network' => $this->nodeInfo->network,
-                    'networkSettings' => $this->nodeInfo->network_settings,
+                    'networkSettings' => self::nodeNetworkSettings($this->nodeInfo->network, $this->nodeInfo->network_settings),
                     'tls' => $this->nodeInfo->tls,
                     'flow' => $this->nodeInfo->flow,
                     'tls_settings' => self::nodeTlsSettings($this->nodeInfo->tls_settings),
