@@ -199,6 +199,10 @@ class ClashMeta
         $array['alterId'] = 0;
         $array['cipher'] = ClientTransport::vmessCipher($server);
         $array['udp'] = true;
+        // XUDP, as Xray clients and mihomo's VLESS already use: plain VMess
+        // UDP is bound to its first destination, so a second one (STUN, games)
+        // never answers. Every V2bX core serves it.
+        $array['packet-encoding'] = 'xudp';
 
         if (!empty($server['tls'])) {
             $array['tls'] = true;

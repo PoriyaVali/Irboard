@@ -257,6 +257,9 @@ class Singbox
         $array['uuid'] = $uuid;
         $array['security'] = ClientTransport::vmessCipher($server);
         $array['alter_id'] = 0;
+        // XUDP, as the VLESS outbound already uses: plain VMess UDP is bound
+        // to its first destination. Every V2bX core serves it.
+        $array['packet_encoding'] = 'xudp';
         $array['transport']= [];
         $array['domain_resolver'] = 'local';
 
