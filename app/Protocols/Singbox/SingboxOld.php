@@ -149,6 +149,8 @@ class SingboxOld
             'uuid' => $uuid,
             'security' => ClientTransport::vmessCipher($server),
             'alter_id' => 0,
+            // XUDP: plain VMess UDP is bound to its first destination.
+            'packet_encoding' => 'xudp',
             'transport' => [],
         ];
 
