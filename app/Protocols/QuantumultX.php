@@ -34,9 +34,9 @@ class QuantumultX
                 $item['type'] = $item['protocol'];
             }
 
-            // 提前过滤不支持的传输协议 (QX 不支持 gRPC, HTTPUpgrade, XHTTP)
+            // 提前过滤不支持的传输协议 (QX 不支持 gRPC, HTTPUpgrade, XHTTP, mKCP)
             $network = $item['network'] ?? 'tcp';
-            if (in_array($network, ['grpc', 'httpupgrade', 'xhttp'])) {
+            if (in_array($network, ['grpc', 'httpupgrade', 'xhttp', 'kcp'])) {
                 continue;
             }
 

@@ -2,6 +2,7 @@
 
 namespace App\Protocols;
 
+use App\Utils\ClientTransport;
 use App\Utils\Helper;
 use App\Utils\Xhttp;
 use Symfony\Component\Yaml\Yaml;
@@ -189,9 +190,9 @@ class ClashNyanpasu
 
     public static function buildVmess($uuid, $server)
     {
-        // mihomo carries XHTTP for VLESS only: the node would be dialled as
-        // plain TCP and refused.
-        if (($server['network'] ?? null) === 'xhttp') {
+        // mihomo carries XHTTP for VLESS only, and has no mKCP: the node
+        // would be dialled as plain TCP and refused.
+        if (($server['network'] ?? null) === 'xhttp' || !ClientTransport::carries('mihomo', $server['network'] ?? null)) {
             return null;
         }
         $array = [];
@@ -201,7 +202,7 @@ class ClashNyanpasu
         $array['port'] = $server['port'];
         $array['uuid'] = $uuid;
         $array['alterId'] = 0;
-        $array['cipher'] = 'auto';
+        $array['cipher'] = ClientTransport::vmessCipher($server);
         $array['udp'] = true;
 
         if (!empty($server['tls'])) {
@@ -245,8 +246,6 @@ class ClashNyanpasu
                     $array['ws-opts']['path'] = $wsSettings['path'];
                 if (isset($wsSettings['headers']['Host']) && !empty($wsSettings['headers']['Host']))
                     $array['ws-opts']['headers'] = ['Host' => $wsSettings['headers']['Host']];
-                if (isset($wsSettings['security'])) 
-                    $array['cipher'] = $wsSettings['security'];
             }
         }
         if ($network === 'grpc') {
@@ -257,16 +256,21 @@ class ClashNyanpasu
                 if (isset($grpcSettings['serviceName'])) $array['grpc-opts']['grpc-service-name'] = $grpcSettings['serviceName'];
             }
         }
+        if ($network === 'httpupgrade') {
+            // mihomo's HTTPUpgrade is its WebSocket with v2ray-http-upgrade.
+            $array['network'] = 'ws';
+            $array['ws-opts'] = ClientTransport::mihomoHttpUpgrade($server['networkSettings'] ?? ($server['network_settings'] ?? []));
+        }
 
         if (isset($server['encryption']) && !empty($server['encryption']) && isset($server['encryption_settings']) && !empty($server['encryption_settings'])) {
             $encryptionSettings = $server['encryption_settings'];
             $array['encryption'] = $server['encryption'] ?? 'mlkem768x25519plus';
-            $array['encryption'] .= '.' . $encryptionSettings['mode'] ?? 'native';
-            $array['encryption'] .= '.' . $encryptionSettings['rtt'] ?? '1rtt';
+            $array['encryption'] .= '.' . ($encryptionSettings['mode'] ?? 'native');
+            $array['encryption'] .= '.' . ($encryptionSettings['rtt'] ?? '1rtt');
             if (isset($encryptionSettings['client_padding']) && !empty($encryptionSettings['client_padding'])) {
                 $array['encryption'] .= '.' . $encryptionSettings['client_padding'];
             }
-            $array['encryption'] .= '.' . $encryptionSettings['password'] ?? '';
+            $array['encryption'] .= '.' . ($encryptionSettings['password'] ?? '');
         }
 
         return $array;
@@ -274,6 +278,11 @@ class ClashNyanpasu
 
     public static function buildVless($uuid, $server)
     {
+        // A transport mihomo has no counterpart for, such as mKCP: the node
+        // would be dialled as plain TCP and refused.
+        if (!ClientTransport::carries('mihomo', $server['network'] ?? null)) {
+            return null;
+        }
         $array = [];
         $array['name'] = $server['name'];
         $array['type'] = 'vless';
@@ -340,6 +349,10 @@ class ClashNyanpasu
                 if (isset($grpcSettings['serviceName'])) $array['grpc-opts']['grpc-service-name'] = $grpcSettings['serviceName'];
             }
         }
+        if ($server['network'] === 'httpupgrade') {
+            $array['network'] = 'ws';
+            $array['ws-opts'] = ClientTransport::mihomoHttpUpgrade($server['network_settings'] ?? []);
+        }
         if ($server['network'] === 'xhttp') {
             // Everything the node is configured with, extra included: a
             // client left to its defaults is refused by a node whose padding,
@@ -354,12 +367,12 @@ class ClashNyanpasu
         if (isset($server['encryption']) && !empty($server['encryption']) && isset($server['encryption_settings']) && !empty($server['encryption_settings'])) {
             $encryptionSettings = $server['encryption_settings'];
             $array['encryption'] = $server['encryption'] ?? 'mlkem768x25519plus';
-            $array['encryption'] .= '.' . $encryptionSettings['mode'] ?? 'native';
-            $array['encryption'] .= '.' . $encryptionSettings['rtt'] ?? '1rtt';
+            $array['encryption'] .= '.' . ($encryptionSettings['mode'] ?? 'native');
+            $array['encryption'] .= '.' . ($encryptionSettings['rtt'] ?? '1rtt');
             if (isset($encryptionSettings['client_padding']) && !empty($encryptionSettings['client_padding'])) {
                 $array['encryption'] .= '.' . $encryptionSettings['client_padding'];
             }
-            $array['encryption'] .= '.' . $encryptionSettings['password'] ?? '';
+            $array['encryption'] .= '.' . ($encryptionSettings['password'] ?? '');
         }
 
         return $array;

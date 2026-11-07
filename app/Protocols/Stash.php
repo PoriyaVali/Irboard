@@ -2,6 +2,7 @@
 
 namespace App\Protocols;
 
+use App\Utils\ClientTransport;
 use App\Utils\Helper;
 use App\Utils\Xhttp;
 use Symfony\Component\Yaml\Yaml;
@@ -142,9 +143,9 @@ class Stash
 
     public static function buildVmess($uuid, $server)
     {
-        // Stash carries XHTTP for VLESS only: the node would be dialled as
-        // plain TCP and refused.
-        if (($server['network'] ?? null) === 'xhttp') {
+        // Stash carries XHTTP for VLESS only, and has no mKCP or HTTPUpgrade:
+        // the node would be dialled as plain TCP and refused.
+        if (($server['network'] ?? null) === 'xhttp' || !ClientTransport::carries('stash', $server['network'] ?? null)) {
             return null;
         }
         $array = [];
@@ -154,7 +155,7 @@ class Stash
         $array['port'] = $server['port'];
         $array['uuid'] = $uuid;
         $array['alterId'] = 0;
-        $array['cipher'] = 'auto';
+        $array['cipher'] = ClientTransport::vmessCipher($server);
         $array['udp'] = true;
 
         if ($server['tls']) {
@@ -187,9 +188,6 @@ class Stash
                     $array['ws-path'] = $wsSettings['path'];
                 if (isset($wsSettings['headers']['Host']) && !empty($wsSettings['headers']['Host']))
                     $array['ws-headers'] = ['Host' => $wsSettings['headers']['Host']];
-                if (isset($wsSettings['security'])) {
-                    $array['cipher'] = $wsSettings['security'];
-                }
             }
         }
         if ($server['network'] === 'grpc') {
@@ -206,6 +204,11 @@ class Stash
 
     public static function buildVless($uuid, $server)
     {
+        // A transport Stash has no counterpart for, such as mKCP or
+        // HTTPUpgrade: the node would be dialled as plain TCP and refused.
+        if (!ClientTransport::carries('stash', $server['network'] ?? null)) {
+            return null;
+        }
         $array = [];
         $array['name'] = $server['name'];
         $array['type'] = 'vless';

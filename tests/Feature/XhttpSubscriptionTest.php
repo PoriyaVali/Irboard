@@ -157,11 +157,15 @@ class XhttpSubscriptionTest extends TestCase
             $reality = $byName['xhttp reality'];
             $this->assertSame('xhttp', $reality['network'], $class);
             $this->assertSame(['public-key' => 'wCAFe8W0VWbAFB9WzigdzH68oJ3pL2p2xuZ9suP08P0', 'short-id' => '0123abcd'], $reality['reality-opts'], $class);
+            // In obfuscation mode mihomo puts the padding nowhere unless told
+            // where, so the profile names Xray's defaults.
             $this->assertSame([
                 'path' => '/xh', 'host' => 'cdn.example.test', 'mode' => 'auto',
                 'headers' => ['User-Agent' => 'fictional'], 'no-grpc-header' => false,
                 'x-padding-bytes' => '1200-1500', 'x-padding-obfs-mode' => true,
                 'sc-max-each-post-bytes' => '500000',
+                'x-padding-key' => 'x_padding', 'x-padding-header' => 'X-Padding',
+                'x-padding-placement' => 'queryInHeader', 'x-padding-method' => 'repeat-x',
                 'reuse-settings' => ['max-concurrency' => '16-32', 'h-keep-alive-period' => 30],
             ], $reality['xhttp-opts'], $class);
 

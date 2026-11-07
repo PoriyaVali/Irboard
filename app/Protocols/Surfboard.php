@@ -2,6 +2,7 @@
 
 namespace App\Protocols;
 
+use App\Utils\ClientTransport;
 use App\Utils\Helper;
 
 class Surfboard
@@ -44,13 +45,13 @@ class Surfboard
                 // [Proxy Group]
                 $proxyGroup .= $item['name'] . ', ';
             }
-            if ($item['type'] === 'vmess') {
+            if ($item['type'] === 'vmess' && ClientTransport::tcpOrWebSocket($item)) {
                 // [Proxy]
                 $proxies .= self::buildVmess($user['uuid'], $item);
                 // [Proxy Group]
                 $proxyGroup .= $item['name'] . ', ';
             }
-            if ($item['type'] === 'trojan') {
+            if ($item['type'] === 'trojan' && ClientTransport::tcpOrWebSocket($item)) {
                 // [Proxy]
                 $proxies .= self::buildTrojan($user['uuid'], $item);
                 // [Proxy Group]
