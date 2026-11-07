@@ -1,6 +1,7 @@
 <?php
 namespace App\Protocols\Singbox;
 
+use App\Utils\ClientTransport;
 use App\Utils\Helper;
 
 class SingboxOld
@@ -48,9 +49,13 @@ class SingboxOld
             if ($item['type'] === 'v2node') {
                 $item['type'] = $item['protocol'];
             }
-            // sing-box has no XHTTP transport: the node went out as plain
-            // VLESS or VMess, which the node refuses.
-            if (in_array($item['type'], ['vless', 'vmess'], true) && ($item['network'] ?? null) === 'xhttp') {
+            // sing-box has no XHTTP or mKCP transport, and no VLESS
+            // encryption: the node went out as plain VLESS or VMess, which the
+            // node refuses.
+            if (in_array($item['type'], ['vless', 'vmess'], true) && !ClientTransport::carries('singbox', $item['network'] ?? null)) {
+                continue;
+            }
+            if ($item['type'] === 'vless' && !in_array((string)($item['encryption'] ?? ''), ['', 'none'], true)) {
                 continue;
             }
             $result = null;
@@ -142,7 +147,7 @@ class SingboxOld
             'server' => $server['host'],
             'server_port' => $server['port'],
             'uuid' => $uuid,
-            'security' => 'auto',
+            'security' => ClientTransport::vmessCipher($server),
             'alter_id' => 0,
             'transport' => [],
         ];

@@ -2,6 +2,7 @@
 
 namespace App\Protocols;
 
+use App\Utils\ClientTransport;
 use App\Utils\Helper;
 
 class Surge
@@ -36,12 +37,12 @@ class Surge
                 $proxies .= self::buildShadowsocks($user['uuid'], $item);
                 // [Proxy Group]
                 $proxyGroup .= $item['name'] . ', ';
-            }elseif ($item['type'] === 'vmess') {
+            }elseif ($item['type'] === 'vmess' && ClientTransport::tcpOrWebSocket($item)) {
                 // [Proxy]
                 $proxies .= self::buildVmess($user['uuid'], $item);
                 // [Proxy Group]
                 $proxyGroup .= $item['name'] . ', ';
-            }elseif ($item['type'] === 'trojan') {
+            }elseif ($item['type'] === 'trojan' && ClientTransport::tcpOrWebSocket($item)) {
                 // [Proxy]
                 $proxies .= self::buildTrojan($user['uuid'], $item);
                 // [Proxy Group]

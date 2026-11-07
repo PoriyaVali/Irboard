@@ -162,6 +162,18 @@ final class Xhttp
                 $opts[$to] = (string)$value;
             }
         }
+        // In obfuscation mode Xray looks for the padding where its defaults
+        // put it: as repeat-x, under the x_padding key of a URL in the
+        // X-Padding header. mihomo has no defaults; told only to obfuscate,
+        // it sent no padding at all and the node refused every request (400).
+        if (($opts['x-padding-obfs-mode'] ?? false) === true) {
+            $opts += [
+                'x-padding-key' => 'x_padding',
+                'x-padding-header' => 'X-Padding',
+                'x-padding-placement' => 'queryInHeader',
+                'x-padding-method' => 'repeat-x',
+            ];
+        }
         if (isset($extra['xmux']) && is_array($extra['xmux'])) {
             $reuse = self::clashReuse($extra['xmux']);
             if ($reuse !== []) {

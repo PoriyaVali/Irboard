@@ -2,6 +2,7 @@
 
 namespace App\Protocols;
 
+use App\Utils\ClientTransport;
 use App\Utils\Helper;
 use App\Utils\Xhttp;
 use Symfony\Component\Yaml\Yaml;
@@ -184,9 +185,9 @@ class ClashMeta
 
     public static function buildVmess($uuid, $server)
     {
-        // mihomo carries XHTTP for VLESS only: the node would be dialled as
-        // plain TCP and refused.
-        if (($server['network'] ?? null) === 'xhttp') {
+        // mihomo carries XHTTP for VLESS only, and has no mKCP: the node
+        // would be dialled as plain TCP and refused.
+        if (($server['network'] ?? null) === 'xhttp' || !ClientTransport::carries('mihomo', $server['network'] ?? null)) {
             return null;
         }
         $array = [];
@@ -196,7 +197,7 @@ class ClashMeta
         $array['port'] = $server['port'];
         $array['uuid'] = $uuid;
         $array['alterId'] = 0;
-        $array['cipher'] = 'auto';
+        $array['cipher'] = ClientTransport::vmessCipher($server);
         $array['udp'] = true;
 
         if (!empty($server['tls'])) {
@@ -240,8 +241,6 @@ class ClashMeta
                     $array['ws-opts']['path'] = $wsSettings['path'];
                 if (isset($wsSettings['headers']['Host']) && !empty($wsSettings['headers']['Host']))
                     $array['ws-opts']['headers'] = ['Host' => $wsSettings['headers']['Host']];
-                if (isset($wsSettings['security'])) 
-                    $array['cipher'] = $wsSettings['security'];
             }
         }
         if ($network === 'grpc') {
@@ -252,12 +251,22 @@ class ClashMeta
                 if (isset($grpcSettings['serviceName'])) $array['grpc-opts']['grpc-service-name'] = $grpcSettings['serviceName'];
             }
         }
+        if ($network === 'httpupgrade') {
+            // mihomo's HTTPUpgrade is its WebSocket with v2ray-http-upgrade.
+            $array['network'] = 'ws';
+            $array['ws-opts'] = ClientTransport::mihomoHttpUpgrade($server['networkSettings'] ?? ($server['network_settings'] ?? []));
+        }
 
         return $array;
     }
 
     public static function buildVless($uuid, $server)
     {
+        // A transport mihomo has no counterpart for, such as mKCP: the node
+        // would be dialled as plain TCP and refused.
+        if (!ClientTransport::carries('mihomo', $server['network'] ?? null)) {
+            return null;
+        }
         $array = [];
         $array['name'] = $server['name'];
         $array['type'] = 'vless';
@@ -326,6 +335,10 @@ class ClashMeta
                 $array['grpc-opts'] = [];
                 if (isset($grpcSettings['serviceName'])) $array['grpc-opts']['grpc-service-name'] = $grpcSettings['serviceName'];
             }
+        }
+        if ($server['network'] === 'httpupgrade') {
+            $array['network'] = 'ws';
+            $array['ws-opts'] = ClientTransport::mihomoHttpUpgrade($server['network_settings'] ?? []);
         }
         if ($server['network'] === 'xhttp') {
             // Everything the node is configured with, extra included: a

@@ -1,6 +1,7 @@
 <?php
 namespace App\Protocols\Singbox;
 
+use App\Utils\ClientTransport;
 use App\Utils\Helper;
 
 class Singbox
@@ -83,9 +84,13 @@ class Singbox
             if ($item['type'] === 'v2node') {
                 $item['type'] = $item['protocol'];
             }
-            // sing-box has no XHTTP transport: the node went out as plain
-            // VLESS or VMess, which the node refuses.
-            if (in_array($item['type'], ['vless', 'vmess'], true) && ($item['network'] ?? null) === 'xhttp') {
+            // sing-box has no XHTTP or mKCP transport, and no VLESS
+            // encryption: the node went out as plain VLESS or VMess, which the
+            // node refuses.
+            if (in_array($item['type'], ['vless', 'vmess'], true) && !ClientTransport::carries('singbox', $item['network'] ?? null)) {
+                continue;
+            }
+            if ($item['type'] === 'vless' && !in_array((string)($item['encryption'] ?? ''), ['', 'none'], true)) {
                 continue;
             }
             switch ($item['type']) {
@@ -250,7 +255,7 @@ class Singbox
         $array['server'] = $server['host'];
         $array['server_port'] = $server['port'];
         $array['uuid'] = $uuid;
-        $array['security'] = 'auto';
+        $array['security'] = ClientTransport::vmessCipher($server);
         $array['alter_id'] = 0;
         $array['transport']= [];
         $array['domain_resolver'] = 'local';
@@ -285,6 +290,9 @@ class Singbox
             $array['transport']['type'] ='grpc';
             $grpcSettings = $server['networkSettings'] ?? ($server['network_settings'] ?? []);
             if (isset($grpcSettings['serviceName'])) $array['transport']['service_name'] = $grpcSettings['serviceName'];
+        }
+        if ($server['network'] === 'httpupgrade') {
+            $array['transport'] = ClientTransport::singboxHttpUpgrade($server['networkSettings'] ?? ($server['network_settings'] ?? []));
         }
 
         if (empty($array['transport'])) {
@@ -361,6 +369,9 @@ class Singbox
                 $grpcSettings = $server['network_settings'];
                 if (isset($grpcSettings['serviceName'])) $array['transport']['service_name'] = $grpcSettings['serviceName'];
             }
+        }
+        if ($server['network'] === 'httpupgrade') {
+            $array['transport'] = ClientTransport::singboxHttpUpgrade($server['network_settings'] ?? []);
         }
 
         return $array;

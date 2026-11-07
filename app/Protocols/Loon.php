@@ -2,6 +2,7 @@
 
 namespace App\Protocols;
 
+use App\Utils\ClientTransport;
 use App\Utils\Helper;
 
 class Loon
@@ -30,7 +31,7 @@ class Loon
             }
             if ($item['type'] === 'shadowsocks') {
                 $uri .= self::buildShadowsocks($user['uuid'], $item);
-            }elseif ($item['type'] === 'vmess') {
+            }elseif ($item['type'] === 'vmess' && ClientTransport::tcpOrWebSocket($item, true)) {
                 $uri .= self::buildVmess($user['uuid'], $item);
             }elseif ($item['type'] === 'vless' && (($item['network'] ?? null) === 'tcp' || ($item['network'] ?? null) === 'ws')) {
                 $uri .= self::buildVless($user['uuid'], $item);

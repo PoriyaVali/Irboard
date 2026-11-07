@@ -346,7 +346,9 @@ class Helper
             "port" => (string)$server['port'],
             "id" => $uuid,
             "aid" => '0',
-            "scy" => 'auto',
+            // Named for a TLS node: sing-box-based apps read "auto" as
+            // "zero" over TLS, which Xray 26 nodes refuse.
+            "scy" => ClientTransport::vmessCipher($server),
             "net" => $server['network'],
             "type" => 'none',
             "host" => '',
@@ -376,7 +378,6 @@ class Helper
             case 'ws':
                 $config['path'] = $networkSettings['path'] ?? null;
                 $config['host'] = $networkSettings['headers']['Host'] ?? null;
-                isset($networkSettings['security']) && $config['scy'] = $networkSettings['security'];
                 break;
     
             case 'grpc':
