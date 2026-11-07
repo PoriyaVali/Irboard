@@ -205,6 +205,12 @@ class ServedNodeContractTest extends TestCase
         }
         // sing-box reads "auto" as "zero" over TLS, which Xray 26 refuses.
         $this->assertSame('aes-128-gcm', $saved['vmess/ws-tls']['singbox']['security']);
+        // Plain VMess UDP is bound to its first destination: a second one
+        // (STUN, games) over the same socket never answered. XUDP is not.
+        foreach (['vmess/tcp', 'vmess/tcp-http', 'vmess/ws', 'vmess/ws-tls', 'vmess/grpc', 'vmess/httpupgrade'] as $name) {
+            $this->assertSame('xudp', $saved[$name]['clash']['packet-encoding'] ?? null, $name);
+            $this->assertSame('xudp', $saved[$name]['singbox']['packet_encoding'] ?? null, $name);
+        }
         // mihomo has no padding defaults of its own in obfuscation mode.
         $this->assertSame('queryInHeader', $saved['vless/xhttp-tls-padding']['clash']['xhttp-opts']['x-padding-placement']);
 
