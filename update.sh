@@ -85,18 +85,29 @@ if [ -f cli-php.ini ] && [ "$(git diff -U0 -- cli-php.ini | grep -E '^[+-]' | gr
 fi
 # Nor do edits to the documentation stop it. No Markdown file reaches the
 # panel, and an agent working on the server keeps its notes in AI_HANDOFF.md,
-# which then held up every update. Each edited one is copied aside, as step 3
-# does with untracked files, and the repo's copy put back. Any other change
-# still stops the update below.
-while IFS= read -r -d '' _f; do
-    case "$_f" in *.md) ;; *) continue ;; esac
-    if [ -e "$_f" ]; then
-        _bak="${_f}.bak_update_$(date +%Y%m%d_%H%M%S)"
-        cp -p -- "$_f" "$_bak" || die "Could not back up '$_f'. Nothing was updated."
-        warn "Your edits to '$_f' are kept in '$_bak'; the repo's copy is put back."
-    fi
-    git checkout HEAD -- "$_f" || die "Could not restore '$_f'. Nothing was updated."
-done < <(git diff -z --name-only --diff-filter=MDT HEAD -- 2>/dev/null)
+# which then held up every update. When Markdown is all that changed, each
+# changed file is copied aside, as step 3 does with untracked files, and the
+# repo's copy put back: the working copy to FILE.bak_update_<time>, and a
+# staged version the working copy no longer matches to that name + .staged.
+# Any other change stops the update below, with nothing touched.
+_changed="$( { git diff --cached --name-only HEAD --; git diff --name-only --; } 2>/dev/null | sort -u)"
+if [ -n "$_changed" ] && ! printf '%s\n' "$_changed" | grep -qv '\.md$'; then
+    _stamp="$(date +%Y%m%d_%H%M%S)"
+    while IFS= read -r _f; do
+        [ -n "$_f" ] || continue
+        _bak="${_f}.bak_update_${_stamp}"
+        if [ -e "$_f" ]; then
+            cp -p -- "$_f" "$_bak" || die "Could not back up '$_f'. Nothing was updated."
+            warn "Your edits to '$_f' are kept in '$_bak'; the repo's copy is put back."
+        fi
+        if ! git diff --cached --quiet HEAD -- "$_f" && ! git diff --quiet -- "$_f" \
+           && git cat-file -e ":$_f" 2>/dev/null; then
+            git show ":$_f" > "$_bak.staged" || die "Could not back up the staged '$_f'. Nothing was updated."
+            warn "Its staged version is kept in '$_bak.staged'."
+        fi
+        git checkout HEAD -- "$_f" || die "Could not restore '$_f'. Nothing was updated."
+    done <<< "$_changed"
+fi
 if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
     warn "This deployment has uncommitted local changes:"
     git status --short --untracked-files=no | head -15
