@@ -152,6 +152,52 @@ jobs:
           )
           echo "✓ update.sh drops only its own pcntl line, so the next update runs."
 
+      - name: update.sh keeps edited Markdown aside and updates
+        run: |
+          set -e
+          # An agent working on a server keeps its notes in AI_HANDOFF.md, and
+          # update.sh then refused every update over that "local change". Edited
+          # Markdown is copied aside and the repo's copy put back; an edit to
+          # anything else still stops the update. update.sh runs here end to
+          # end, with composer and php stubbed, against a local remote.
+          SCRIPT="$PWD/update.sh"
+          fail() { echo "::error::$*"; exit 1; }
+          T="$(mktemp -d)"
+          export HOME="$T/home"; mkdir -p "$HOME" "$T/bin"
+          printf '#!/bin/sh\nexit 0\n' > "$T/bin/composer"
+          printf '#!/bin/sh\ncase "$1" in -r) echo 8 ;; -m) echo pcntl ;; esac\nexit 0\n' > "$T/bin/php"
+          chmod +x "$T/bin/composer" "$T/bin/php"
+          git init -q --bare -b main "$T/remote.git"
+          git clone -q "$T/remote.git" "$T/src" 2>/dev/null
+          cd "$T/src"; git config user.email t@t; git config user.name t
+          cp "$SCRIPT" update.sh
+          printf '# Notes\n' > AI_HANDOFF.md; printf '# Irboard\n' > readme.md
+          printf '<?php // v1\n' > app.php; touch composer.lock
+          git add -A; git commit -qm one; git push -q origin HEAD:main; OLD=$(git rev-parse HEAD)
+          printf '# Notes\nfrom the repo\n' > AI_HANDOFF.md; printf '<?php // v2\n' > app.php
+          git commit -qam two; git push -q origin HEAD:main; NEW=$(git rev-parse HEAD)
+          git clone -q "$T/remote.git" "$T/panel"; cd "$T/panel"; git reset -q --hard "$OLD"
+
+          # Notes left in AI_HANDOFF.md (staged, even) and a removed readme.
+          printf 'a local note\n' >> AI_HANDOFF.md; git add AI_HANDOFF.md; rm readme.md
+          PATH="$T/bin:$PATH" bash update.sh > "$T/out1" 2>&1 || { cat "$T/out1"; fail "update.sh refused edited Markdown"; }
+          [ "$(git rev-parse HEAD)" = "$NEW" ] || fail "the panel was not updated"
+          [ -z "$(git status --porcelain --untracked-files=no)" ] || fail "the tree is not the repo's: $(git status --short)"
+          git show "$NEW:AI_HANDOFF.md" | cmp -s - AI_HANDOFF.md || fail "AI_HANDOFF.md is not the repo's copy"
+          bak=$(ls AI_HANDOFF.md.bak_update_* 2>/dev/null | head -1)
+          [ -n "$bak" ] && grep -qx 'a local note' "$bak" || fail "the local note was not kept"
+          [ -f readme.md ] || fail "readme.md was not put back"
+          ! ls readme.md.bak_update_* >/dev/null 2>&1 || fail "a removed file got a backup"
+          grep -q "kept in 'AI_HANDOFF.md.bak_update_" "$T/out1" || fail "update.sh did not say where the edits went"
+
+          # An edit to anything else still stops the update, and nothing changes.
+          git reset -q --hard "$OLD"; echo '// mine' >> app.php; printf 'more\n' >> AI_HANDOFF.md
+          if PATH="$T/bin:$PATH" bash update.sh > "$T/out2" 2>&1; then cat "$T/out2"; fail "update.sh ran over a local edit to app.php"; fi
+          grep -q "Refusing to update" "$T/out2" || { cat "$T/out2"; fail "no refusal message"; }
+          [ "$(git rev-parse HEAD)" = "$OLD" ] || fail "HEAD moved"
+          grep -q mine app.php || fail "the edit to app.php was lost"
+          echo "✓ update.sh keeps edited Markdown aside and updates; other edits still stop it."
+
       - name: cli-php.ini really enables OPcache + JIT (the webman runtime)
         run: |
           set -e
