@@ -892,7 +892,7 @@ jobs:
           set -e
           EXPECTED="failed_jobs migrations payment_tracks settings sms_logs \
             v2_bot_channels v2_bot_panels v2_bot_settings v2_bot_texts \
-            v2_card_payment_config v2_card_payments v2_commission_log v2_coupon \
+            v2_card_payment_config v2_card_payments v2_commission_log v2_coupon v2_device_ban \
             v2_giftcard v2_invite_code v2_knowledge v2_log v2_mail_log v2_notice \
             v2_order v2_payment v2_plan v2_plan_prices v2_reseller_log v2_reserved_plans \
             v2_server_anytls v2_server_group v2_server_hysteria v2_server_mdns \
@@ -966,6 +966,23 @@ jobs:
           CNT2=$($MYSQL irboard_upgrade -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='irboard_upgrade';")
           test "$CNT2" -eq "$CNT"
           echo "✓ Re-apply kept the schema stable ($CNT2 tables) — idempotent."
+
+      - name: install.sql has every table and column update.sql creates
+        run: |
+          set -e
+          # The installer imports install.sql alone. What only update.sql creates
+          # is on every updated panel and missing on every new one: v2_device_ban
+          # was, so banning a device failed with "table doesn't exist" on a fresh
+          # install.
+          EXTRA=$($MYSQL -N -e "
+            SELECT CONCAT(table_name,'.',column_name) FROM information_schema.columns WHERE table_schema='irboard_upgrade'
+            EXCEPT
+            SELECT CONCAT(table_name,'.',column_name) FROM information_schema.columns WHERE table_schema='irboard';")
+          if [ -n "$EXTRA" ]; then
+            echo "::error::install.sql lacks what update.sql creates: $(echo $EXTRA | tr '\n' ' ' | head -c 400)"
+            exit 1
+          fi
+          echo "✓ A fresh install has every table and column an updated panel has."
 
       - name: Migrating an upstream v2board (wyx2685) install leaves nothing missing
         run: |

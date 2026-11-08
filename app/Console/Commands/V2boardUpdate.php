@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class V2boardUpdate extends Command
 {
@@ -85,8 +86,39 @@ class V2boardUpdate extends Command
             $this->warn("Applied {$applied}, already present {$skipped}. Fix the above and run this again.");
             return 1;
         }
+        $this->warnInterimMihomoNodes();
         $this->info("Database is up to date (applied {$applied}, already present {$skipped}). The queue workers were restarted; nothing else is needed.");
         return 0;
+    }
+
+    /**
+     * Mihomo nodes kept in the October 26 interim table.
+     *
+     * For about a day (fc33624 to 990d5f4) the new Mihomo protocols lived in
+     * one table, v2_server_mihomo. Each protocol has had a table of its own
+     * since, and nothing reads that one any more: a node created then is in
+     * neither the admin nor any subscription after an update. The update
+     * lists them so they can be created again, and leaves the table as it is.
+     */
+    private function warnInterimMihomoNodes(): void
+    {
+        try {
+            if (!Schema::hasTable('v2_server_mihomo')) {
+                return;
+            }
+            $nodes = DB::table('v2_server_mihomo')->orderBy('id')->get();
+        } catch (\Throwable $e) {
+            return;
+        }
+        if ($nodes->isEmpty()) {
+            return;
+        }
+        $this->warn(count($nodes) . ' node(s) from the interim v2_server_mihomo table are no longer shown in the admin or in subscriptions. Create them again under Nodes:');
+        foreach ($nodes as $node) {
+            $address = trim(($node->host ?? '') . ':' . ($node->port ?? ''), ':');
+            $this->warn(sprintf('  #%d %s "%s"%s', $node->id, $node->protocol, $node->name, $address !== '' ? " ({$address})" : ''));
+        }
+        $this->warn('Their settings are still in v2_server_mihomo (outbound_settings); the table is left as it is.');
     }
 
     /**
