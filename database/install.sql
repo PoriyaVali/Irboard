@@ -202,6 +202,22 @@ CREATE TABLE `v2_coupon` (
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+DROP TABLE IF EXISTS `v2_device_ban`;
+CREATE TABLE `v2_device_ban` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `batch` char(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT 'one admin action',
+  `hash` varchar(80) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT 'the kind:hash the device was matched by',
+  `user_id` int(11) NOT NULL,
+  `was_banned` tinyint(1) NOT NULL COMMENT 'v2_user.banned BEFORE this action, so it can be put back',
+  `admin_id` int(11) DEFAULT NULL COMMENT 'who did it',
+  `reverted_at` int(11) DEFAULT NULL COMMENT 'null while the ban stands',
+  `created_at` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_batch` (`batch`),
+  KEY `idx_user` (`user_id`),
+  KEY `idx_hash` (`hash`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='device bans and the state each one replaced';
+
 DROP TABLE IF EXISTS `v2_giftcard`;
 CREATE TABLE `v2_giftcard` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
