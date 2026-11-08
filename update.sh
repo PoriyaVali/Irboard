@@ -74,6 +74,13 @@ command -v php >/dev/null 2>&1 || die "php is not installed."
 git config --global --add safe.directory "$APP_DIR" >/dev/null 2>&1
 
 # ── 1. Refuse to run if updating would destroy local changes ─────────────────
+# Except the one this script makes itself: on a PHP without pcntl, step 4 adds
+# extension=pcntl.so to cli-php.ini, a tracked file, and the next update then
+# refused to run over it. When that line is the file's only change it is taken
+# out here; step 4 puts it back after the update if PHP still needs it.
+if [ -f cli-php.ini ] && [ "$(git diff -U0 -- cli-php.ini | grep -E '^[+-]' | grep -vE '^(\+\+\+|---) ')" = "+extension=pcntl.so" ]; then
+    git checkout -- cli-php.ini
+fi
 if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
     warn "This deployment has uncommitted local changes:"
     git status --short --untracked-files=no | head -15

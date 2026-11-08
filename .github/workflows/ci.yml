@@ -125,6 +125,33 @@ jobs:
           rm -rf "$T"
           echo "✓ update.sh backs up a hand-copied file and still fast-forwards."
 
+      - name: update.sh runs again after it enabled pcntl in cli-php.ini
+        run: |
+          set -e
+          # On a PHP without pcntl, update.sh adds extension=pcntl.so to the
+          # tracked cli-php.ini, and the next update refused to run over that
+          # "local change". It must take out its own line, and only that.
+          grep -qF '= "+extension=pcntl.so" ]; then' update.sh \
+            || { echo "::error::update.sh lost the guard for its own cli-php.ini edit."; exit 1; }
+          own() { [ "$(git diff -U0 -- cli-php.ini | grep -E '^[+-]' | grep -vE '^(\+\+\+|---) ')" = "+extension=pcntl.so" ]; }
+          T="$(mktemp -d)"
+          cp cli-php.ini "$T/"
+          (
+            cd "$T"
+            git init -q; git config user.email t@t; git config user.name t
+            git add cli-php.ini; git commit -qm base
+            sed -i '/^extension=redis.so/a extension=pcntl.so' cli-php.ini   # update.sh's own edit
+            own || { echo "::error::update.sh's own pcntl line is not recognized"; exit 1; }
+            git checkout -- cli-php.ini
+            [ -z "$(git status --porcelain --untracked-files=no)" ] \
+              || { echo "::error::cli-php.ini still counts as a local change"; exit 1; }
+            # An admin's own edit is not update.sh's: it still stops the update.
+            sed -i '/^extension=redis.so/a extension=pcntl.so' cli-php.ini
+            echo 'memory_limit=1G' >> cli-php.ini
+            ! own || { echo "::error::an admin's edit to cli-php.ini would be discarded"; exit 1; }
+          )
+          echo "✓ update.sh drops only its own pcntl line, so the next update runs."
+
       - name: cli-php.ini really enables OPcache + JIT (the webman runtime)
         run: |
           set -e
