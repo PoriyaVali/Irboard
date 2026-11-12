@@ -8,6 +8,8 @@ use App\Protocols\QuantumultX;
 use App\Protocols\Surfboard;
 use App\Protocols\Surge;
 use App\Protocols\Singbox\Singbox;
+use App\Protocols\Mihomo\ManagedServer;
+use App\Protocols\Mihomo\Outbound;
 use App\Protocols\Mihomo\ProtocolRegistry as Registry;
 use App\Services\ServerService;
 use App\Utils\Helper;
@@ -32,6 +34,8 @@ class ServedNodeContractTest extends TestCase
     use PanelFixtures;
 
     private const UUID = '11111111-2222-3333-4444-555555555555';
+    /** The master key of tests/Unit/SudokuKeysTest.php. */
+    private const SUDOKU_MASTER = '1a1786c2533e7d5b5b1015d717ea8ce09165858dec91327c66bb958dcbd0050a';
 
     protected function setUp(): void
     {
@@ -148,6 +152,44 @@ class ServedNodeContractTest extends TestCase
         ];
     }
 
+    /**
+     * The nodes V2bX's Mihomo core serves for the panel, each as its form
+     * starts it (the protocol's example, with blank per-user templates) and
+     * with what an admin changes most.
+     */
+    private static function managedVariants(): array
+    {
+        $shadowTls = ['mode' => 'shadow-tls', 'version' => 3, 'host' => 'cover.example.test'];
+        return [
+            'http/plain' => ['http', ['tls' => false]],
+            'http/tls' => ['http', ['tls' => true, 'sni' => 'node.example.test']],
+            'socks5/plain' => ['socks5', []],
+            'socks5/tls' => ['socks5', ['tls' => true]],
+            'mieru/tcp' => ['mieru', []],
+            'mieru/udp' => ['mieru', ['transport' => 'UDP']],
+            'shadowquic/default' => ['shadowquic', ['sni' => 'node.example.test']],
+            // Datagrams carry no UDP packet larger than a QUIC datagram frame;
+            // streams carry any.
+            'shadowquic/udp-over-stream' => ['shadowquic', ['sni' => 'node.example.test', 'udp_over_stream' => true]],
+            // A fixed master key, so that the export does not change by itself;
+            // left blank, the panel generates one.
+            'sudoku/default' => ['sudoku', ['key' => self::SUDOKU_MASTER]],
+            'sudoku/http-mask' => ['sudoku', ['key' => self::SUDOKU_MASTER, 'http_mask' => true, 'http_mask_mode' => 'stream']],
+            'snell/shadow-tls' => ['snell', ['obfs_opts' => $shadowTls]],
+        ];
+    }
+
+    /** The admin route the native form of a Mihomo protocol posts to. */
+    private function nativeSavePath(string $type): string
+    {
+        foreach (app('router')->getRoutes() as $route) {
+            if ($route->getActionName() === 'App\\Http\\Controllers\\V1\\Admin\\Server\\ProtocolCatalogController@fetch') {
+                return preg_replace('~/protocols$~', '/' . $type . '/save', '/' . $route->uri());
+            }
+        }
+        $this->fail('The native protocol routes are missing');
+    }
+
     /** @runInSeparateProcess
      * @preserveGlobalState disabled
      */
@@ -167,6 +209,22 @@ class ServedNodeContractTest extends TestCase
                 ->assertOk();
             $saved[$name] = ['node_type' => $type, 'node_id' => $id, 'config' => self::response($config)];
         }
+        // The native forms post JSON. A managed node listens where clients
+        // connect unless told otherwise, and its credentials are templates.
+        foreach (self::managedVariants() as $name => [$type, $fields]) {
+            $node = array_replace(Registry::storage($type, Outbound::catalog()[$type]['example']), [
+                'name' => $name, 'group_id' => ['1'], 'route_id' => [], 'parent_id' => null, 'tags' => [],
+                'rate' => 1, 'sort' => 0, 'show' => true, 'managed' => true,
+                'host' => 'node.example.test', 'port' => ++$port, 'server_port' => 2443,
+            ], $fields);
+            $this->withHeaders($headers)->postJson($this->nativeSavePath($type), $node)
+                ->assertOk()->assertJsonPath('data', true);
+            $id = Registry::model($type)::max('id');
+            $config = $this->getJson('/api/v1/server/UniProxy/config?' . http_build_query(['node_type' => $type, 'node_id' => $id, 'token' => 'contract-token']))
+                ->assertOk();
+            $saved[$name] = ['node_type' => $type, 'node_id' => $id, 'config' => self::response($config)];
+        }
+        $this->assertSame(ManagedServer::TYPES, array_values(array_unique(array_column(self::managedVariants(), 0))), 'a managed protocol has no node in the contract');
 
         // What a subscriber in the nodes' group gets.
         $user = $this->makeActiveUser($this->makePlan(), ['uuid' => self::UUID]);
