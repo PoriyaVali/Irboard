@@ -168,6 +168,9 @@ class ServedNodeContractTest extends TestCase
             'mieru/tcp' => ['mieru', []],
             'mieru/udp' => ['mieru', ['transport' => 'UDP']],
             'shadowquic/default' => ['shadowquic', ['sni' => 'node.example.test']],
+            // Datagrams carry no UDP packet larger than a QUIC datagram frame;
+            // streams carry any.
+            'shadowquic/udp-over-stream' => ['shadowquic', ['sni' => 'node.example.test', 'udp_over_stream' => true]],
             // A fixed master key, so that the export does not change by itself;
             // left blank, the panel generates one.
             'sudoku/default' => ['sudoku', ['key' => self::SUDOKU_MASTER]],
