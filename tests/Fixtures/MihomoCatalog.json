@@ -2703,8 +2703,8 @@
                     "en": "UDP over streams"
                 },
                 "help": {
-                    "fa": "برای انتقال بسته‌های UDP در streamهای قابل اعتماد QUIC روشن کنید؛ در غیر این صورت datagram استفاده می‌شود. باید با رفتار سرویس سازگار باشد.",
-                    "en": "Enable to carry UDP packets over reliable QUIC streams instead of datagrams; the service must support this mode."
+                    "fa": "برای انتقال بسته‌های UDP در streamهای قابل اعتماد QUIC روشن کنید؛ در غیر این صورت datagram استفاده می‌شود. در حالت datagram بسته‌های UDP بزرگ‌تر از حدود ۱۲۰۰ بایت (مثل HTTP/3) منتقل نمی‌شوند؛ اگر کاربران به آن نیاز دارند روشن کنید. نودهای مدیریت‌شده با V2bX هر دو حالت را می‌پذیرند.",
+                    "en": "Enable to carry UDP packets over reliable QUIC streams instead of datagrams. Datagrams cannot carry a UDP packet larger than about 1200 bytes (HTTP/3 sends larger ones); turn this on if users need them. Nodes managed by V2bX accept both modes."
                 },
                 "section": "advanced",
                 "required": false
