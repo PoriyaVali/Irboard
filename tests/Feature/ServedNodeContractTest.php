@@ -27,7 +27,9 @@ use Tests\TestCase;
  *
  * V2bX's cmd/irboard_served_test.go starts each node on every core that can
  * serve it, from that config and user list, and connects through it as each
- * client would. Export with IRBOARD_NODE_CONTRACT_DIR set (served.json).
+ * client would. Export with IRBOARD_NODE_CONTRACT_DIR set: served.json for
+ * V2bX, and meta.yaml, the whole Clash Meta profile as served, for the
+ * Doctor Mobile app's test/features/mihomo/fixtures/irboard_meta.yaml.
  */
 class ServedNodeContractTest extends TestCase
 {
@@ -229,7 +231,8 @@ class ServedNodeContractTest extends TestCase
         // What a subscriber in the nodes' group gets.
         $user = $this->makeActiveUser($this->makePlan(), ['uuid' => self::UUID]);
         $servers = (new ServerService())->getAvailableServers($user);
-        $proxies = array_column(Yaml::parse((new ClashMeta($user, $servers))->handle())['proxies'], null, 'name');
+        $meta = (new ClashMeta($user, $servers))->handle();
+        $proxies = array_column(Yaml::parse($meta)['proxies'], null, 'name');
         $outbounds = array_column(json_decode((new Singbox($user, $servers))->handle()->getContent(), true)['outbounds'], null, 'tag');
         foreach ($servers as $server) {
             $this->assertArrayHasKey($server['name'], $saved, 'a node of the test was not served');
@@ -295,6 +298,9 @@ class ServedNodeContractTest extends TestCase
         if ($dir = getenv('IRBOARD_NODE_CONTRACT_DIR')) {
             if (!is_dir($dir)) mkdir($dir, 0755, true);
             file_put_contents($dir . '/served.json', json_encode(['uuid' => self::UUID, 'nodes' => $saved], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n");
+            // The Clash Meta profile as its bytes: a client that reads the
+            // YAML itself meets the scalars as they are written, not as parsed.
+            file_put_contents($dir . '/meta.yaml', $meta);
         }
     }
 }
