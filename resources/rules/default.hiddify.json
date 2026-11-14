@@ -4,21 +4,21 @@
       {
         "type": "local",
         "tag": "local",
-        "detour": "دکتر‌موبایل‌جایزان"
+        "detour": "دکتر‌موبایل"
       },
       {
         "type": "https",
         "tag": "remote",
         "server": "cloudflare-dns.com",
         "server_port": 443,
-        "detour": "دکتر‌موبایل‌جایزان"
+        "detour": "دکتر‌موبایل"
       },
       {
         "type": "udp",
         "tag": "ir",
         "server": "8.8.8.8",
         "server_port": 53,
-        "detour": "دکتر‌موبایل‌جایزان"
+        "detour": "دکتر‌موبایل"
       }
     ],
     "rules": [
@@ -68,7 +68,7 @@
 
   "outbounds": [
     {
-      "tag": "دکتر‌موبایل‌جایزان",
+      "tag": "دکتر‌موبایل",
       "type": "selector",
       "interrupt_exist_connections": true,
       "outbounds": ["انتخاب خودکار"]
@@ -81,7 +81,7 @@
       "tolerance": 80,
       "idle_timeout": "10m",
       "interrupt_exist_connections": false,
-      "outbounds": ["دکتر‌موبایل‌جایزان"]
+      "outbounds": ["دکتر‌موبایل"]
     }
   ],
 
@@ -97,13 +97,13 @@
       {
         "protocol": "stun",
         "action": "route",
-        "outbound": "دکتر‌موبایل‌جایزان"
+        "outbound": "دکتر‌موبایل"
       },
       {
         "network": "udp",
         "port": [3478, 3479, 3480, 3481, 4244, 5222, 5223, 5228, 5242, 5349, 19302, 19305],
         "action": "route",
-        "outbound": "دکتر‌موبایل‌جایزان"
+        "outbound": "دکتر‌موبایل"
       },
       {
         "rule_set": ["category-ads-all"],
@@ -114,7 +114,7 @@
       {
         "clash_mode": "پراکسی سراسری",
         "action": "route",
-        "outbound": "دکتر‌موبایل‌جایزان"
+        "outbound": "دکتر‌موبایل"
       },
 
       {
@@ -203,12 +203,12 @@
           "khanacademy.org"
         ],
         "action": "route",
-        "outbound": "دکتر‌موبایل‌جایزان"
+        "outbound": "دکتر‌موبایل"
       }
     ],
 
     "auto_detect_interface": true,
-    "final": "دکتر‌موبایل‌جایزان",
+    "final": "دکتر‌موبایل",
     "default_domain_resolver": {
       "server": "remote"
     },
@@ -218,24 +218,24 @@
         "tag": "geoip-ir",
         "type": "remote",
         "format": "binary",
-        "url": "https://drmobjay.com/route/geoip-ir.srs",
-        "download_detour": "دکتر‌موبایل‌جایزان",
+        "url": "https://raw.githubusercontent.com/Chocolate4U/Iran-sing-box-rules/rule-set/geoip-ir.srs",
+        "download_detour": "دکتر‌موبایل",
         "update_interval": "168h"
       },
       {
         "tag": "geosite-ir",
         "type": "remote",
         "format": "binary",
-        "url": "https://drmobjay.com/route/geosite-ir.srs",
-        "download_detour": "دکتر‌موبایل‌جایزان",
+        "url": "https://raw.githubusercontent.com/Chocolate4U/Iran-sing-box-rules/rule-set/geosite-ir.srs",
+        "download_detour": "دکتر‌موبایل",
         "update_interval": "168h"
       },
       {
         "tag": "category-ads-all",
         "type": "remote",
         "format": "binary",
-        "url": "https://drmobjay.com/route/geosite-category-ads-all.srs",
-        "download_detour": "دکتر‌موبایل‌جایزان",
+        "url": "https://raw.githubusercontent.com/Chocolate4U/Iran-sing-box-rules/rule-set/geosite-category-ads-all.srs",
+        "download_detour": "دکتر‌موبایل",
         "update_interval": "168h"
       }
     ]

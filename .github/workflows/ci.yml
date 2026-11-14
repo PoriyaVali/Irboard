@@ -205,6 +205,40 @@ jobs:
           [ "$(ls | grep -c bak_update_ || true)" = "$before" ] || fail "a refused update made backups"
           echo "✓ update.sh keeps edited Markdown aside and updates; other edits still stop it."
 
+      - name: update.sh keeps runtime data the repo stops tracking
+        run: |
+          set -e
+          # storage/appstore/apps.json is written by the admin app-store screen
+          # and used to be committed. A fast-forward deletes a tracked file the
+          # repo removes; update.sh must put the panel's copy back, and only
+          # under storage/ - a code file the repo deletes stays deleted.
+          SCRIPT="$PWD/update.sh"
+          fail() { echo "::error::$*"; exit 1; }
+          T="$(mktemp -d)"
+          export HOME="$T/home"; mkdir -p "$HOME" "$T/bin"
+          printf '#!/bin/sh\nexit 0\n' > "$T/bin/composer"
+          printf '#!/bin/sh\ncase "$1" in -r) echo 8 ;; -m) echo pcntl ;; esac\nexit 0\n' > "$T/bin/php"
+          chmod +x "$T/bin/composer" "$T/bin/php"
+          git init -q --bare -b main "$T/remote.git"
+          git clone -q "$T/remote.git" "$T/src" 2>/dev/null
+          cd "$T/src"; git config user.email t@t; git config user.name t
+          cp "$SCRIPT" update.sh; chmod +x update.sh
+          mkdir -p storage/appstore; printf '{"apps":"this panel"}\n' > storage/appstore/apps.json
+          printf '<?php // v1\n' > app.php; printf '<?php // old\n' > old.php; touch composer.lock
+          git add -A; git commit -qm one; git push -q origin HEAD:main; OLD=$(git rev-parse HEAD)
+          git rm -q --cached storage/appstore/apps.json; git rm -q old.php
+          printf '/storage/appstore/apps.json\n' > .gitignore; printf '<?php // v2\n' > app.php
+          git add -A; git commit -qm two; git push -q origin HEAD:main; NEW=$(git rev-parse HEAD)
+          git clone -q "$T/remote.git" "$T/panel"; cd "$T/panel"; git reset -q --hard "$OLD"
+          PATH="$T/bin:$PATH" bash update.sh > "$T/out" 2>&1 || { cat "$T/out"; fail "update.sh failed"; }
+          [ "$(git rev-parse HEAD)" = "$NEW" ] || fail "the panel was not updated"
+          [ "$(cat storage/appstore/apps.json 2>/dev/null)" = '{"apps":"this panel"}' ] || fail "the panel's app store was lost"
+          git check-ignore -q storage/appstore/apps.json || fail "apps.json is not ignored after the update"
+          [ ! -e old.php ] || fail "a code file the repo deleted came back"
+          [ -z "$(git status --porcelain --untracked-files=no)" ] || fail "the tree is not the repo's: $(git status --short)"
+          grep -q "Kept this panel's own 'storage/appstore/apps.json'" "$T/out" || { cat "$T/out"; fail "update.sh did not say it kept the file"; }
+          echo "✓ update.sh keeps runtime data the repo stops tracking."
+
       - name: cli-php.ini really enables OPcache + JIT (the webman runtime)
         run: |
           set -e

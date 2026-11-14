@@ -95,9 +95,17 @@ class SingboxOld
 
     protected function addProxies($proxies)
     {
+        $auto = 'انتخاب خودکار';
         foreach ($this->config['outbounds'] as &$outbound) {
-            if (($outbound['type'] === 'selector' && $outbound['tag'] === config('v2board.app_name'))
-                || ($outbound['type'] === 'urltest' && $outbound['tag'] === 'انتخاب خودکار')
+            // The selector a person picks a node from was found only by its
+            // tag being the panel's app_name, so a template naming it anything
+            // else left it offering the automatic group alone. A selector that
+            // offers that group is the one, whatever it is called - as in
+            // Singbox::addProxies.
+            $isPicker = $outbound['type'] === 'selector'
+                && ($outbound['tag'] === config('v2board.app_name') || in_array($auto, $outbound['outbounds'] ?? [], true));
+            if ($isPicker
+                || ($outbound['type'] === 'urltest' && $outbound['tag'] === $auto)
                 || ($outbound['type'] === 'selector' && strpos($outbound['tag'], '#') === 0)) {
                 array_push($outbound['outbounds'], ...array_column($proxies, 'tag'));
             }

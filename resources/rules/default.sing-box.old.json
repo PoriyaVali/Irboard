@@ -108,7 +108,7 @@
     "outbounds": [
         {
             "type": "selector",
-            "tag": "دکتر‌موبایل‌جایزان",
+            "tag": "دکتر‌موبایل",
             "outbounds": [
                 "انتخاب خودکار"
             ]
@@ -138,14 +138,8 @@
                 "action": "hijack-dns"
             },
             {
-                "domain": [
-                    "drmobjay.com"
-                ],
-                "outbound": "direct"
-            },
-            {
                 "protocol": "stun",
-                "outbound": "دکتر‌موبایل‌جایزان"
+                "outbound": "دکتر‌موبایل"
             },
             {
                 "network": "udp",
@@ -163,7 +157,7 @@
                     19302,
                     19305
                 ],
-                "outbound": "دکتر‌موبایل‌جایزان"
+                "outbound": "دکتر‌موبایل"
             },
             {
                 "clash_mode": "خاموش کردن پروکسی",
@@ -171,7 +165,7 @@
             },
             {
                 "clash_mode": "پراکسی سراسری",
-                "outbound": "دکتر‌موبایل‌جایزان"
+                "outbound": "دکتر‌موبایل"
             },
             {
                 "domain": [
@@ -312,7 +306,7 @@
                     "edx.org",
                     "khanacademy.org"
                 ],
-                "outbound": "دکتر‌موبایل‌جایزان"
+                "outbound": "دکتر‌موبایل"
             },
             {
                 "rule_set": [

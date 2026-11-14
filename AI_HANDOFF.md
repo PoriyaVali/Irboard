@@ -1,5 +1,40 @@
 # AI work log and handoff
 
+## Active handoff - 2026-11-14 - Claude - public templates name no operator host
+
+This repository is public. One deployment's own hosts, relay IP rule and brand
+tag were removed from what it ships; an operator keeps theirs in the custom.*
+copies next to each template (resources/rules/.gitignore ignores custom.*).
+Files: resources/rules/{default.clash.yaml,app.clash.yaml,default.sing-box.json,
+default.sing-box.old.json,default.hiddify.json,default.dm-app.json};
+config/{exchange,mirror}.php and app/Console/Commands/MirrorBuild.php (comments
+only); host/path mentions in this file; .gitignore + `git rm --cached
+storage/appstore/apps.json` (written by the admin app-store screen and names
+download hosts); update.sh keeps runtime files under storage/ that an update
+stops tracking (copied aside before the fast-forward, restored after);
+app/Protocols/Singbox/SingboxOld.php; tests/Feature/{AppConfigDocumentTest,
+SingboxPickerGroupTest}.php; a ci.yml step simulating the apps.json update.
+
+- Rule-set URLs in the sing-box/Hiddify templates point at the upstream
+  Chocolate4U/Iran-sing-box-rules release (each URL answered 200), downloaded
+  through the proxy group rather than DIRECT.
+- default.dm-app.json: update_sources names GitHub only (the app appends its
+  built-ins after the list); transfer_check_endpoints is no longer published,
+  so the app uses its built-in endpoint unless custom.dm-app.json sets one.
+- SingboxOld filled the picker selector only when its tag equalled app_name;
+  it now also fills a selector offering the automatic group, as Singbox does.
+- AppConfigDocumentTest gains an allowlist of the hosts the shipped templates
+  may name; a new host fails CI until it is added on purpose.
+
+Validated here: templates parse (json/yaml), the appConfig flatten and the
+document assertions via a standalone replica of the controller, the host
+allowlist, SingboxOld before/after via a replica (old: picker offered only the
+automatic group when app_name differed), php -l, the new ci.yml step against
+the old update.sh (fails) and the new one (passes). The Laravel suite itself was
+not run locally (no vendor tree): CI is the first full run.
+Risks: an operator who relied on the removed values must copy each default.*
+to custom.* before updating. Git history and existing forks still contain them.
+
 ## Active handoff - 2026-10-21 - Codex - both gift P1s FIXED/LOCAL PASS; CI required before merge
 
 User authorized finishing all GitHub sync/merges. UNCOMMITTED runtimefix exactfiles:
@@ -188,7 +223,7 @@ appears before slow profile sync; account/dispose guards intact. FullFlutter1316
 470PASS onPHP8.1; unrelated broad112test run1ERROR missing Redis (initially APP_KEY).
 No real gift redemption/payment/device/installer test was performed.
 
-Laravel metadata2filepatch IS LIVE on91.107.255.204, exact hashes/backups/API runtime
+Laravel metadata2filepatch IS LIVE on the production panel, exact hashes/backups/API runtime
 and HTTP200/403 checks in prior152completion entry and gift152-health-final.log.
 No DB/schema/tariff/fulfilmentchanges. SIGUSR2 API drain needed idle closed-counter
 cleanup via SIGINT ONLY already-unlistening/noHTTPsocket/CPU-idle children; fresh4
@@ -269,9 +304,9 @@ failed atomically; corrected UTF8 patch/regeneration passed. PHP syntax2filesPAS
 LIVE main-server PATCH (earlier user explicitly authorized Laravel deployment;
 latest hold concerns GitHub/public app release). Exact baseline live2file hashes
 matched HEAD before writing. Only additive response presentation installed on
-91.107.255.204 /www/wwwroot/ddr.drmobilejayzan.info. Root-owned0644 preserved.
+the production panel. Root-owned0644 preserved.
 Private payload/script/backups+metadata/journal under
-/root/drmobile-deploy-20261019-tailored-v150/gift152-response-20261020/; source backups
+<a private directory on the panel host>; source backups
 private0700/0600. No .env/composer/config/routes/Umi/tariff/DB changes or test orders.
 LIVE fileSHA256:
 GiftOrderService.php 291b9d55e4165c575a371ac82a21a60513973d4700df10af3a0f3eb91d1bf5d1
@@ -332,7 +367,7 @@ connection or mutation yet in this task. No physical or real purchase tests.
 ## Active handoff - 2026-10-20 - Codex - main backend DEPLOYED; 2.2.4+150 test files VERIFIED; public app HOLD
 
 Production feature source e9c745603cf5ee3f26a4833c1b1e924a87154e1d is LIVE on main
-91.107.255.204 /www/wwwroot/ddr.drmobilejayzan.info, completed07:00:17UTC Oct20.
+the production panel, completed07:00:17UTC Oct20.
 Five additive columns + exact unique indexes custom_key/gift_coupon_id verified.
 No settings/reference approvals, tariff changes, real purchase or payment tests
 performed. Custom pricing remains OFF/no row/no references until administrator
@@ -349,7 +384,7 @@ backedupconfig metadata/ownership preserved and reread/update loaded after new
 source installation. Source/DB activation happened only after ALLoldapp processes
 were zero. Newruntime acknowledged maintenance503, then UP200 before exposure.
 
-New private full DBbackup at .../drmobile-deploy-20261019-tailored-v150/resume-20261020:
+New private full DBbackup at <a private directory on the panel host>:
 7972743gzipbytes/176693724rawbytes, SHA63e0ac5a6faebc826ea45d333e8d3990d76a104567ffd763b63bf2485a7abe0c;
 consistentInnoDB snapshot and gzipintegrityPASS; config/customization backups
 private0700/0600. Rollout journal and logs there; local ignored audit/production-
@@ -456,7 +491,7 @@ source CI + signed150 artifacts. New custom gift code must fit VARCHAR64.
 
 Main backend deployment remains explicitly AUTHORIZED after this new source is
 ready. NO functional deployment/DDL/restart/payment/settings/approval yet.
-Actual prod fb1c64d at91.107.255.204; only dirty two umi bundles4883540bytes each,
+Actual prod fb1c64d at the production panel; only dirty two umi bundles4883540bytes each,
 SHA26135ef246076243d19e8fd03a44f5daa393fbe935612269d23ecef6a91019be.
 Private olda377 source/config backup preparation was interrupted locally;
 completion UNKNOWN pending metadata verification, no full DB backup yet.
@@ -472,7 +507,7 @@ financial review and fullapp validation still PENDING. UI/sharedsource UNCOMMITT
 Maintainedpatcher addsONLY665bytes peractualproductionbundle; strippingourfences
 returns originalbytes, originalhash26135ef..., patchedhash951c7179d096082c206309f1311607ca643364328f41c69d1cd2a5a144dd52b9.
 Olda377 private source/config backups now verifiedgzipOK, nofunctionalchanges.
-NEWprivatebackup /root/drmobile-deploy-20261019-tailored-v150 source/configOK;
+NEWprivatebackup <a private directory on the panel host> source/configOK;
 fullconsistentInnoDB DBbackup exit0,5352149gzipbytes/37577876rawbytes,
 SHA5da6c05c9070d525897f384ba880261367dcfab58472a376fb12644024fc9c11.
 DBMySQL5.7.44,53tablesALLInnoDB; backupgzipverification stillpending.

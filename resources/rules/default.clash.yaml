@@ -233,8 +233,6 @@ rules:
   - DOMAIN-SUFFIX,icloud.com,DIRECT
   - DOMAIN-SUFFIX,mzstatic.com,DIRECT
   - DOMAIN-SUFFIX,apple-cloudkit.com,DIRECT
-  - DOMAIN,drmobjay.com,DIRECT
-  - IP-CIDR,45.90.74.232/8,DIRECT
   - IP-CIDR,17.0.0.0/8,DIRECT,no-resolve
 
   - DOMAIN-KEYWORD,adserver,REJECT

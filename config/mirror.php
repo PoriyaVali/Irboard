@@ -3,7 +3,7 @@
 /*
  * What the Iranian relay is allowed to take a copy of.
  *
- * drmobjay.com is the first host the app talks to, and it reaches this panel
+ * The relay is the first host the app talks to, and it reaches this panel
  * through an SSH tunnel out of Iran. When that tunnel is down - which happens,
  * and would be permanent under a national internet - nginx there answers 502
  * and a subscriber who has already paid cannot fetch the configuration they
