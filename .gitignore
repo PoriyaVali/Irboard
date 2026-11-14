@@ -59,6 +59,9 @@ nohup.out
 /storage/framework/laravel-serve.pid
 /storage/framework/server-info.json
 /storage/server_config_status.json
+# The app store's entries: written by the admin screen, and they name the
+# operator's own download hosts. update.sh keeps the panel's copy.
+/storage/appstore/apps.json
 /public/.well-known/
 
 # Backups written by scripts/patch_admin_anytls_tls.py next to the bundle it

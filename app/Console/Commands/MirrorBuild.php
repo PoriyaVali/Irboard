@@ -211,7 +211,7 @@ class MirrorBuild extends Command
         );
         // 🔑 Tiny, and the customer site does not work without it.
         //
-        // drmobjay.com's own Vue front-end calls checkLogin on every page load
+        // The relay's own Vue front-end calls checkLogin on every page load
         // to decide whether it has a session. Unanswered, it concludes the
         // person is signed out and shows a login form they cannot get past -
         // during an outage where their subscription was sitting right here,

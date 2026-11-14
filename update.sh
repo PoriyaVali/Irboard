@@ -148,10 +148,40 @@ else
         fi
     done < <(git diff --name-only --diff-filter=A "$BEFORE" "$REMOTE/$BRANCH" 2>/dev/null)
 
+    # The other direction: runtime data under storage/ that the repo stops
+    # tracking. storage/appstore/apps.json, which the admin app-store screen
+    # writes, used to be committed; the fast-forward deletes a tracked file the
+    # update removes, which would empty the panel's app store. Copy each such
+    # file aside and put it back afterwards, where .gitignore now leaves it be.
+    # (One with local edits never gets here: step 1 refuses to run over it.)
+    _kept=""
+    while IFS= read -r _f; do
+        [ -n "$_f" ] || continue
+        case "$_f" in storage/*) ;; *) continue ;; esac
+        [ -f "$_f" ] || continue
+        [ -n "$_kept" ] || _kept="$(mktemp -d)" || die "Could not keep '$_f'. Nothing was updated."
+        mkdir -p "$_kept/$(dirname "$_f")" && cp -p -- "$_f" "$_kept/$_f" \
+            || die "Could not keep '$_f'. Nothing was updated."
+    done < <(git diff --name-only --diff-filter=D "$BEFORE" "$REMOTE/$BRANCH" 2>/dev/null)
+
     git merge --ff-only "$REMOTE/$BRANCH" \
         || die "Local and remote have diverged — cannot fast-forward.
 Nothing was changed. Resolve manually, then re-run."
     say "Code updated to $(git rev-parse --short HEAD)."
+
+    if [ -n "$_kept" ]; then
+        _lost=0
+        while IFS= read -r _k; do
+            _k="${_k#./}"
+            if mkdir -p "$(dirname "$_k")" && cp -p -- "$_kept/$_k" "$_k"; then
+                say "Kept this panel's own '$_k' (the repo no longer tracks it)."
+            else
+                _lost=1
+                warn "Could not put back '$_k' - your copy is in $_kept/$_k."
+            fi
+        done < <(cd "$_kept" && find . -type f)
+        [ "$_lost" = 1 ] || rm -rf "$_kept"
+    fi
 fi
 
 # Keep the deploy scripts runnable after every update.

@@ -4,8 +4,8 @@ return [
     /*
      * An OPTIONAL private relay that has already read the rate.
      *
-     * 🔴 This used to default to `https://drmobjay.com/get-dollar-price.php`,
-     * which is one specific deployment's own server. Every panel installed
+     * 🔴 This used to default to a rate script on one specific deployment's
+     * own server. Every panel installed
      * from this repository therefore called that host on a schedule, without
      * its operator ever choosing to, and inherited whatever it happened to be
      * serving. A default belongs to whoever installs the software, not to
