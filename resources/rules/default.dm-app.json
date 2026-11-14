@@ -58,7 +58,7 @@
   "settings":
   {
       "app": {
-          "_": "Which core the connect button drives, and where the app looks for new versions.",
+          "_": "Which core the connect button drives, where the app looks for new versions, and how automatic groups vet a node.",
           "selected_core": "mihomo",   // mihomo | singbox | mdns
           // Where the app reads version.json (Android) or windows/version.json
           // (Windows), tried in this order until one can deliver the release.
@@ -70,6 +70,17 @@
           "update_sources": [
               "https://raw.githubusercontent.com/PoriyaVali/drmobile-updates/main",
               "https://drmobjay.com/updates"
+          ],
+          // Automatic groups on both cores (mihomo and sing-box) prefer a node
+          // only once it has carried a real exchange through this endpoint:
+          // 64 KiB up, its SHA-256 back, 128 KiB down. A node that answers a
+          // URL test but cannot upload is ranked last. One or two https URLs
+          // running dm-transfer-v1.php, with no credentials, query or
+          // fragment; a list the cores would refuse is ignored and the
+          // built-in endpoint used, so a typo here cannot take phones offline.
+          "transfer_check": true,   // true | false - false leaves the choice to URL tests alone
+          "transfer_check_endpoints": [
+              "https://ddr.drmobilejayzan.info/dm-transfer-v1.php"
           ]
           // Optional, not published by default:
           // "profile_update_minutes": 60   // how often panel profiles refresh; minimum 5, 0 = never; absent = the subscription header
@@ -83,10 +94,12 @@
           "direct-dns-address": "1.1.1.1",   // local | udp://1.1.1.1 | udp://223.5.5.5 | tcp://1.1.1.1 | 8.8.8.8
           "direct-dns-domain-strategy": "",   // "" | prefer_ipv6 | prefer_ipv4 | ipv4_only | ipv6_only
           "direct-port": 12337,   // number (port)
+          "enable-fake-dns": false,   // true | false - answer lookups with fake addresses and resolve on the server side
           "enable-tls-fragment": false,   // true | false
           "enable-tls-mixed-sni-case": false,   // true | false
           "enable-tls-padding": false,   // true | false
           "fragment-packets": "tlshello",   // tlshello | 1-3 | 1-2
+          "independent-dns-cache": true,   // true | false - a separate DNS cache per outbound
           "ipv6-mode": "ipv4_only",   // ipv4_only | prefer_ipv4 | prefer_ipv6 | ipv6_only
           "log-level": "warn",   // trace | debug | info | warn | error | fatal | panic
           "mixed-port": 12334,   // number (port)
@@ -138,7 +151,7 @@
           "mh_custom_rules": [],   // list of "type|domain|action"
           "mh_default_auto": true,   // true | false
           "mh_default_ns": "8.8.8.8",   // plain IP (bootstrap)
-          "mh_direct_ns": "178.22.122.100",   // plain IP (DNS for DIRECT traffic)
+          "mh_direct_ns": "",   // plain IP put first for DIRECT lookups; "" = the region's own resolvers (Iran: Shecan, Electro; none elsewhere). An IP here reaches every region
           "mh_disable_keep_alive": false,   // true | false
           "mh_dns_cache_algo": "",   // "" (core default) | lru | arc
           "mh_dns_cache_size": 0,   // records; 0 = core default
