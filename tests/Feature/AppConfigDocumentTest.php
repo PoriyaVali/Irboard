@@ -53,6 +53,23 @@ class AppConfigDocumentTest extends TestCase
         ], $this->document()['settings']['update_sources']);
     }
 
+    public function testTheShippedValuesAreTheAppsOwn()
+    {
+        // Publishing the file as-is must change nothing on a phone, so these
+        // carry the app's compiled-in values.
+        $settings = $this->document()['settings'];
+        $this->assertTrue($settings['transfer_check']);
+        $this->assertSame(
+            ['https://ddr.drmobilejayzan.info/dm-transfer-v1.php'],
+            $settings['transfer_check_endpoints']
+        );
+        $this->assertFalse($settings['enable-fake-dns']);
+        $this->assertTrue($settings['independent-dns-cache']);
+        // Empty means each region's own resolvers. The Shecan address that
+        // used to be here reached Russian and Chinese users as well.
+        $this->assertSame('', $settings['mh_direct_ns']);
+    }
+
     public function testTheBodyIsTheSameEveryTime()
     {
         // The app skips a document it has already applied by comparing it, so
