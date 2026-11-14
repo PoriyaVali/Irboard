@@ -775,10 +775,10 @@ jobs:
           python3 scripts/patch_admin_native_node_help.py --check
           node --test tests/AdminMihomoNodesBrowserTest.cjs
 
-      - name: New node protocol administration and subscription contract
+      - name: New node protocol administration, subscription and app-config contract
         env:
           IRBOARD_MIHOMO_CONTRACT_DIR: ${{ runner.temp }}/mihomo-contract
-        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'AdminFormMetadataTest|MihomoNodesTest|MihomoSubscriptionTest|SshKeysTest|MieruTrafficPatternTest|XhttpSubscriptionTest|ServedNodeContractTest'
+        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'AdminFormMetadataTest|MihomoNodesTest|MihomoSubscriptionTest|SshKeysTest|MieruTrafficPatternTest|XhttpSubscriptionTest|ServedNodeContractTest|SingboxPickerGroupTest|AppConfigDocumentTest'
 
       - name: Simulate node traffic, limits, bans and reporting with real Redis
         env:
