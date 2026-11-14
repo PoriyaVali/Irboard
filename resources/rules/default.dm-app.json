@@ -116,6 +116,7 @@
           "mirage-enable": false,   // true | false - matches the app's compiled default
           "mirage-offset": 0,   // bytes kept in the small first record; 0 = the measured default (5)
           "mirage-records": 0,   // 0 = the default shape, or 2..8 records
+          "mirage-auto": true,   // true | false - adaptive shape in the core: a server whose shape is reset or ignored moves to the next shape, the untouched hello last; a working shape is kept. Cores that predate it ignore it
           // Optional, not published by default - the automatic Mirage trial:
           // "mirage-auto-experiment": false,   // true | false
           // "mirage-probe-host": "",   // host the trial dials; empty = the app's built-in target
