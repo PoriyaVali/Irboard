@@ -1,5 +1,94 @@
 # AI work log and handoff
 
+## Active handoff - 2026-11-16 - Codex - FIXED/LOCAL VALIDATED: PR37 firewall review fixes, CI and deployment pending
+
+Owner authorized merge and deployment of PR37. Preparing fixes for four P2
+findings before shipping: partial firewalld writes lose ownership, UFW
+source-restricted allows are mistaken for public access, firewalld default
+zone may differ from the ingress zone, and iptables ignores IPv6. Files to
+change: scripts/node_ports.py, tests/NodePortsAgentTest.py, docs/node-ports.md
+and this handoff. Work in an isolated local clone, not the live checkout.
+Implemented scoped ownership: firewalld active zones, runtime/permanent
+separately; public inbound UFW rules with independent IPv4/IPv6 ownership;
+iptables/ip6tables independent rules; failed inspection/address discovery
+stops safely. Existing operator rules are not adopted when only another
+scope is missing. The command reports errors for partial operations and
+retries them while keeping successful changes recorded.
+
+Windows simulated tests 22/22 PASS (Linux import/nonroot compatibility shim
+only), Debian 22/22 PASS. Real iptables + ip6tables in an isolated network
+namespace: single ports, UDP ranges, re-add after flush/reboot simulation,
+and removal all PASS, operator 443 rule preserved in both families. Actual
+UFW --dry-run accepts add/delete syntax for both families and port ranges;
+UFW was not enabled or changed. Host rules before/after namespace validation
+match after excluding iptables-save timestamp comments. An initial raw-hash
+audit failed because those comment timestamps changed; corrected audit PASS.
+bash -n agent/update, Python compilation, admin native-help --check and git
+diff --check PASS. Real firewalld and enabled-UFW integration not run. CI and
+full Laravel tests pending; preparing commit, no merge/deployment yet.
+Prior implementation and the failed-removal fix are Claude's commits; this
+entry does not claim them. Known limits: all active firewalld
+zones are managed (no per-node bind-interface setting); custom nftables/
+chains and provider firewalls are outside scope; identical UFW rules later
+replaced by an operator cannot be distinguished from the original rule.
+
+## Active handoff - 2026-11-16 - Claude - node ports on the panel's own server, REALITY port help
+
+The owner asked for this: a node running on the panel's server gets its port
+opened in that server's firewall automatically, closed again when the node is
+deleted, with shared ports kept open until their last node goes.
+
+- `app/Services/LocalNodePorts.php` decides (pure, tested without a
+  framework): a node is local when its V2bX last reported from one of this
+  server's addresses, or its host is or resolves to one. Loopback never counts
+  (SSH-tunnelled V2bX instances report from 127.0.0.1). Service port with the
+  node type's protocols; children and unmanaged protocol nodes add none.
+- `php artisan node:local-ports --ips=...` prints the union as JSON, or
+  {"ok":false} on any failure.
+- UniProxy `status`/`user` remember the reporter address for a day
+  (`CacheKey NODE_REPORTER_IP`, keyed "type#id").
+- `scripts/node_ports.py`, run by `server_config_agent.sh` every minute and at
+  once on `storage/node_ports_dirty` (touched by every node model's saved and
+  deleted events, AppServiceProvider): opens what is needed and not allowed,
+  records it in `storage/node_ports_state.json`, closes only recorded ports no
+  node needs, changes nothing when the panel cannot answer. firewalld, ufw and
+  iptables (DROP/REJECT policy); an accept-by-default firewall needs nothing.
+  artisan runs as the panel directory's owner (no root-owned storage files).
+- Admin: `GET /{admin}/system/getNodePorts` returns the agent's last status
+  (`storage/node_ports_status.json`): firewall, ports with their nodes,
+  allowed, listener, opened/closed, errors.
+- `update.sh` now restarts the server-config agent (a running bash loop keeps
+  its old code otherwise).
+- The REALITY dialog's "Server Port" showed the node listening-port help
+  (common `server_port`); the `tls` section now has its own text (the cover
+  site's port, normally 443). Bundles re-patched with
+  `scripts/patch_admin_native_node_help.py`; `--check` passes.
+- Docs: `docs/node-ports.md`.
+
+Validated here: `tests/Unit/LocalNodePortsTest.php` 9/9 through a minimal
+PHPUnit stand-in (no vendor here: composer filled the disk with source clones);
+`tests/NodePortsAgentTest.py` 9/9 against simulated firewalld, ufw, iptables
+and an open firewall; the reconcile against real iptables in an isolated
+network namespace (opened 2053/tcp, 2053/udp and a 2000:2010/udp range with
+the tag, left the operator's 443 rule alone, closed each when unneeded);
+`php -l` on every changed PHP file, `bash -n` on the agent and update.sh, the
+other admin patch scripts' `--check`. CI adds: the agent tests, a
+`node:local-ports` run on the empty schema (must answer ok with no ports) and
+LocalNodePortsTest in the focused phpunit gate. Not run here: the full
+PHPUnit suite, ufw and firewalld for real (not installed), the agent on a live
+aaPanel server.
+
+Review fix (Codex, P2): a removal that failed or timed out used to drop the
+port from the record anyway, so it was never retried and stayed open while the
+status read success. Removal now reports success only once the rule is really
+gone (firewalld runtime and permanent queries, ufw status, iptables -C), and a
+failed one stays recorded with an error and is retried; the new test fails on
+the earlier code for all three backends.
+
+Risks: on ufw, `ufw delete allow` removes the rule even if an operator later
+added the identical rule by hand; a node whose host and V2bX report are both
+elsewhere but which still listens here (an unusual NAT) is not detected.
+
 ## Active handoff - 2026-11-14 - Claude - public templates name no operator host
 
 This repository is public. One deployment's own hosts, relay IP rule and brand

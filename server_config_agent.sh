@@ -7,6 +7,9 @@
 # and the rewrite rules), and applies fixes the admin panel asks for by dropping
 # a storage/server_config_queue.json containing {"tasks": [...]}.
 #
+# It also keeps this server's firewall open for the nodes running here, and
+# only for them (scripts/node_ports.py, storage/node_ports_status.json).
+#
 # Run under supervisor; install.sh registers it when this file is present.
 #
 BASEDIR="$(cd "$(dirname "$0")" && pwd)"
@@ -17,6 +20,12 @@ CONF="/www/server/panel/vhost/nginx/$DOMAIN.conf"
 FASTCGI="/www/server/nginx/conf/fastcgi.conf"
 REWRITE="/www/server/panel/vhost/rewrite/$DOMAIN.conf"
 LOG="$BASEDIR/storage/logs/server_config.log"
+# Ports of the nodes running on this server: opened when a node needs them,
+# closed when none does (scripts/node_ports.py). Checked every minute, and at
+# once when the panel drops the flag after a node is saved or deleted.
+NODE_PORTS_FLAG="$BASEDIR/storage/node_ports_dirty"
+NODE_PORTS_EVERY=60
+NODE_PORTS_LAST=0
 
 # Open a port on whichever firewall this distribution actually uses. The original
 # only called firewall-cmd, which does not exist on Debian/Ubuntu, so the task
@@ -32,6 +41,13 @@ open_port() {
     else
         return 1
     fi
+}
+
+reconcile_node_ports() {
+    [ -f "$BASEDIR/scripts/node_ports.py" ] || return 0
+    rm -f "$NODE_PORTS_FLAG"
+    python3 "$BASEDIR/scripts/node_ports.py" --base "$BASEDIR" >> "$LOG" 2>&1
+    NODE_PORTS_LAST=$(date +%s)
 }
 
 update_status() {
@@ -84,6 +100,11 @@ STATUSEOF
 while true; do
     # Refresh the status the admin panel reads.
     update_status
+
+    # Node ports: at once after a node change, otherwise once a minute.
+    if [ -f "$NODE_PORTS_FLAG" ] || [ $(( $(date +%s) - NODE_PORTS_LAST )) -ge "$NODE_PORTS_EVERY" ]; then
+        reconcile_node_ports
+    fi
 
     # Apply anything the panel queued.
     if [ -f "$QUEUE" ]; then

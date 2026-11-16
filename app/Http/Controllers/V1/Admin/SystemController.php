@@ -103,6 +103,21 @@ class SystemController extends Controller
         })->count();
     }
 
+    /**
+     * What the server-config agent last decided about the ports of the nodes
+     * running on this server: the firewall it found, each port with the
+     * nodes needing it, whether it is allowed and what listens on it, and the
+     * ports it opened or closed. Empty until the agent has run.
+     */
+    public function getNodePorts()
+    {
+        $path = storage_path('node_ports_status.json');
+        $status = is_file($path) ? json_decode((string)@file_get_contents($path), true) : null;
+        return response([
+            'data' => is_array($status) ? $status : (object)[]
+        ]);
+    }
+
     public function getSystemLog(Request $request) {
         $current = $request->input('current') ? $request->input('current') : 1;
         $pageSize = $request->input('page_size') >= 10 ? $request->input('page_size') : 10;
