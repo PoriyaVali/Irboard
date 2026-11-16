@@ -47,6 +47,11 @@ reconcile_node_ports() {
     [ -f "$BASEDIR/scripts/node_ports.py" ] || return 0
     rm -f "$NODE_PORTS_FLAG"
     python3 "$BASEDIR/scripts/node_ports.py" --base "$BASEDIR" >> "$LOG" 2>&1
+    # Observe each configured client endpoint separately. Probe outcomes never
+    # feed firewall desired/state files or change firewall rules.
+    if [ -f "$BASEDIR/scripts/node_port_probe.py" ]; then
+        python3 "$BASEDIR/scripts/node_port_probe.py" --base "$BASEDIR" >> "$LOG" 2>&1
+    fi
     NODE_PORTS_LAST=$(date +%s)
 }
 

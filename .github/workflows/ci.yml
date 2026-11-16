@@ -354,12 +354,15 @@ jobs:
           set -e
           # The agent's firewall logic against simulated ufw, iptables and firewalld.
           python3 tests/NodePortsAgentTest.py
+          python3 tests/NodePortProbeTest.py
           # The command the agent asks: on an empty schema it must answer, and
           # answer "no ports" - never fail, which the agent reads as "change nothing".
           out=$(php artisan node:local-ports --ips=203.0.113.10)
           echo "$out"
           echo "$out" | tail -1 | python3 -c "import sys,json; d=json.load(sys.stdin); assert d['ok'] is True and d['ports'] == [], d"
           echo "✓ node:local-ports answers"
+          endpoints=$(php artisan node:local-ports --endpoints)
+          echo "$endpoints" | tail -1 | python3 -c "import sys,json; d=json.load(sys.stdin); assert d['ok'] is True and d['targets'] == [], d"
 
       - name: Every route resolves to a real controller method (signature check)
         run: |
@@ -792,7 +795,7 @@ jobs:
       - name: New node protocol administration, subscription and app-config contract
         env:
           IRBOARD_MIHOMO_CONTRACT_DIR: ${{ runner.temp }}/mihomo-contract
-        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'AdminFormMetadataTest|MihomoNodesTest|MihomoSubscriptionTest|SshKeysTest|MieruTrafficPatternTest|XhttpSubscriptionTest|ServedNodeContractTest|SingboxPickerGroupTest|AppConfigDocumentTest|LocalNodePortsTest'
+        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'AdminFormMetadataTest|MihomoNodesTest|MihomoSubscriptionTest|SshKeysTest|MieruTrafficPatternTest|XhttpSubscriptionTest|ServedNodeContractTest|SingboxPickerGroupTest|AppConfigDocumentTest|LocalNodePortsTest|NodePortTargetsTest'
 
       - name: Simulate node traffic, limits, bans and reporting with real Redis
         env:

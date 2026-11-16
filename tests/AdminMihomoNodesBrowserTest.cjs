@@ -667,3 +667,115 @@ test('port status is beside each address on a Persian mobile node list with acce
     assert.equal(state.portRequests.length, 1);
     await portScreenshot(page, 'port-status-fa-mobile.png');
 });
+
+function endpointPortFixture() {
+    portFixture();
+    state.nodes.push(nativeNode({ id: 10, type: 'mdns', name: 'DNS tunnel UDP', host: 'dns-tunnel.example.test', port: 53, server_port: 5353 }));
+    state.portStatus.ports = []; // The production case: every node is remote.
+    const result = (node, port, transport, status, reason) => ({ node: node.type + '#' + node.id,
+        host: node.host, port, transport, state: status, reason, updated_at: node.updated_at || 0 });
+    state.portStatus.reachability = { ok: true, updated_at: new Date().toISOString(), errors: [], results: [
+        result(state.nodes[0], '443', 'tcp', 'open', 'connected'),
+        result(state.nodes[1], '443', 'tcp', 'closed', 'refused'),
+        result(state.nodes[2], '8388', 'tcp', 'open', 'connected'),
+        result(state.nodes[3], '2443', 'udp', 'unknown', 'udp_unverified'),
+        result(state.nodes[4], '2000-2010', 'udp', 'unknown', 'udp_unverified'),
+        result(state.nodes[6], '8443', 'tcp', 'unreachable', 'timeout'),
+        // A malformed TCP success cannot prove a UDP DNS tunnel is reachable.
+        result(state.nodes[7], '53', 'tcp', 'open', 'connected')
+    ] };
+}
+async function endpointReportRendered(page) {
+    await page.wait('performance.getEntriesByType("resource").some(entry=>entry.name.endsWith("/system/getNodePorts")&&entry.responseEnd>0)');
+    await page.evaluate('new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)))');
+}
+
+test('remote endpoint port status uses client TCP results even when the local firewall list is empty in both Umi bundles', async () => {
+    for (const bundle of ['umi.js', 'umi-fa.js']) {
+        for (const lang of ['en', 'fa']) {
+            endpointPortFixture(); state.portRequests = [];
+            const page = await openPage(lang, bundle);
+            await page.wait(`document.querySelector(${JSON.stringify(portSelector('vless#1'))}).getAttribute('data-node-port-state')==='open'`);
+            for (const [ref, expected] of [['vless#1', 'open'], ['trojan#2', 'closed'], ['shadowsocks#3', 'open'],
+                ['hysteria#4', 'unknown'], ['mieru#5', 'unknown'], ['vmess#6', 'unknown'], ['vless#9', 'unreachable'], ['mdns#10', 'unknown']]) {
+                const badge = await portBadge(page, ref);
+                assert.equal(badge.state, expected, bundle + '/' + lang + '/' + ref + ': ' + JSON.stringify(badge));
+                if (expected === 'open') assert.equal(badge.dot, 'rgb(82, 196, 26)');
+                if (expected === 'closed' || expected === 'unreachable') assert.equal(badge.dot, 'rgb(245, 34, 45)');
+                const udpOnly = ['hysteria#4', 'mieru#5', 'mdns#10'].includes(ref);
+                if (lang === 'fa') assert.equal(badge.label, 'وضعیت پورت: ' + (udpOnly ? 'UDP بررسی نشده' : ({ open: 'باز (TCP)', closed: 'بسته (TCP)', unknown: 'نامشخص', unreachable: 'در دسترس نیست' })[expected]));
+                if (lang === 'en') assert.equal(badge.label, 'Port status: ' + (udpOnly ? 'UDP unverified' : ({ open: 'Open (TCP)', closed: 'Closed (TCP)', unknown: 'Unknown', unreachable: 'Unreachable' })[expected]));
+            }
+            const tcp = await portBadge(page, 'vless#1'), child = await portBadge(page, 'vless#9');
+            assert.match(tcp.title, /TCP/);
+            assert.match(tcp.title, /tcp\.example\.test:443/);
+            assert.doesNotMatch(tcp.title, /2053/, 'service port is not the remote client endpoint');
+            assert.match(child.title, /relay\.example\.test:8443/, 'the relay is measured independently from its parent');
+            assert.equal(state.portRequests.length, 1, 'one shared cached read supplies all endpoint results');
+            assert.deepEqual(state.portRequests[0], { auth: 'fixture-admin-token', method: 'GET' });
+            assert.equal(await page.evaluate('Array.from(document.scripts).some(script=>/admin_node_ports|node-port-status/.test(script.src))'), false,
+                'endpoint status executes within the existing full Umi bundle');
+            await portScreenshot(page, 'reachability-' + lang + '-' + bundle.replace('.js', '') + '-desktop.png');
+            await page.close();
+        }
+    }
+});
+
+test('remote endpoint port status never reuses an old host port edit or parent success in both Umi bundles', async () => {
+    for (const bundle of ['umi.js', 'umi-fa.js']) {
+        for (const invalid of ['host', 'port', 'edited', 'missing-child', 'stale', 'failed']) {
+            endpointPortFixture(); state.portRequests = [];
+            let ref = 'vless#1';
+            // A successful local parent firewall result must not mask an absent
+            // or invalid endpoint measurement once reachability is supplied.
+            state.portStatus.ports = [{ nodes: ['vless#1'], port: '2053', proto: 'tcp', allowed: true }];
+            if (invalid === 'host') state.nodes[0].host = 'changed.example.test';
+            if (invalid === 'port') state.nodes[0].port = 1443;
+            if (invalid === 'edited') state.nodes[0].updated_at = Math.floor(Date.now() / 1000);
+            if (invalid === 'missing-child') {
+                ref = 'vless#9';
+                state.portStatus.reachability.results = state.portStatus.reachability.results.filter(result => result.node !== ref);
+            }
+            if (invalid === 'stale') state.portStatus.reachability.updated_at = new Date(Date.now() - 181000).toISOString();
+            if (invalid === 'failed') state.portStatus.reachability.ok = false;
+            const page = await openPage('fa', bundle);
+            await page.wait(`document.querySelectorAll('[data-node-port-ref]').length===8`);
+            await endpointReportRendered(page);
+            assert.equal((await portBadge(page, ref)).state, 'unknown', bundle + '/' + invalid);
+            assert.equal((await portBadge(page, ref)).label, 'وضعیت پورت: نامشخص');
+            assert.equal(state.portRequests.length, 1);
+            await page.close();
+        }
+    }
+});
+
+test('remote endpoint port status remains available if the independent local firewall report failed', async () => {
+    endpointPortFixture(); state.portStatus.ok = false;
+    const page = await openPage('fa', 'umi-fa.js');
+    await page.wait(`document.querySelector(${JSON.stringify(portSelector('vless#1'))}).getAttribute('data-node-port-state')==='open'`);
+    assert.equal((await portBadge(page, 'vless#1')).label, 'وضعیت پورت: باز (TCP)');
+    assert.equal((await portBadge(page, 'trojan#2')).label, 'وضعیت پورت: بسته (TCP)');
+});
+
+test('remote endpoint port status displays actual client and relay outcomes on the Persian mobile list', async () => {
+    endpointPortFixture();
+    const page = await openPage('fa', 'umi-fa.js', 'fixture-admin-token', { width: 390, height: 844,
+        userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36' });
+    await page.wait('document.querySelectorAll("#main-container .v2board_node_mobile").length===8');
+    await page.wait(`document.querySelector(${JSON.stringify(portSelector('vless#1'))}).getAttribute('data-node-port-state')==='open'`);
+    assert.equal((await portBadge(page, 'vless#1')).text, 'وضعیت پورت: باز (TCP)');
+    assert.equal((await portBadge(page, 'trojan#2')).text, 'وضعیت پورت: بسته (TCP)');
+    assert.equal((await portBadge(page, 'vless#9')).text, 'وضعیت پورت: در دسترس نیست');
+    assert.equal((await portBadge(page, 'hysteria#4')).state, 'unknown', 'a TCP probe does not claim UDP connectivity');
+    assert.equal((await portBadge(page, 'hysteria#4')).label, 'وضعیت پورت: UDP بررسی نشده');
+    const mdns = await portBadge(page, 'mdns#10');
+    assert.equal(mdns.state, 'unknown', 'MDNS is a UDP DNS tunnel, not a TCP listener');
+    assert.equal(mdns.text, 'وضعیت پورت: UDP بررسی نشده');
+    assert.equal(mdns.dot, 'rgb(140, 140, 140)');
+    const geometry = await page.evaluate(`(()=>{const badge=document.querySelector(${JSON.stringify(portSelector('vless#1'))}),box=badge.getBoundingClientRect();return {left:box.left,right:box.right,width:innerWidth};})()`);
+    assert.ok(geometry.left >= -2 && geometry.right <= geometry.width + 2, JSON.stringify(geometry));
+    assert.equal(state.portRequests.length, 1);
+    await portScreenshot(page, 'reachability-fa-mobile.png');
+    await page.evaluate(`document.querySelector(${JSON.stringify(portSelector('mdns#10'))}).scrollIntoView({block:'center'})`);
+    await portScreenshot(page, 'reachability-fa-mobile-mdns.png');
+});

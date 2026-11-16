@@ -1,5 +1,30 @@
 # AI work log and handoff
 
+## Active handoff - 2026-11-16 - Codex - IN PROGRESS: remote endpoint evidence for node-port badges
+
+Owner reports every badge Unknown. The deployed local firewall snapshot is
+fresh but empty, while 21 remote nodes report serving. The earlier UI's
+local-firewall-only scope cannot answer their requested endpoint status.
+Add separate bounded background TCP reachability for each row's own client
+host/port, including relays; expose the snapshot in the existing admin GET.
+Refused is closed; timeouts are unreachable, and UDP remains unverified
+without a protocol response. Never let probe failures change firewall rules.
+All runtime UI code stays embedded in both Umi bundles, no JS sidecar.
+Implemented separate bounded/deduplicated background observations with an
+independent snapshot, exact own endpoint/version matching, TCP-qualified
+labels, timeout versus refusal distinction, and explicit UDP-unverified
+labels. MDNS is a UDP DNS tunnel and is not marked closed from a TCP refusal.
+Unfinished batch-budget work stays Unknown, never unreachability evidence.
+
+Validation: JavaScript13/13 PASS; probe Python10/10 on Windows and Debian;
+existing firewall22/22 PASS (Windows uses import compatibility shim). Pure
+target tests9/9 via minimal stand-in, not PHPUnit; real PHPUnit added to CI.
+Chrome full23/23 PASS before final UDP label qualification, focused final7/7
+PASS on both Umi and Persian mobile including MDNS no false TCP success.
+PHP/Bash lint, patch --check and bundle syntax PASS. Real configured endpoint
+observations verified privately; firewall rules unchanged. Source has no
+operator hosts or node credentials. Preparing commit; CI/deployment pending.
+
 ## Active handoff - 2026-11-16 - Codex - LOCAL VALIDATED: node-port status embedded in both admin Umi bundles
 
 Owner requests a green/red port-status badge next to each node address in

@@ -113,9 +113,13 @@ class SystemController extends Controller
     {
         $path = storage_path('node_ports_status.json');
         $status = is_file($path) ? json_decode((string)@file_get_contents($path), true) : null;
-        return response([
-            'data' => is_array($status) ? $status : (object)[]
-        ]);
+        $data = is_array($status) ? $status : [];
+        // Endpoint observations are independent of firewall reconciliation:
+        // a panel-server rule does not describe a remote node's client port.
+        $probePath = storage_path('node_port_reachability.json');
+        $probe = is_file($probePath) ? json_decode((string)@file_get_contents($probePath), true) : null;
+        $data['reachability'] = is_array($probe) ? $probe : (object)[];
+        return response(['data' => $data]);
     }
 
     public function getSystemLog(Request $request) {
