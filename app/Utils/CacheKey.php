@@ -108,6 +108,9 @@ class CacheKey
         'SERVER_EASYTIER_LAST_CHECK_AT' => 'easytier node last_check_at',
         'SERVER_EASYTIER_LAST_PUSH_AT' => 'easytier node last_push_at',
         'SERVER_EASYTIER_LOAD_STATUS' => 'easytier node load_status',
+        // The address a node's V2bX last reported from, keyed "type#id": tells
+        // the server-config agent which nodes listen on the panel's own server.
+        'NODE_REPORTER_IP' => 'node reporter address',
         'TEMP_TOKEN' => '临时令牌',
         'LAST_SEND_EMAIL_REMIND_TRAFFIC' => '最后发送流量邮件提醒',
         'SCHEDULE_LAST_CHECK_AT' => '计划任务最后检查时间',

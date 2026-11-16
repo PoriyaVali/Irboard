@@ -42,6 +42,7 @@ class UniProxyController extends Controller
     public function status(Request $request)
     {
         Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_LAST_CHECK_AT', $this->nodeInfo->id), time(), 3600);
+        $this->rememberReporter($request);
         // The load itself used to be thrown away, so the admin had no way to
         // see a node running out of CPU, memory or disk until users
         // complained. Kept for five minutes: a node that stops reporting stops
@@ -119,11 +120,25 @@ class UniProxyController extends Controller
         return null;
     }
 
+    /**
+     * Where this node's V2bX reports from. The server-config agent opens the
+     * ports of the nodes whose V2bX runs on the panel's own server, and this
+     * is how it knows which those are, CDN or relay in front of them or not.
+     * A day, so a V2bX restarting or briefly down does not close its port.
+     */
+    private function rememberReporter(Request $request): void
+    {
+        $ip = (string)$request->ip();
+        if ($ip === '') return;
+        Cache::put(CacheKey::get('NODE_REPORTER_IP', $this->nodeType . '#' . $this->nodeInfo->id), $ip, 86400);
+    }
+
     // 后端获取用户
     public function user(Request $request)
     {
         ini_set('memory_limit', -1);
         Cache::put(CacheKey::get('SERVER_' . strtoupper($this->nodeType) . '_LAST_CHECK_AT', $this->nodeInfo->id), time(), 3600);
+        $this->rememberReporter($request);
         $users = $this->serverService->getAvailableUsers($this->nodeInfo->group_id)
             ->map(function ($user) {
                 return array_filter($user->toArray(), function ($v) {

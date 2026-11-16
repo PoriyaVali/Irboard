@@ -65,7 +65,8 @@ jobs:
           set -e
           bash -n init.sh
           bash -n update.sh
-          echo "✓ init.sh / update.sh syntax OK"
+          bash -n server_config_agent.sh
+          echo "✓ init.sh / update.sh / server_config_agent.sh syntax OK"
           # Regression guard: the old updater ran `git reset --hard origin/master`,
           # which wipes a deployment that runs from a modified working tree.
           # Anchored to the start of a line so rollback hints printed inside
@@ -347,6 +348,18 @@ jobs:
           php artisan config:clear
           php artisan route:list --json >/dev/null
           echo "✓ Application boots and routes register."
+
+      - name: Node ports on the panel's server (agent and its command)
+        run: |
+          set -e
+          # The agent's firewall logic against simulated ufw, iptables and firewalld.
+          python3 tests/NodePortsAgentTest.py
+          # The command the agent asks: on an empty schema it must answer, and
+          # answer "no ports" - never fail, which the agent reads as "change nothing".
+          out=$(php artisan node:local-ports --ips=203.0.113.10)
+          echo "$out"
+          echo "$out" | tail -1 | python3 -c "import sys,json; d=json.load(sys.stdin); assert d['ok'] is True and d['ports'] == [], d"
+          echo "✓ node:local-ports answers"
 
       - name: Every route resolves to a real controller method (signature check)
         run: |
@@ -778,7 +791,7 @@ jobs:
       - name: New node protocol administration, subscription and app-config contract
         env:
           IRBOARD_MIHOMO_CONTRACT_DIR: ${{ runner.temp }}/mihomo-contract
-        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'AdminFormMetadataTest|MihomoNodesTest|MihomoSubscriptionTest|SshKeysTest|MieruTrafficPatternTest|XhttpSubscriptionTest|ServedNodeContractTest|SingboxPickerGroupTest|AppConfigDocumentTest'
+        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'AdminFormMetadataTest|MihomoNodesTest|MihomoSubscriptionTest|SshKeysTest|MieruTrafficPatternTest|XhttpSubscriptionTest|ServedNodeContractTest|SingboxPickerGroupTest|AppConfigDocumentTest|LocalNodePortsTest'
 
       - name: Simulate node traffic, limits, bans and reporting with real Redis
         env:

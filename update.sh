@@ -247,6 +247,24 @@ if [ -f webman.php ]; then
     restart_webman || warn "Could not restart webman automatically — please restart it."
 fi
 
+# The server-config agent is one long-running bash loop: it keeps running the
+# code it started with, so an update to it (node ports, for one) only takes
+# effect once it is restarted.
+restart_agent() {
+    local sc
+    for sc in /www/server/panel/pyenv/bin/supervisorctl "$(command -v supervisorctl 2>/dev/null)"; do
+        [ -n "$sc" ] && [ -x "$sc" ] || continue
+        if "$sc" -c /etc/supervisor/supervisord.conf status 2>/dev/null | grep -q 'server-config-agent'; then
+            say "Restarting the server-config agent"
+            "$sc" -c /etc/supervisor/supervisord.conf restart 'server-config-agent:*' >/dev/null 2>&1 \
+                || "$sc" -c /etc/supervisor/supervisord.conf restart server-config-agent >/dev/null 2>&1
+            return 0
+        fi
+    done
+    return 0
+}
+[ -f server_config_agent.sh ] && restart_agent
+
 # ── 7. Ownership (aaPanel) ──────────────────────────────────────────────────
 [ -f /etc/init.d/bt ] && chown -R www "$APP_DIR" 2>/dev/null
 
