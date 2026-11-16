@@ -1,5 +1,37 @@
 # AI work log and handoff
 
+## Active handoff - 2026-11-16 - Codex - FIXED/LOCAL VALIDATED: PR37 firewall review fixes, CI and deployment pending
+
+Owner authorized merge and deployment of PR37. Preparing fixes for four P2
+findings before shipping: partial firewalld writes lose ownership, UFW
+source-restricted allows are mistaken for public access, firewalld default
+zone may differ from the ingress zone, and iptables ignores IPv6. Files to
+change: scripts/node_ports.py, tests/NodePortsAgentTest.py, docs/node-ports.md
+and this handoff. Work in an isolated local clone, not the live checkout.
+Implemented scoped ownership: firewalld active zones, runtime/permanent
+separately; public inbound UFW rules with independent IPv4/IPv6 ownership;
+iptables/ip6tables independent rules; failed inspection/address discovery
+stops safely. Existing operator rules are not adopted when only another
+scope is missing. The command reports errors for partial operations and
+retries them while keeping successful changes recorded.
+
+Windows simulated tests 22/22 PASS (Linux import/nonroot compatibility shim
+only), Debian 22/22 PASS. Real iptables + ip6tables in an isolated network
+namespace: single ports, UDP ranges, re-add after flush/reboot simulation,
+and removal all PASS, operator 443 rule preserved in both families. Actual
+UFW --dry-run accepts add/delete syntax for both families and port ranges;
+UFW was not enabled or changed. Host rules before/after namespace validation
+match after excluding iptables-save timestamp comments. An initial raw-hash
+audit failed because those comment timestamps changed; corrected audit PASS.
+bash -n agent/update, Python compilation, admin native-help --check and git
+diff --check PASS. Real firewalld and enabled-UFW integration not run. CI and
+full Laravel tests pending; preparing commit, no merge/deployment yet.
+Prior implementation and the failed-removal fix are Claude's commits; this
+entry does not claim them. Known limits: all active firewalld
+zones are managed (no per-node bind-interface setting); custom nftables/
+chains and provider firewalls are outside scope; identical UFW rules later
+replaced by an operator cannot be distinguished from the original rule.
+
 ## Active handoff - 2026-11-16 - Claude - node ports on the panel's own server, REALITY port help
 
 The owner asked for this: a node running on the panel's server gets its port

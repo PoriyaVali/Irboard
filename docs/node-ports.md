@@ -39,10 +39,27 @@ and within seconds after a node is saved or deleted) makes the firewall match:
 - When the panel cannot answer (database down, PHP error), nothing changes: an
   unanswered question must not read as "no nodes" and close everything.
 
-Supported firewalls: firewalld (runtime and permanent), ufw (rules commented
-`irboard-node`), and iptables with a DROP or REJECT INPUT policy (rules tagged
-`irboard-node`, re-added after a reboot by the next run). A firewall that
-accepts by default needs nothing and is reported as `open`.
+Supported firewalls: firewalld, ufw, and iptables/ip6tables:
+
+- firewalld: each active zone (or the default when none is active), runtime
+  and permanent separately. The exact zone and configuration are recorded,
+  so a default-zone change cannot redirect cleanup. If only one addition
+  succeeds, that rule stays recorded and the other is retried.
+- ufw: public inbound rules, separately for IPv4 and enabled IPv6, commented
+  `irboard-node`. An allow limited to a source, destination or interface is
+  not mistaken for public access. An existing IPv4 rule is not adopted when
+  only IPv6 needs adding (and vice versa).
+- iptables and ip6tables: each family with a DROP/REJECT INPUT policy gets
+  its own tagged rule and ownership record; rules return after a reboot on
+  the next run. An ACCEPT policy with an unconditional final deny is
+  reported as unsupported rather than incorrectly reported open.
+
+A family with an accept-by-default policy needs no extra rule. Existing
+source-specific restrictions are left intact. Failure to discover local
+addresses or inspect a required firewall family/zone stops reconciliation;
+it is never interpreted as an empty node list or an open firewall. Changes
+to cloud security groups and arbitrary nftables/custom chains are outside
+the agent's scope. Rules must still be reviewed against local firewall policy.
 
 artisan is run as the owner of the panel directory, never as root, so it
 cannot leave root-owned files in `storage/` that the web server then cannot
