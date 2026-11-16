@@ -1,5 +1,55 @@
 # AI work log and handoff
 
+## Active handoff - 2026-11-16 - Claude - node ports on the panel's own server, REALITY port help
+
+The owner asked for this: a node running on the panel's server gets its port
+opened in that server's firewall automatically, closed again when the node is
+deleted, with shared ports kept open until their last node goes.
+
+- `app/Services/LocalNodePorts.php` decides (pure, tested without a
+  framework): a node is local when its V2bX last reported from one of this
+  server's addresses, or its host is or resolves to one. Loopback never counts
+  (SSH-tunnelled V2bX instances report from 127.0.0.1). Service port with the
+  node type's protocols; children and unmanaged protocol nodes add none.
+- `php artisan node:local-ports --ips=...` prints the union as JSON, or
+  {"ok":false} on any failure.
+- UniProxy `status`/`user` remember the reporter address for a day
+  (`CacheKey NODE_REPORTER_IP`, keyed "type#id").
+- `scripts/node_ports.py`, run by `server_config_agent.sh` every minute and at
+  once on `storage/node_ports_dirty` (touched by every node model's saved and
+  deleted events, AppServiceProvider): opens what is needed and not allowed,
+  records it in `storage/node_ports_state.json`, closes only recorded ports no
+  node needs, changes nothing when the panel cannot answer. firewalld, ufw and
+  iptables (DROP/REJECT policy); an accept-by-default firewall needs nothing.
+  artisan runs as the panel directory's owner (no root-owned storage files).
+- Admin: `GET /{admin}/system/getNodePorts` returns the agent's last status
+  (`storage/node_ports_status.json`): firewall, ports with their nodes,
+  allowed, listener, opened/closed, errors.
+- `update.sh` now restarts the server-config agent (a running bash loop keeps
+  its old code otherwise).
+- The REALITY dialog's "Server Port" showed the node listening-port help
+  (common `server_port`); the `tls` section now has its own text (the cover
+  site's port, normally 443). Bundles re-patched with
+  `scripts/patch_admin_native_node_help.py`; `--check` passes.
+- Docs: `docs/node-ports.md`.
+
+Validated here: `tests/Unit/LocalNodePortsTest.php` 9/9 through a minimal
+PHPUnit stand-in (no vendor here: composer filled the disk with source clones);
+`tests/NodePortsAgentTest.py` 8/8 against simulated firewalld, ufw, iptables
+and an open firewall; the reconcile against real iptables in an isolated
+network namespace (opened 2053/tcp, 2053/udp and a 2000:2010/udp range with
+the tag, left the operator's 443 rule alone, closed each when unneeded);
+`php -l` on every changed PHP file, `bash -n` on the agent and update.sh, the
+other admin patch scripts' `--check`. CI adds: the agent tests, a
+`node:local-ports` run on the empty schema (must answer ok with no ports) and
+LocalNodePortsTest in the focused phpunit gate. Not run here: the full
+PHPUnit suite, ufw and firewalld for real (not installed), the agent on a live
+aaPanel server.
+
+Risks: on ufw, `ufw delete allow` removes the rule even if an operator later
+added the identical rule by hand; a node whose host and V2bX report are both
+elsewhere but which still listens here (an unusual NAT) is not detected.
+
 ## Active handoff - 2026-11-14 - Claude - public templates name no operator host
 
 This repository is public. One deployment's own hosts, relay IP rule and brand
