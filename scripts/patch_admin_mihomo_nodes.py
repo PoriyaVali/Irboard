@@ -69,7 +69,8 @@ def changes():
         ('ROW_NAME', '''}), y.a.createElement("span", null, e), /*__NODELOAD__*/''', '''}), imnProtocolNames[t.type] ? y.a.createElement(mMihomo,{record:t},y.a.createElement("a",{"data-mihomo-edit":t.id},e)) : y.a.createElement("span", null, e), /*__NODELOAD__*/''', 1),
         ('ADDRESS', '}, t.host + ":" + t.port)', '}, imnProtocolNames[t.type] ? imnAddress(t) : t.host + ":" + t.port)', 1),
         ('ADDRESS_COPY', 'S()(t.host),', 'S()(imnProtocolNames[t.type] ? imnAddress(t) : t.host),', 1),
-        ('MOBILE_ADDRESS', 'description: "".concat(e.host, ":").concat(e.port)', 'description: imnProtocolNames[e.type] ? imnAddress(e) : "".concat(e.host, ":").concat(e.port)', 1),
+        ('MOBILE_ADDRESS', 'description: "".concat(e.host, ":").concat(e.port)', 'description: y.a.createElement("div", {style:{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}, y.a.createElement("span", {dir:"ltr"}, imnProtocolNames[e.type] ? imnAddress(e) : "".concat(e.host, ":").concat(e.port)), y.a.createElement(ImnNodePortBadge, {row:e,nodes:E,caption:true}))', 1),
+        ('PORT_COLUMNS', '                    }] : $,', '                    }] : imnPortColumns($, E),', 1),
         ('STATUS', 'status: D[t.available_status]', 'status: imnProtocolNames[t.type] && t.available_status == null ? "default" : D[t.available_status]', 1),
         ('MOBILE_STATUS', 'status: D[e.available_status]', 'status: imnProtocolNames[e.type] && e.available_status == null ? "default" : D[e.available_status]', 1),
     ]

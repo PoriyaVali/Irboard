@@ -87,14 +87,16 @@ async function openPage(lang = 'en', bundle = 'umi.js', auth = 'fixture-admin-to
     };
     pages.add(page);
     await cdp.call('Page.enable', {}, sessionId);
-    await cdp.call('Emulation.setDeviceMetricsOverride', { ...viewport, deviceScaleFactor: 1, mobile: viewport.width <= 768 }, sessionId);
+    await cdp.call('Emulation.setDeviceMetricsOverride', { width: viewport.width, height: viewport.height, deviceScaleFactor: 1, mobile: viewport.width <= 768 }, sessionId);
+    if (viewport.userAgent) await cdp.call('Network.setUserAgentOverride', { userAgent: viewport.userAgent }, sessionId);
     await cdp.call('Page.navigate', { url: `${origin}/secure-fixture?lang=${lang}&bundle=${bundle}&token=${encodeURIComponent(auth)}#/server/manage` }, sessionId);
-    await page.wait('window.fixtureReady && document.querySelector("#main-container .ant-table")');
-    if (state.nodes.length) await page.wait('document.querySelectorAll("#main-container tr.ant-table-row").length>=' + Math.min(10, state.nodes.length));
+    await page.wait('window.fixtureReady && document.querySelector("#main-container .ant-table, #main-container .ant-list")');
+    if (state.nodes.length) await page.wait('document.querySelectorAll("#main-container tr.ant-table-row, #main-container .v2board_node_mobile").length>=' + Math.min(10, state.nodes.length));
     return page;
 }
 function freshState() {
-    return { protocols: JSON.parse(fs.readFileSync(path.join(__dirname, 'Fixtures/MihomoCatalog.json'), 'utf8')), nodes: [], requests: [], fail: false, forbidden: false };
+    return { protocols: JSON.parse(fs.readFileSync(path.join(__dirname, 'Fixtures/MihomoCatalog.json'), 'utf8')), nodes: [], requests: [], fail: false, forbidden: false,
+        portStatus: { ok: true, updated_at: new Date().toISOString(), ports: [] }, portRequests: [], portFailure: false };
 }
 function nativeNode(row) {
     return { host: '', port: null, server_port: null, group_id: ['1'], route_id: [], tags: [], rate: 1, sort: 0, show: 0, parent_id: null,
@@ -111,6 +113,12 @@ before(async () => {
         }
         if (url.pathname.startsWith('/api/')) {
             res.setHeader('Content-Type', 'application/json');
+            if (url.pathname.endsWith('/system/getNodePorts')) {
+                state.portRequests.push({ auth: req.headers.authorization, method: req.method });
+                if (req.headers.authorization !== 'fixture-admin-token') { res.statusCode = 403; res.end(JSON.stringify({ message: 'Admin access required' })); return; }
+                if (state.portFailure) { res.statusCode = 503; res.end(JSON.stringify({ message: 'Unavailable' })); return; }
+                res.end(JSON.stringify({ data: state.portStatus })); return;
+            }
             const type = url.pathname.split('/').slice(-2)[0];
             const catalog = url.pathname.endsWith('/server/protocols');
             const specific = types.includes(type);
@@ -180,7 +188,12 @@ after(async () => {
     if (chrome) chrome.kill();
     if (stopped) await stopped;
     if (server) await new Promise(resolve => server.close(resolve));
-    if (profile) await fs.promises.rm(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    if (profile) {
+        const resolved = path.resolve(profile);
+        assert.equal(path.dirname(resolved), path.resolve(os.tmpdir()), 'Refuse profile cleanup outside its temporary root');
+        assert.ok(path.basename(resolved).startsWith('irboard-mihomo-browser-'), 'Refuse an unexpected profile path');
+        await fs.promises.rm(resolved, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
+    }
 });
 async function addMenu(page) {
     const box = await page.evaluate('(()=>{const b=document.querySelector("[data-mihomo-add-menu]").getBoundingClientRect();return {x:b.x+b.width/2,y:b.y+b.height/2};})()');
@@ -559,4 +572,98 @@ test('a managed node needs only its name, groups, address and port, and says wha
     const payload = state.requests.find(request => request.action === 'save').payload;
     assert.equal(payload.managed, true);
     assert.equal(payload.server_port, null, 'the panel uses the connection port');
+});
+
+function portFixture() {
+    state.nodes = [
+        nativeNode({ id: 1, type: 'vless', name: 'Open TCP', host: 'tcp.example.test', port: 443, server_port: 2053 }),
+        nativeNode({ id: 2, type: 'trojan', name: 'Blocked TCP', host: 'blocked.example.test', port: 443, server_port: 2083 }),
+        nativeNode({ id: 3, type: 'shadowsocks', name: 'Mixed TCP UDP', host: 'mixed.example.test', port: 8388, server_port: 8388 }),
+        nativeNode({ id: 4, type: 'hysteria', name: 'Open UDP', host: 'udp.example.test', port: 2443, server_port: 2443 }),
+        nativeNode({ id: 5, type: 'mieru', name: 'Mieru range', host: 'mieru.example.test', port: null, server_port: null, port_range: '2000-2010', transport: 'UDP', managed: true }),
+        nativeNode({ id: 6, type: 'vmess', name: 'Remote unmeasured', host: 'elsewhere.example.test', port: 443, server_port: 8443 }),
+        nativeNode({ id: 9, type: 'vless', name: 'Child listener', host: 'relay.example.test', port: 8443, server_port: 8443, parent_id: 1 })
+    ];
+    const entry = (ref, port, proto, allowed) => ({ nodes: [ref], port, proto, allowed });
+    state.portStatus = { ok: true, updated_at: new Date().toISOString(), ports: [
+        entry('vless#1', '2053', 'tcp', true), entry('trojan#2', '2083', 'tcp', false),
+        entry('shadowsocks#3', '8388', 'tcp', true), entry('shadowsocks#3', '8388', 'udp', false),
+        entry('hysteria#4', '2443', 'udp', true), entry('mieru#5', '2000-2010', 'udp', true)
+    ] };
+}
+function portSelector(ref) { return '[data-node-port-ref=' + JSON.stringify(ref) + ']'; }
+async function portBadge(page, ref) {
+    const selector = JSON.stringify(portSelector(ref));
+    return page.evaluate(`(()=>{const badge=document.querySelector(${selector}),dot=badge&&badge.querySelector('[data-node-port-dot]');if(!badge)return null;return {state:badge.getAttribute('data-node-port-state'),label:badge.getAttribute('aria-label'),text:badge.textContent,title:badge.title,dot:dot?getComputedStyle(dot).backgroundColor:null,role:badge.getAttribute('role')};})()`);
+}
+async function portScreenshot(page, filename) {
+    if (!process.env.IRBOARD_PORT_UI_SCREENSHOT_DIR) return;
+    const directory = path.resolve(process.env.IRBOARD_PORT_UI_SCREENSHOT_DIR);
+    fs.mkdirSync(directory, { recursive: true });
+    await page.screenshot(path.join(directory, filename));
+}
+
+test('port status column is adjacent to Address in both Umi bundles with real green red and neutral badges', async () => {
+    for (const [lang, bundle] of [['en', 'umi.js'], ['fa', 'umi-fa.js']]) {
+        portFixture(); state.portRequests = [];
+        const page = await openPage(lang, bundle);
+        await page.wait(`document.querySelector(${JSON.stringify(portSelector('vless#1'))}).getAttribute('data-node-port-state')==='open'`);
+        const headers = await page.evaluate('Array.from(document.querySelectorAll("#main-container .ant-table-thead th")).map(cell=>cell.textContent.trim())');
+        const address = headers.indexOf('آدرس');
+        assert.ok(address >= 0, JSON.stringify(headers));
+        assert.equal(headers[address + 1], lang === 'fa' ? 'وضعیت پورت' : 'Port status');
+        for (const [ref, expected] of [['vless#1', 'open'], ['trojan#2', 'closed'], ['shadowsocks#3', 'closed'],
+            ['hysteria#4', 'open'], ['mieru#5', 'open'], ['vmess#6', 'unknown'], ['vless#9', 'open']]) {
+            const badge = await portBadge(page, ref);
+            assert.equal(badge.state, expected, ref + ': ' + JSON.stringify(badge));
+            assert.equal(badge.role, 'status');
+            assert.equal(badge.dot, expected === 'open' ? 'rgb(82, 196, 26)' : expected === 'closed' ? 'rgb(245, 34, 45)' : 'rgb(140, 140, 140)');
+            if (lang === 'fa') assert.equal(badge.label, 'وضعیت پورت: ' + ({ open: 'باز', closed: 'بسته', unknown: 'نامشخص' })[expected]);
+        }
+        assert.match((await portBadge(page, 'vless#9')).title, /2053/);
+        assert.match((await portBadge(page, 'mieru#5')).title, /2000-2010/);
+        assert.match((await portBadge(page, 'hysteria#4')).title, /UDP/);
+        assert.equal(state.portRequests.length, 1, 'all visible badges share one read');
+        assert.deepEqual(state.portRequests[0], { auth: 'fixture-admin-token', method: 'GET' });
+        assert.equal(await page.evaluate('Array.from(document.scripts).some(script=>/admin_node_ports|node-port-status/.test(script.src))'), false,
+            'port status executes inside the Umi bundle');
+        await portScreenshot(page, 'port-status-' + lang + '-desktop.png');
+        await page.close();
+    }
+});
+
+test('port status stays neutral for stale failed and unavailable reports in both Umi bundles', async () => {
+    for (const bundle of ['umi.js', 'umi-fa.js']) {
+        for (const failure of ['stale', 'failed', 'unavailable']) {
+            portFixture(); state.portRequests = [];
+            if (failure === 'stale') state.portStatus.updated_at = new Date(Date.now() - 181000).toISOString();
+            if (failure === 'failed') state.portStatus.ok = false;
+            state.portFailure = failure === 'unavailable';
+            const page = await openPage('fa', bundle);
+            await page.wait(`document.querySelectorAll('[data-node-port-ref]').length===7`);
+            await page.wait('Array.from(document.querySelectorAll("[data-node-port-ref]")).every(badge=>badge.getAttribute("data-node-port-state")==="unknown")');
+            assert.equal(state.portRequests.length, 1);
+            assert.equal((await portBadge(page, 'vless#1')).label, 'وضعیت پورت: نامشخص');
+            await page.close();
+        }
+        state.portFailure = false;
+    }
+});
+
+test('port status is beside each address on a Persian mobile node list with accessible colored labels', async () => {
+    portFixture();
+    const page = await openPage('fa', 'umi-fa.js', 'fixture-admin-token', { width: 390, height: 844,
+        userAgent: 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36' });
+    await page.wait('document.querySelectorAll("#main-container .v2board_node_mobile").length===7');
+    await page.wait(`document.querySelector(${JSON.stringify(portSelector('vless#1'))}).getAttribute('data-node-port-state')==='open'`);
+    const open = await portBadge(page, 'vless#1'), closed = await portBadge(page, 'trojan#2');
+    assert.equal(open.text, 'وضعیت پورت: باز');
+    assert.equal(closed.text, 'وضعیت پورت: بسته');
+    assert.equal(open.dot, 'rgb(82, 196, 26)'); assert.equal(closed.dot, 'rgb(245, 34, 45)');
+    const geometry = await page.evaluate(`(()=>{const badge=document.querySelector(${JSON.stringify(portSelector('vless#1'))}),description=badge.closest('.ant-list-item-meta-description'),box=badge.getBoundingClientRect();return {address:description.textContent,badgeParent:badge.parentElement.textContent,left:box.left,right:box.right,width:innerWidth};})()`);
+    assert.match(geometry.address, /tcp\.example\.test:443/);
+    assert.match(geometry.badgeParent, /tcp\.example\.test:443/);
+    assert.ok(geometry.left >= -2 && geometry.right <= geometry.width + 2, JSON.stringify(geometry));
+    assert.equal(state.portRequests.length, 1);
+    await portScreenshot(page, 'port-status-fa-mobile.png');
 });

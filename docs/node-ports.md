@@ -67,6 +67,24 @@ write.
 
 ## What the admin sees
 
+In **Nodes / Manage**, the **Port status** column follows **Address** in both
+admin bundles. A green dot and "Open" mean that all required service-port
+transports are allowed by the panel server's firewall; a red dot and "Closed"
+mean a required transport is blocked. Text accompanies the color, and the
+tooltip identifies the service port, transports, parent listener (when shared)
+and last check. The same badge is next to the address on mobile.
+
+A gray "Unknown" badge means there is no applicable, current report: for
+example, a node runs elsewhere, is an unmanaged external service, was just
+edited, or the agent/report is unavailable. A report older than three minutes
+is not displayed as a current open/closed result. This is firewall evidence,
+not proof that an external client can reach a listener or pass a provider
+security group. No remote port scan is started by opening the node list.
+
+The visible rows share one authenticated read every 20 seconds. Requests
+stop when the list unmounts; logout or navigation discards previous reports
+and in-flight responses.
+
 `GET /{admin}/system/getNodePorts` returns `storage/node_ports_status.json`:
 the firewall found, each needed port with the nodes needing it, whether it is
 allowed and which process listens on it (a port held by another program, say
