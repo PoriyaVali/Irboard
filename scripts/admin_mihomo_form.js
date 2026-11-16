@@ -335,3 +335,159 @@ class MihomoNodeDrawer extends y.a.Component {
     }
 }
 var mMihomo = Object(_['c'])(state => ({groups: state.serverGroup.groups || [], routes: state.serverRoute.routes || [], nodes: state.serverManage.servers || []}))(MihomoNodeDrawer);
+
+/*__NODE_PORT_SOURCE_START__*/
+/* Native admin node-port column. Evidence is the panel server's firewall
+ * report, never an assumed result of a remote TCP/UDP connectivity test. */
+var imnPortMaxAge = 180000;
+function imnPortTimestamp(value) {
+    if (typeof value !== 'string') return NaN;
+    var match = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}:\d{2})(\.\d{1,3})?(Z|[+-]\d{2}:?\d{2})$/.exec(value);
+    if (!match) return NaN;
+    var offset = match[4];
+    if (offset !== 'Z' && offset.indexOf(':') < 0) offset = offset.slice(0, 3) + ':' + offset.slice(3);
+    return Date.parse(match[1] + 'T' + match[2] + (match[3] || '') + offset);
+}
+function imnPortSpec(row) {
+    if (row.type === 'mieru') {
+        var range = /^(\d{1,5})\s*-\s*(\d{1,5})$/.exec(String(row.port_range || '').trim());
+        if (range && Number(range[1]) >= 1 && Number(range[2]) <= 65535 && Number(range[1]) <= Number(range[2])) {
+            return Number(range[1]) === Number(range[2]) ? String(Number(range[1])) : Number(range[1]) + '-' + Number(range[2]);
+        }
+    }
+    var numeric = value => value != null && String(value).trim() !== '' && Number.isFinite(Number(value));
+    var value = numeric(row.server_port) ? row.server_port : row.port;
+    var port = numeric(value) ? Math.trunc(Number(value)) : 0;
+    return port >= 1 && port <= 65535 ? String(port) : null;
+}
+function imnPortProtocols(row) {
+    if (row.type === 'mieru') {
+        var transport = String(row.transport || '').trim().toUpperCase();
+        return transport === 'TCP' ? ['tcp'] : transport === 'UDP' ? ['udp'] : ['tcp', 'udp'];
+    }
+    if (['hysteria', 'tuic', 'shadowquic', 'wireguard', 'masque'].includes(row.type)) return ['udp'];
+    if (['vless', 'vmess', 'trojan', 'anytls', 'v2node', 'sudoku', 'ssh', 'http'].includes(row.type)) {
+        return ['kcp', 'mkcp', 'quic'].includes(String(row.network || '').toLowerCase()) ? ['udp'] : ['tcp'];
+    }
+    return ['tcp', 'udp'];
+}
+function imnPortResult(row, nodes, report, now) {
+    var unknown = reason => ({state: 'unknown', label: imnText('نامشخص', 'Unknown'), detail: reason});
+    if (!report || report.ok !== true || !Array.isArray(report.ports)) {
+        return unknown(imnText('گزارش معتبر وضعیت پورت در دسترس نیست.', 'A valid port-status report is unavailable.'));
+    }
+    var checked = imnPortTimestamp(report.updated_at), age = now - checked;
+    if (!Number.isFinite(checked) || age > imnPortMaxAge || age < -30000) {
+        return unknown(imnText('گزارش قدیمی یا نامعتبر است؛ منتظر بررسی تازه هستیم.', 'The report is stale or invalid; waiting for a fresh check.'));
+    }
+    var source = row, seen = new Set(), changed = Number(row.updated_at) || 0;
+    while (source && source.parent_id) {
+        var key = source.type + '#' + source.id;
+        if (seen.has(key)) return unknown(imnText('گره اصلی مشخص نیست.', 'The parent node is unavailable.'));
+        seen.add(key);
+        source = nodes.find(item => item.type === source.type && String(item.id) === String(source.parent_id));
+        if (source) changed = Math.max(changed, Number(source.updated_at) || 0);
+    }
+    if (!source) return unknown(imnText('گره اصلی مشخص نیست.', 'The parent node is unavailable.'));
+    if (changed * 1000 > checked) {
+        return unknown(imnText('تنظیمات گره تغییر کرده؛ منتظر بررسی تازه هستیم.', 'The node was edited; waiting for a fresh check.'));
+    }
+    var native = ['vless', 'vmess', 'trojan', 'shadowsocks', 'hysteria', 'tuic', 'anytls', 'v2node', 'mdns', 'trusttunnel'];
+    if (!native.includes(source.type) && !source.managed) {
+        return unknown(imnText('این گره سرویس خارجی است و گزارش فایروال محلی ندارد.', 'This external service has no local firewall report.'));
+    }
+    var port = imnPortSpec(source), ref = source.type + '#' + source.id;
+    if (!port) return unknown(imnText('پورت سرویس این گره مشخص نیست.', 'This node has no valid service port.'));
+    var protocols = imnPortProtocols(source);
+    var entries = protocols.map(proto => report.ports.filter(item => item && String(item.port) === port && item.proto === proto &&
+        Array.isArray(item.nodes) && item.nodes.includes(ref)));
+    var blocked = entries.some(matches => matches.some(item => item.allowed === false));
+    var complete = entries.every(matches => matches.length > 0 && matches.every(item => item.allowed === true));
+    if (!blocked && !complete) {
+        return unknown(imnText('برای این گره گزارشی از فایروال سرور پنل نداریم.', 'There is no panel-server firewall report for this node.'));
+    }
+    var detail = imnText('فایروال سرور پنل؛ پورت سرویس ', 'Panel-server firewall; service port ') + port + ' / ' + protocols.join('+').toUpperCase();
+    if (source !== row) detail += imnText('؛ مربوط به گره اصلی', '; parent node listener');
+    detail += imnText('؛ این وضعیت، اتصال از بیرون را تضمین نمی‌کند.', '; this does not confirm external connectivity.');
+    detail += '\n' + imnText('آخرین بررسی: ', 'Last checked: ') + new Date(checked).toLocaleString(imnText('fa-IR', 'en-US'));
+    return {state: blocked ? 'closed' : 'open', label: blocked ? imnText('بسته', 'Closed') : imnText('باز', 'Open'), detail: detail};
+}
+
+// All visible rows share a single request. No token or report crosses an
+// admin session/navigation boundary, even if an old response arrives late.
+var imnPortStore = {
+    listeners: new Set(), report: null, session: null, request: null, timer: null, nextPoll: 0, expired: false,
+    identity() { return {token: imnToken(), scope: imnScope()}; },
+    current(session) { return this.session === session && session.token === imnToken() && session.scope === imnScope(); },
+    emit() { this.listeners.forEach(listener => listener()); },
+    snapshot() { return this.session && this.current(this.session) ? this.report : null; },
+    clear() {
+        if (this.request) { clearTimeout(this.request.timeout); this.request.controller.abort(); }
+        this.request = null; this.report = null; this.session = null; this.nextPoll = 0; this.expired = false;
+    },
+    subscribe(listener) {
+        this.listeners.add(listener);
+        if (!this.timer) { this.tick(); this.timer = setInterval(() => this.tick(), 1000); }
+        return () => {
+            this.listeners.delete(listener);
+            if (!this.listeners.size) { clearInterval(this.timer); this.timer = null; this.clear(); }
+        };
+    },
+    tick() {
+        var identity = this.identity(), secure = String((window.settings || {}).secure_path || '');
+        if (this.session && !this.current(this.session)) { this.clear(); this.emit(); }
+        if (!identity.token || !/^[A-Za-z0-9_-]+$/.test(secure)) return;
+        if (this.report && !this.expired && Date.now() - imnPortTimestamp(this.report.updated_at) > imnPortMaxAge) {
+            this.expired = true; this.emit();
+        }
+        if (!this.request && Date.now() >= this.nextPoll) this.refresh(identity, secure);
+    },
+    async refresh(identity, secure) {
+        var session = this.session || identity; this.session = session;
+        var controller = new AbortController();
+        var request = {controller: controller, timeout: setTimeout(() => controller.abort(), 8000)};
+        this.request = request; this.nextPoll = Date.now() + 20000;
+        try {
+            var response = await fetch('/api/v1/' + secure + '/system/getNodePorts', {
+                headers: {authorization: session.token, Accept: 'application/json'}, signal: controller.signal
+            });
+            var payload = await response.json();
+            if (!this.current(session)) return;
+            if (!response.ok || !payload || !payload.data || typeof payload.data !== 'object') throw new Error('unavailable');
+            this.report = payload.data; this.expired = false; this.emit();
+        } catch (_) {
+            if (this.current(session)) { this.report = null; this.expired = false; this.emit(); }
+        } finally {
+            clearTimeout(request.timeout);
+            if (this.request === request) this.request = null;
+        }
+    }
+};
+
+class ImnNodePortBadge extends y.a.Component {
+    constructor(props) { super(props); this.state = {revision: 0}; }
+    componentDidMount() { this.unsubscribe = imnPortStore.subscribe(() => this.setState(state => ({revision: state.revision + 1}))); }
+    componentWillUnmount() { if (this.unsubscribe) this.unsubscribe(); }
+    render() {
+        var result = imnPortResult(this.props.row, this.props.nodes || [], imnPortStore.snapshot(), Date.now());
+        var palette = result.state === 'open' ? ['#f6ffed', '#b7eb8f', '#237804', '#52c41a'] :
+            result.state === 'closed' ? ['#fff1f0', '#ffa39e', '#a8071a', '#f5222d'] : ['#fafafa', '#d9d9d9', '#595959', '#8c8c8c'];
+        var caption = imnText('وضعیت پورت', 'Port status');
+        return y.a.createElement('span', {'data-node-port-state': result.state, 'data-node-port-ref': this.props.row.type + '#' + this.props.row.id,
+            title: result.detail, role: 'status', 'aria-label': caption + ': ' + result.label,
+            dir: imnText('rtl', 'ltr'), style: {display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
+                border: '1px solid ' + palette[1], borderRadius: 5, backgroundColor: palette[0], color: palette[2], padding: '3px 8px', fontSize: 12, lineHeight: 1.5}},
+            y.a.createElement('span', {'aria-hidden': true, 'data-node-port-dot': true,
+                style: {display: 'inline-block', width: 8, height: 8, borderRadius: '50%', backgroundColor: palette[3], flexShrink: 0}}),
+            (this.props.caption ? caption + ': ' : '') + result.label);
+    }
+}
+function imnPortColumns(columns, nodes) {
+    var result = columns.slice(), address = result.findIndex(column => column.key === 'host');
+    result.splice(address < 0 ? result.length : address + 1, 0, {
+        title: imnText('وضعیت پورت', 'Port status'), key: 'node_port_status', width: 145,
+        render: (_, row) => y.a.createElement(ImnNodePortBadge, {row: row, nodes: nodes})
+    });
+    return result;
+}
+/*__NODE_PORT_SOURCE_END__*/

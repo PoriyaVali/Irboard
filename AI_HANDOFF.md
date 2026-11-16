@@ -1,5 +1,37 @@
 # AI work log and handoff
 
+## Active handoff - 2026-11-16 - Codex - LOCAL VALIDATED: node-port status embedded in both admin Umi bundles
+
+Owner requests a green/red port-status badge next to each node address in
+both admin Umi bundles. Work from main0a8746a in an isolated clone; previous
+PR37 firewall fixes were merged and deployed in the preceding session.
+Plan files: scripts/admin_mihomo_form.js, scripts/patch_admin_mihomo_nodes.py,
+public/assets/admin/{umi.js,umi-fa.js}, resources/views/admin.blade.php,
+tests/AdminNodePortsTest.cjs, tests/AdminMihomoNodesBrowserTest.cjs,
+.github/workflows/ci.yml, docs/node-ports.md and this handoff.
+Latest owner clarification: the feature must execute inside umi.js/umi-fa.js,
+with no separately loaded JS. The maintained helper is embedded in the
+existing admin_mihomo_form.js and patcher inlines it into both full bundles;
+there is no new standalone source/served script. Admin view cache key bumped.
+Unit tests 9/9 PASS for exact IDs/ports/transports, parents, stale/error/edit
+neutral states, shared request, auth/navigation races, and Persian labels.
+An initial strict parser rejected ISO milliseconds; corrected and retested.
+A source-move encoding regression was caught by the Persian-label test and
+corrected before publishing. All admin patch --check and bundle JS syntax
+checks PASS. Real Chrome browser suite 19/19 PASS (71.48s), including the
+existing node forms and three new status cases: both full bundles in EN/FA,
+actual mobile UA/list rendering, adjacent column, green/red/gray indicators,
+service-port/transports/parent mapping, stale/error neutral, one authenticated
+read, and no standalone runtime script. Focused status tests also 3/3 PASS.
+Screenshots inspected in Persian desktop/mobile. CI/commit/deploy pending.
+
+The existing status API is local-firewall evidence, not an external port
+scan: unsupported/remote/missing/stale/failed reports must remain neutral.
+Map exact typed node references, current service port/range and transports;
+parent rows use their parent's service listener. Share one authenticated
+request/poll across all visible badges and discard responses across logout
+or navigation. No firewall writes or new probe service in this task.
+
 ## Active handoff - 2026-11-16 - Codex - FIXED/LOCAL VALIDATED: PR37 firewall review fixes, CI and deployment pending
 
 Owner authorized merge and deployment of PR37. Preparing fixes for four P2

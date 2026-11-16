@@ -783,6 +783,7 @@ jobs:
           node --check scripts/admin_tailored_pricing.js
           node --test tests/AdminTailoredPricingBrowserTest.cjs
           node --check scripts/admin_mihomo_form.js
+          node --test tests/AdminNodePortsTest.cjs
           node --check scripts/admin_native_node_help.js
           python3 scripts/patch_admin_mihomo_nodes.py --check
           python3 scripts/patch_admin_native_node_help.py --check
