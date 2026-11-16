@@ -35,7 +35,7 @@ deleted, with shared ports kept open until their last node goes.
 
 Validated here: `tests/Unit/LocalNodePortsTest.php` 9/9 through a minimal
 PHPUnit stand-in (no vendor here: composer filled the disk with source clones);
-`tests/NodePortsAgentTest.py` 8/8 against simulated firewalld, ufw, iptables
+`tests/NodePortsAgentTest.py` 9/9 against simulated firewalld, ufw, iptables
 and an open firewall; the reconcile against real iptables in an isolated
 network namespace (opened 2053/tcp, 2053/udp and a 2000:2010/udp range with
 the tag, left the operator's 443 rule alone, closed each when unneeded);
@@ -45,6 +45,13 @@ other admin patch scripts' `--check`. CI adds: the agent tests, a
 LocalNodePortsTest in the focused phpunit gate. Not run here: the full
 PHPUnit suite, ufw and firewalld for real (not installed), the agent on a live
 aaPanel server.
+
+Review fix (Codex, P2): a removal that failed or timed out used to drop the
+port from the record anyway, so it was never retried and stayed open while the
+status read success. Removal now reports success only once the rule is really
+gone (firewalld runtime and permanent queries, ufw status, iptables -C), and a
+failed one stays recorded with an error and is retried; the new test fails on
+the earlier code for all three backends.
 
 Risks: on ufw, `ufw delete allow` removes the rule even if an operator later
 added the identical rule by hand; a node whose host and V2bX report are both

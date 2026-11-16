@@ -16,11 +16,13 @@ import node_ports  # noqa: E402
 class FakeFirewall:
     """Answers the commands node_ports.py runs, for one backend."""
 
-    def __init__(self, backend, preset=()):
+    def __init__(self, backend, preset=(), refuse_removal=False):
         self.backend = backend
         # (port, proto) -> tagged by us?
         self.rules = {p: False for p in preset}
         self.log = []
+        # A firewall whose removals fail (busy lock, timeout): rules stay.
+        self.refuse_removal = refuse_removal
 
     def __call__(self, cmd, timeout=30):
         self.log.append(cmd)
@@ -46,6 +48,8 @@ class FakeFirewall:
                 self.rules[(port, proto)] = True
                 return 0, 'success\n'
             if spec.startswith('--remove-port'):
+                if self.refuse_removal:
+                    return 1, ''
                 self.rules.pop((port, proto), None)
                 return 0, 'success\n'
         if b == 'ufw' and cmd[:2] == ['ufw', 'allow']:
@@ -54,6 +58,8 @@ class FakeFirewall:
             return 0, 'Rule added\n'
         if b == 'ufw' and cmd[:3] == ['ufw', 'delete', 'allow']:
             port, proto = cmd[3].split('/')
+            if self.refuse_removal:
+                return 1, 'ERROR: could not delete rule\n'
             return (0, 'Rule deleted\n') if self.rules.pop((port.replace(':', '-'), proto), None) is not None else (1, '')
         if b == 'iptables' and cmd[0] == 'iptables':
             proto = cmd[cmd.index('-p') + 1]
@@ -66,6 +72,8 @@ class FakeFirewall:
                 self.rules[key] = True
                 return 0, ''
             if cmd[1] == '-D':
+                if self.refuse_removal:
+                    return 4, ''
                 if self.rules.get(key) is True and tagged:
                     del self.rules[key]
                     return 0, ''
@@ -138,6 +146,22 @@ class ReconcileTest(unittest.TestCase):
         self.assertEqual(fw.name, 'open')
         state, report = node_ports.reconcile(want('2053/tcp'), [], fw)
         self.assertEqual((state, report['opened'], report['closed']), ([], [], []))
+
+    def test_a_port_that_fails_to_close_stays_recorded_and_is_retried(self):
+        for backend in ('ufw', 'iptables', 'firewalld'):
+            with self.subTest(backend=backend):
+                fake = FakeFirewall(backend)
+                fw = node_ports.Firewall(fake)
+                state, _ = node_ports.reconcile(want('2053/tcp'), [], fw)
+                fake.refuse_removal = True
+                state, report = node_ports.reconcile([], state, fw)
+                self.assertEqual(report['closed'], [])
+                self.assertEqual(len(report['errors']), 1)
+                self.assertEqual(state, [{'port': '2053', 'proto': 'tcp', 'backend': backend}])
+                # The firewall recovers: the next run closes it.
+                fake.refuse_removal = False
+                state, report = node_ports.reconcile([], state, fw)
+                self.assertEqual((report['closed'], report['errors'], state), (['2053/tcp'], [], []))
 
     def test_invalid_entries_are_ignored(self):
         fw = node_ports.Firewall(FakeFirewall('ufw'))

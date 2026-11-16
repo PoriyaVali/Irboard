@@ -116,22 +116,30 @@ class Firewall:
         return True
 
     def remove(self, port, proto, backend):
-        """Remove a rule we added, with the tool that added it."""
+        """Remove a rule we added, with the tool that added it.
+
+        True only once the rule is really gone: a removal that fails or times
+        out must keep the port in the record, or no later run would retry it
+        and the port would stay open for good while the status read success.
+        """
         if backend == 'firewalld':
             spec = '--remove-port=%s/%s' % (port, proto)
             self.run(['firewall-cmd', spec])
             self.run(['firewall-cmd', '--permanent', spec])
-            return True
+            runtime = self.run(['firewall-cmd', '--query-port=%s/%s' % (port, proto)])
+            permanent = self.run(['firewall-cmd', '--permanent', '--query-port=%s/%s' % (port, proto)])
+            return runtime[1].strip() == 'no' and permanent[1].strip() == 'no'
         if backend == 'ufw':
-            return self.run(['ufw', 'delete', 'allow', '%s/%s' % (self._range(port, ':'), proto)])[0] == 0
+            self.run(['ufw', 'delete', 'allow', '%s/%s' % (self._range(port, ':'), proto)])
+            code, _ = self.run(['ufw', 'status'])
+            return code == 0 and not self.allowed(port, proto, 'ufw')
         if backend == 'iptables':
             # Only our tagged rule; delete every copy of it.
+            rule = ['-p', proto, '--dport', self._range(port, ':'), '-j', 'ACCEPT', '-m', 'comment', '--comment', TAG]
             for _ in range(10):
-                code, _ = self.run(['iptables', '-D', 'INPUT', '-p', proto, '--dport', self._range(port, ':'),
-                                    '-j', 'ACCEPT', '-m', 'comment', '--comment', TAG])
-                if code != 0:
+                if self.run(['iptables', '-D', 'INPUT'] + rule)[0] != 0:
                     break
-            return True
+            return self.run(['iptables', '-C', 'INPUT'] + rule)[0] == 1
         return True
 
 
@@ -221,14 +229,19 @@ def reconcile(desired, state, fw):
         else:
             report['errors'].append('could not open %s/%s with %s' % (port, proto, fw.name))
 
+    failed = set()
     for (port, proto), backend in sorted(mine.items()):
         if (port, proto) in wanted:
             continue
-        fw.remove(port, proto, backend)
-        report['closed'].append('%s/%s' % (port, proto))
+        if fw.remove(port, proto, backend):
+            report['closed'].append('%s/%s' % (port, proto))
+        else:
+            # Kept in the record so the next run tries again.
+            failed.add((port, proto))
+            report['errors'].append('could not close %s/%s with %s; will retry' % (port, proto, backend))
 
     new_state = [{'port': p, 'proto': pr, 'backend': b}
-                 for (p, pr), b in sorted(mine.items()) if (p, pr) in wanted]
+                 for (p, pr), b in sorted(mine.items()) if (p, pr) in wanted or (p, pr) in failed]
     return new_state, report
 
 
