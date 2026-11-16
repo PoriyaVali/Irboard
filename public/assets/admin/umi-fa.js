@@ -105158,7 +105158,12 @@ var imnNativeNodeGuides = {
                 "Filter target protocols, one core-recognized name per line; this does not change the node connection protocol."
             ]
         },
-        "tls": {},
+        "tls": {
+            "server_port": [
+                "پورت سایت مقصد (پوششی) در حالت REALITY؛ تقریباً همیشه ۴۴۳. این پورت شنود نود نیست و نباید با پورت اتصال یا سرویس نود یکی شود.",
+                "Port of the REALITY cover (destination) site, almost always 443. It is not the node's listening port and must not copy the node's connection or service port."
+            ]
+        },
         "encryption": {
             "mode": [
                 "حالت رمزگذاری VLESS مطابق سرور و کلاینت؛ تغییر حالت به کلیدها و تنظیمات سازگار همان حالت نیاز دارد.",
