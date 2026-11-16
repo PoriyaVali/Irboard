@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Services\LocalNodePorts;
+use App\Services\NodePortTargets;
 use App\Services\ServerService;
 use App\Utils\CacheKey;
 use Illuminate\Console\Command;
@@ -18,15 +19,19 @@ use Illuminate\Support\Facades\Cache;
  */
 class NodeLocalPorts extends Command
 {
-    protected $signature = 'node:local-ports {--ips= : this server\'s addresses, comma- or space-separated}';
+    protected $signature = 'node:local-ports {--ips= : this server\'s addresses, comma- or space-separated} {--endpoints : export all configured client endpoints for read-only reachability checks}';
 
-    protected $description = 'List the firewall ports needed by the nodes running on this server';
+    protected $description = 'List local node firewall ports or configured client endpoints for read-only checks';
 
     public function handle()
     {
         try {
             $ips = preg_split('/[\s,]+/', (string)$this->option('ips'), -1, PREG_SPLIT_NO_EMPTY);
             $servers = (new ServerService())->getAllServers();
+            if ($this->option('endpoints')) {
+                $this->line(json_encode(['ok' => true, 'targets' => NodePortTargets::fromServers($servers)], JSON_UNESCAPED_SLASHES));
+                return 0;
+            }
             $reporters = [];
             foreach ($servers as $server) {
                 $ref = ($server['type'] ?? '') . '#' . ($server['id'] ?? '');

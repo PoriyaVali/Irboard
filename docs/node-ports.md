@@ -67,25 +67,49 @@ write.
 
 ## What the admin sees
 
+The column now prefers a separate **endpoint observation**, generated in the
+background by `scripts/node_port_probe.py`. The previous local-firewall-only
+view could show Unknown for every node when none ran on the panel server.
+`node:local-ports --endpoints` exports configured client addresses only, with
+no credentials. Each row, including a relay/child, is checked at its **own
+host and client port**, not its service port or its parent's endpoint.
+
+TCP connect success is green **Open (TCP)**; explicit connection refusal is
+red **Closed (TCP)**. A timeout or unavailable route is **Unreachable**, not
+proof that a firewall closed the port. The tooltip names the vantage point
+(the panel server) and the tested transport. A CDN edge accepting TCP does
+not prove a working VPN handshake. UDP-only services and unsupported ranges
+remain unverified instead of being guessed from a TCP check or heartbeat.
+MDNS is a UDP DNS tunnel and is explicitly marked **UDP unverified**, not
+classified as closed just because a TCP connection would be refused.
+Host/port changes, edits and stale snapshots invalidate the previous result.
+
+The observation worker deduplicates endpoints and uses bounded concurrency
+and a global deadline. Opening the admin list only reads its cached result;
+it never launches a scan. Its status file `node_port_reachability.json` is
+separate from firewall ownership/desired state, and observation failures
+can never open or close a firewall rule. Work that did not complete within
+the batch budget remains Unknown rather than being reported unreachable.
+
 In **Nodes / Manage**, the **Port status** column follows **Address** in both
-admin bundles. A green dot and "Open" mean that all required service-port
-transports are allowed by the panel server's firewall; a red dot and "Closed"
-mean a required transport is blocked. Text accompanies the color, and the
-tooltip identifies the service port, transports, parent listener (when shared)
-and last check. The same badge is next to the address on mobile.
+admin bundles. Text accompanies the color; the tooltip identifies the tested
+endpoint, transport and last check. The same badge is next to the address on
+mobile. Older API responses without an observation field retain the legacy
+local-firewall display; an explicit failed or stale endpoint observation
+never falls back to an unrelated parent or local-firewall success.
 
 A gray "Unknown" badge means there is no applicable, current report: for
-example, a node runs elsewhere, is an unmanaged external service, was just
-edited, or the agent/report is unavailable. A report older than three minutes
-is not displayed as a current open/closed result. This is firewall evidence,
-not proof that an external client can reach a listener or pass a provider
-security group. No remote port scan is started by opening the node list.
+example, a UDP-only service has not been verified, a node was just edited, or
+the observer/report is unavailable. A report older than three minutes is not
+displayed as a current open/closed result. No network check is started by
+opening the node list.
 
 The visible rows share one authenticated read every 20 seconds. Requests
 stop when the list unmounts; logout or navigation discards previous reports
 and in-flight responses.
 
-`GET /{admin}/system/getNodePorts` returns `storage/node_ports_status.json`:
+`GET /{admin}/system/getNodePorts` returns `storage/node_ports_status.json`,
+with the separate endpoint snapshot under `reachability`:
 the firewall found, each needed port with the nodes needing it, whether it is
 allowed and which process listens on it (a port held by another program, say
 the web server's 8443, shows here), and the ports opened or closed on the last

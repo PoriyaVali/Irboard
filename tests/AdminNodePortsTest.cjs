@@ -139,3 +139,49 @@ test('the column follows Address and badge text accompanies the green/red light 
     assert.equal(badge.props['aria-label'], 'وضعیت پورت: بسته');
     assert.equal(badge.children[0].props.style.backgroundColor, '#f5222d');
 });
+
+function endpointReport(f, results, local = {}) {
+    return { ...f.report([]), ...local, reachability: { ok: true, updated_at: new Date(f.now()).toISOString(), results } };
+}
+function endpoint(row, state = 'open', reason = 'connected') {
+    return { node: row.type + '#' + row.id, host: row.host, port: String(row.port), transport: 'tcp', state, reason, updated_at: row.updated_at || 0 };
+}
+test('empty local firewall results no longer make every remote node unknown', () => {
+    const f = fixture(), open = f.row(), closed = f.row('anytls', 4, { host: 'other.example.test', port: 2087 });
+    const report = endpointReport(f, [endpoint(open), endpoint(closed, 'closed', 'refused')]);
+    assert.equal(f.result(open, report).state, 'open');
+    assert.equal(f.result(open, report).label, 'Open (TCP)');
+    assert.equal(f.result(closed, report).state, 'closed');
+    assert.equal(f.result(open, { ...report, ok: false }).state, 'open', 'firewall failure is independent of observations');
+    assert.match(f.result(open, report).detail, /node\.example\.test:443/);
+    assert.doesNotMatch(f.result(open, report).detail, /2053/);
+});
+test('remote relay status measures its own connection address instead of its parent service', () => {
+    const f = fixture(), parent = f.row(), child = f.row('vless', 9, { host: 'relay.example.test', port: 8443, parent_id: 7 });
+    const report = endpointReport(f, [endpoint(parent), endpoint(child, 'unreachable', 'timeout')]);
+    assert.equal(f.result(parent, report, [parent, child]).state, 'open');
+    assert.equal(f.result(child, report, [parent, child]).state, 'unreachable');
+    assert.match(f.result(child, report).detail, /relay\.example\.test:8443/);
+    assert.equal(f.result(child, endpointReport(f, [endpoint(parent)]), [parent, child]).state, 'unknown');
+});
+test('endpoint evidence cannot survive an address, port, edit or report freshness change', () => {
+    const f = fixture(), row = f.row('vless', 7, { updated_at: f.now() / 1000 - 60 }), report = endpointReport(f, [endpoint(row)]);
+    for (const changed of [{ ...row, host: 'moved.example.test' }, { ...row, port: 1443 }, { ...row, updated_at: row.updated_at + 1 }]) {
+        assert.equal(f.result(changed, report).state, 'unknown');
+    }
+    const local = f.report([f.entry()]);
+    for (const reachability of [null, {}, { ...report.reachability, ok: false },
+        { ...report.reachability, updated_at: '2026-11-16T08:55:00Z' }]) {
+        assert.equal(f.result(row, { ...local, reachability }).state, 'unknown', 'no fallback to old local success');
+    }
+});
+test('TCP observations never claim UDP reachability or a closed port from a timeout', () => {
+    const f = fixture(), udp = f.row('hysteria'), mixed = f.row('trusttunnel');
+    assert.equal(f.result(udp, endpointReport(f, [endpoint(udp)])).state, 'unknown');
+    assert.equal(f.result(mixed, endpointReport(f, [endpoint(mixed)])).label, 'Open (TCP)');
+    assert.match(f.result(mixed, endpointReport(f, [endpoint(mixed)])).detail, /does not verify VPN operation or UDP/);
+    assert.equal(f.result(mixed, endpointReport(f, [endpoint(mixed, 'closed', 'timeout')])).state, 'unknown');
+    const mdns = f.row('mdns');
+    assert.equal(f.result(mdns, endpointReport(f, [endpoint(mdns)])).state, 'unknown', 'MDNS is a UDP DNS tunnel');
+    assert.equal(f.result(mdns, endpointReport(f, [{ ...endpoint(mdns), transport: 'udp', state: 'unknown', reason: 'udp_unverified' }])).label, 'UDP unverified');
+});

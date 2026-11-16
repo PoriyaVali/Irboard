@@ -371,7 +371,52 @@ function imnPortProtocols(row) {
     }
     return ['tcp', 'udp'];
 }
+function imnEndpointResult(row, report, now) {
+    var unknown = detail => ({state: 'unknown', label: imnText('نامشخص', 'Unknown'), detail: detail});
+    if (!report || report.ok !== true || !Array.isArray(report.results)) {
+        return unknown(imnText('بررسی آدرس و پورت گره هنوز آماده نیست.', 'The node endpoint check is not available yet.'));
+    }
+    var checked = imnPortTimestamp(report.updated_at), age = now - checked;
+    if (!Number.isFinite(checked) || age > imnPortMaxAge || age < -30000) {
+        return unknown(imnText('نتیجه بررسی پورت قدیمی است؛ منتظر بررسی تازه هستیم.', 'The endpoint check is stale; waiting for a fresh result.'));
+    }
+    var normalizeHost = value => String(value || '').trim().replace(/^\[|\]$/g, '').toLowerCase();
+    var host = normalizeHost(row.host), raw = row.type === 'mieru' && String(row.port_range || '').trim() ? row.port_range : row.port;
+    var port = raw != null && String(raw).trim() !== '' && Number.isInteger(Number(raw)) && Number(raw) >= 1 && Number(raw) <= 65535 ?
+        String(Number(raw)) : String(row.port_range || raw || '').trim().replace(/\s*-\s*/g, '-');
+    var range = /^(\d{1,5})-(\d{1,5})$/.exec(port);
+    if (range) port = Number(range[1]) === Number(range[2]) ? String(Number(range[1])) : Number(range[1]) + '-' + Number(range[2]);
+    if (!host || !port) return unknown(imnText('آدرس و پورت اتصال این گره مشخص نیست.', 'This node has no valid connection address and port.'));
+    // A relay has its OWN endpoint. Its parent's listener being up does not
+    // make the relay address reachable, and service_port is not client port.
+    var entry = report.results.find(item => item && item.node === row.type + '#' + row.id &&
+        normalizeHost(item.host) === host && String(item.port) === port);
+    if (!entry || (Number(row.updated_at) > 0 && Number(entry.updated_at) !== Number(row.updated_at))) {
+        return unknown(imnText('برای آدرس فعلی این گره بررسی تازه‌ای نداریم.', 'No current check matches this node endpoint.'));
+    }
+    if (entry.reason === 'unsupported_range') return unknown(imnText('بازه پورت هنوز بررسی نشده است.', 'This port range has not been checked.'));
+    if (entry.reason === 'budget_exceeded') return unknown(imnText('بررسی این گره در مهلت این نوبت کامل نشد.', 'This endpoint check did not complete within this batch deadline.'));
+    if (entry.transport === 'udp' || row.type === 'mdns' || !imnPortProtocols(row).includes('tcp')) {
+        return {state: 'unknown', label: imnText('UDP بررسی نشده', 'UDP unverified'),
+            detail: imnText('باز بودن UDP با اتصال TCP قابل تشخیص نیست؛ بررسی پروتکل لازم است.', 'UDP reachability needs a protocol response; TCP cannot verify it.')};
+    }
+    if (entry.transport !== 'tcp') return unknown(imnText('روش بررسی این پروتکل پشتیبانی نشده است.', 'This protocol has no supported endpoint check.'));
+    var state = entry.state;
+    if (!((state === 'open' && entry.reason === 'connected') || (state === 'closed' && entry.reason === 'refused') || state === 'unreachable')) {
+        return unknown(imnText('نتیجه معتبری برای این پورت ثبت نشده است.', 'There is no verified result for this port.'));
+    }
+    var address = (host.indexOf(':') >= 0 ? '[' + host + ']' : host) + ':' + port;
+    var detail = imnText('بررسی اتصال TCP از سرور پنل به ', 'TCP connection from the panel server to ') + address;
+    detail += state === 'open' ? imnText(' برقرار شد.', ' succeeded.') : state === 'closed' ?
+        imnText(' رد شد؛ پورت TCP بسته است.', ' was refused; the TCP port is closed.') :
+        imnText(' موفق نشد؛ مسیر یا پورت از این سرور در دسترس نیست.', ' failed; the endpoint is unreachable from this server.');
+    detail += imnText(' این بررسی صحت VPN یا دسترسی UDP را تأیید نمی‌کند.', ' This does not verify VPN operation or UDP reachability.');
+    detail += '\n' + imnText('آخرین بررسی: ', 'Last checked: ') + new Date(checked).toLocaleString(imnText('fa-IR', 'en-US'));
+    return {state: state, label: state === 'open' ? imnText('باز (TCP)', 'Open (TCP)') : state === 'closed' ?
+        imnText('بسته (TCP)', 'Closed (TCP)') : imnText('در دسترس نیست', 'Unreachable'), detail: detail};
+}
 function imnPortResult(row, nodes, report, now) {
+    if (report && Object.prototype.hasOwnProperty.call(report, 'reachability')) return imnEndpointResult(row, report.reachability, now);
     var unknown = reason => ({state: 'unknown', label: imnText('نامشخص', 'Unknown'), detail: reason});
     if (!report || report.ok !== true || !Array.isArray(report.ports)) {
         return unknown(imnText('گزارش معتبر وضعیت پورت در دسترس نیست.', 'A valid port-status report is unavailable.'));
@@ -437,7 +482,9 @@ var imnPortStore = {
         var identity = this.identity(), secure = String((window.settings || {}).secure_path || '');
         if (this.session && !this.current(this.session)) { this.clear(); this.emit(); }
         if (!identity.token || !/^[A-Za-z0-9_-]+$/.test(secure)) return;
-        if (this.report && !this.expired && Date.now() - imnPortTimestamp(this.report.updated_at) > imnPortMaxAge) {
+        var timestamp = this.report && Object.prototype.hasOwnProperty.call(this.report, 'reachability') ?
+            (this.report.reachability || {}).updated_at : (this.report || {}).updated_at;
+        if (this.report && !this.expired && Date.now() - imnPortTimestamp(timestamp) > imnPortMaxAge) {
             this.expired = true; this.emit();
         }
         if (!this.request && Date.now() >= this.nextPoll) this.refresh(identity, secure);
@@ -471,7 +518,7 @@ class ImnNodePortBadge extends y.a.Component {
     render() {
         var result = imnPortResult(this.props.row, this.props.nodes || [], imnPortStore.snapshot(), Date.now());
         var palette = result.state === 'open' ? ['#f6ffed', '#b7eb8f', '#237804', '#52c41a'] :
-            result.state === 'closed' ? ['#fff1f0', '#ffa39e', '#a8071a', '#f5222d'] : ['#fafafa', '#d9d9d9', '#595959', '#8c8c8c'];
+            ['closed', 'unreachable'].includes(result.state) ? ['#fff1f0', '#ffa39e', '#a8071a', '#f5222d'] : ['#fafafa', '#d9d9d9', '#595959', '#8c8c8c'];
         var caption = imnText('وضعیت پورت', 'Port status');
         return y.a.createElement('span', {'data-node-port-state': result.state, 'data-node-port-ref': this.props.row.type + '#' + this.props.row.id,
             title: result.detail, role: 'status', 'aria-label': caption + ': ' + result.label,
