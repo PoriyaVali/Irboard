@@ -19,6 +19,22 @@ both Umi bundles) and #39 (endpoint reachability probe) at main 3edfe22.
   the loop returned in 2 ms and an overlapping second start was skipped.
 - `docs/node-ports.md` notes both. No bundle, PHP or UI change.
 
+Staff (reseller) scope, same PR:
+- `Staff\UserController::sendMail` and `::ban` called a `filter()` the class
+  never had, so both always failed with a 500; the admin filter they were
+  copied from would have reached every account. A private `filter()` now
+  always scopes to `invite_user_id = staff id`, then applies whitelisted
+  filter rows only.
+- `Staff\TicketController` listed, read, replied to and closed every ticket on
+  the panel: it now sees only tickets of its own customers.
+- Staff notice routes pointed at the admin's controller (create, change,
+  delete notices every user sees): only `notice/fetch` remains, read-only
+  (`Staff\NoticeController::fetch`; its unused save/drop were removed). The
+  app uses only `staff/reseller/*`; no page calls the removed routes.
+- `tests/Feature/StaffScopeTest.php` (new blocking CI step): ban and mail reach
+  only the reseller's customers, tickets are only theirs, notices read-only.
+  Not run here (no vendor in this container); `php -l` passes.
+
 Not changed, by decision: the badge code stays fenced inside
 `scripts/admin_mihomo_form.js`, the source the node-list patcher already
 inlines into both bundles (moving it buys nothing at runtime).

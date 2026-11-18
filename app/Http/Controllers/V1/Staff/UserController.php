@@ -85,6 +85,39 @@ class UserController extends Controller
         ]);
     }
 
+    /**
+     * The staff member's own customers (the users it invited), narrowed by
+     * the panel's filter rows. sendMail and ban called a filter() this class
+     * never had, so both always failed; the admin's filter would have
+     * reached every account on the panel.
+     */
+    private function filter(Request $request, $builder)
+    {
+        $builder->where('invite_user_id', $request->user['id']);
+        $filters = $request->input('filter');
+        if (!is_array($filters)) return;
+        $keys = ['id', 'email', 'plan_id', 'banned', 'transfer_enable', 'd', 'expired_at', 'device_limit', 'remarks'];
+        $conditions = ['=', '!=', '>', '<', '>=', '<=', 'like'];
+        foreach ($filters as $filter) {
+            if (!is_array($filter) || !in_array($filter['key'] ?? null, $keys, true) || !isset($filter['value'])) continue;
+            $condition = $filter['condition'] ?? '=';
+            $value = $filter['value'];
+            if ($condition === '模糊' || $condition === 'تقریبی') {
+                $condition = 'like';
+                $value = "%{$value}%";
+            }
+            if (!in_array($condition, $conditions, true)) continue;
+            if ($filter['key'] === 'plan_id' && $value === 'null') {
+                $builder->whereNull('plan_id');
+                continue;
+            }
+            if (in_array($filter['key'], ['d', 'transfer_enable'], true) && is_numeric($value)) {
+                $value = $value * 1073741824;
+            }
+            $builder->where($filter['key'], $condition, $value);
+        }
+    }
+
     public function sendMail(UserSendMail $request)
     {
         $sortType = in_array($request->input('sort_type'), ['ASC', 'DESC']) ? $request->input('sort_type') : 'DESC';
