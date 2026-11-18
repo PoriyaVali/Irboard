@@ -29,6 +29,8 @@ class StaffScopeTest extends TestCase
     {
         parent::setUp();
         $this->setUpPanel();
+        // The shared fixture has no notices table; the notice routes need one.
+        $this->createInstallTables(['v2_notice']);
         $this->reseller = $this->makeUser(['is_staff' => 1]);
         $other = $this->makeUser(['is_staff' => 1]);
         $this->mine = $this->makeUser(['invite_user_id' => $this->reseller->id]);
