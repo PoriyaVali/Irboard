@@ -48,9 +48,18 @@ reconcile_node_ports() {
     rm -f "$NODE_PORTS_FLAG"
     python3 "$BASEDIR/scripts/node_ports.py" --base "$BASEDIR" >> "$LOG" 2>&1
     # Observe each configured client endpoint separately. Probe outcomes never
-    # feed firewall desired/state files or change firewall rules.
+    # feed firewall desired/state files or change firewall rules. It runs in
+    # the background: a batch can take half a minute (artisan, then up to 20 s
+    # of connects) and must not hold queued server-config tasks. flock skips a
+    # run while the previous one is still going.
     if [ -f "$BASEDIR/scripts/node_port_probe.py" ]; then
-        python3 "$BASEDIR/scripts/node_port_probe.py" --base "$BASEDIR" >> "$LOG" 2>&1
+        if command -v flock >/dev/null 2>&1; then
+            ( flock -n 9 || exit 0
+              python3 "$BASEDIR/scripts/node_port_probe.py" --base "$BASEDIR" >> "$LOG" 2>&1
+            ) 9>"$BASEDIR/storage/node_port_probe.lock" &
+        else
+            python3 "$BASEDIR/scripts/node_port_probe.py" --base "$BASEDIR" >> "$LOG" 2>&1
+        fi
     fi
     NODE_PORTS_LAST=$(date +%s)
 }

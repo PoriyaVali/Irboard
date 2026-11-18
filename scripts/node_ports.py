@@ -70,6 +70,8 @@ class Firewall:
         self.ipv6_required = ipv6_required
         self.scopes = []
         self.default_zone = None
+        # Limits worth knowing that still let the agent do its job.
+        self.warnings = []
         self.name = self.detect()
 
     def detect(self):
@@ -100,7 +102,10 @@ class Firewall:
                 if match:
                     ipv6 = match.group(1).lower() == 'yes'
                     if self.ipv6_required and not ipv6:
-                        raise RuntimeError('ufw IPv6 is disabled but this server has IPv6 addresses')
+                        # ufw then filters IPv4 only: its IPv4 rules are still
+                        # needed. Refusing them would leave every node closed.
+                        self.warnings.append('ufw has IPv6 disabled (IPV6=no in /etc/default/ufw): '
+                                             'only IPv4 ports are opened; IPv6 clients are not covered')
             self.scopes = [dict(backend='ufw', family=family) for family in ((4, 6) if ipv6 else (4,))]
             return 'ufw'
         for backend in ('iptables', 'ip6tables'):
@@ -413,6 +418,7 @@ def main(argv=None):
         'opened': report['opened'],
         'closed': report['closed'],
         'errors': report['errors'],
+        'warnings': fw.warnings,
     })
     return 1 if report['errors'] else 0
 

@@ -1,5 +1,31 @@
 # AI work log and handoff
 
+## Active handoff - 2026-11-18 - Claude - review of Codex's node-port work (PR #37 follow-up, #38, #39)
+
+The owner asked for Codex's recent work to be reviewed, integrated and its
+bugs caught. Reviewed 557027d (scoped firewall ownership), #38 (port badge in
+both Umi bundles) and #39 (endpoint reachability probe) at main 3edfe22.
+
+- `scripts/node_ports.py`: on a dual-stack server whose ufw has `IPV6=no`,
+  `Firewall.detect()` raised, so the agent changed nothing and no node port
+  was ever opened. ufw then filters IPv4 only and its IPv4 rules are still
+  needed: they are opened and the status gains `warnings` naming the limit.
+  `tests/NodePortsAgentTest.py::test_ufw_with_ipv6_disabled_still_opens_ipv4_ports`
+  fails on the earlier code with that RuntimeError and passes now (23/23).
+- `server_config_agent.sh`: the reachability probe ran in the agent loop
+  every minute; a batch (artisan up to 10 s, connects up to 20 s) held queued
+  server-config tasks meanwhile. It now runs in the background under
+  `flock -n` (falls back to the old inline run without flock): checked here,
+  the loop returned in 2 ms and an overlapping second start was skipped.
+- `docs/node-ports.md` notes both. No bundle, PHP or UI change.
+
+Not changed, by decision: the badge code stays fenced inside
+`scripts/admin_mihomo_form.js`, the source the node-list patcher already
+inlines into both bundles (moving it buys nothing at runtime).
+Validated: `python3 tests/NodePortsAgentTest.py` 23/23, `python3
+tests/NodePortProbeTest.py` 10/10, `bash -n server_config_agent.sh`. Not run: real
+ufw/firewalld; the agent on a live server.
+
 ## Active handoff - 2026-11-16 - Codex - IN PROGRESS: remote endpoint evidence for node-port badges
 
 Owner reports every badge Unknown. The deployed local firewall snapshot is
