@@ -31,11 +31,9 @@ class StaffRoute
             $router->post('/reseller/update-user', 'V1\\Staff\\ResellerController@updateUser');
             $router->get ('/reseller/user-detail', 'V1\\Staff\\ResellerController@userDetail');
             $router->get ('/reseller/logs', 'V1\\Staff\\ResellerController@logs');
-            // Notice
-            $router->get ('/notice/fetch', 'V1\\Admin\\NoticeController@fetch');
-            $router->post('/notice/save', 'V1\\Admin\\NoticeController@save');
-            $router->post('/notice/update', 'V1\\Admin\\NoticeController@update');
-            $router->post('/notice/drop', 'V1\\Admin\\NoticeController@drop');
+            // Notice: read only. Notices reach every user of the panel, so
+            // creating, changing or deleting one is the admin's alone.
+            $router->get ('/notice/fetch', 'V1\\Staff\\NoticeController@fetch');
         });
     }
 }

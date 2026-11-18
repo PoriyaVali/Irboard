@@ -8,7 +8,7 @@ import os
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import mock_open, patch
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'scripts'))
 import node_ports  # noqa: E402
@@ -280,6 +280,19 @@ class ReviewRegressionTest(unittest.TestCase):
         state, report = node_ports.reconcile([], state, fw)
         self.assertEqual(fake.rules, {('2053', 'tcp'): False})
         self.assertEqual(fake.ufw_ipv6_rules, {})
+
+    def test_ufw_with_ipv6_disabled_still_opens_ipv4_ports(self):
+        # A dual-stack server whose ufw has IPV6=no: ufw filters IPv4 only, so
+        # its IPv4 rules are needed. Refusing to run left every node closed.
+        fake = FakeFirewall('ufw')
+        with patch.object(node_ports.os.path, 'isfile', return_value=True), \
+                patch('builtins.open', mock_open(read_data='IPV6=no\n')):
+            fw = node_ports.Firewall(fake, ipv6_required=True)
+        self.assertEqual(fw.scopes, [{'backend': 'ufw', 'family': 4}])
+        self.assertEqual(len(fw.warnings), 1)
+        state, report = node_ports.reconcile(want('2053/tcp'), [], fw)
+        self.assertEqual((report['opened'], report['errors']), (['2053/tcp'], []))
+        self.assertEqual([s['family'] for s in state], [4])
 
     def test_ipv6_iptables_has_independent_ownership_and_removal(self):
         fake = FakeFirewall('iptables', preset=[('443', 'tcp')])

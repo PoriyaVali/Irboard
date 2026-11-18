@@ -48,7 +48,10 @@ Supported firewalls: firewalld, ufw, and iptables/ip6tables:
 - ufw: public inbound rules, separately for IPv4 and enabled IPv6, commented
   `irboard-node`. An allow limited to a source, destination or interface is
   not mistaken for public access. An existing IPv4 rule is not adopted when
-  only IPv6 needs adding (and vice versa).
+  only IPv6 needs adding (and vice versa). With `IPV6=no` in
+  `/etc/default/ufw` on a server that has IPv6 addresses, ufw filters IPv4
+  only: its IPv4 ports are still opened, and the status carries a warning
+  that IPv6 clients are not covered.
 - iptables and ip6tables: each family with a DROP/REJECT INPUT policy gets
   its own tagged rule and ownership record; rules return after a reboot on
   the next run. An ACCEPT policy with an unconditional final deny is
@@ -90,6 +93,8 @@ it never launches a scan. Its status file `node_port_reachability.json` is
 separate from firewall ownership/desired state, and observation failures
 can never open or close a firewall rule. Work that did not complete within
 the batch budget remains Unknown rather than being reported unreachable.
+The agent starts it in the background under a lock, so a slow batch never
+holds the server-config queue and two batches never overlap.
 
 In **Nodes / Manage**, the **Port status** column follows **Address** in both
 admin bundles. Text accompanies the color; the tooltip identifies the tested

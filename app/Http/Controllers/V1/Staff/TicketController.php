@@ -5,15 +5,25 @@ namespace App\Http\Controllers\V1\Staff;
 use App\Http\Controllers\Controller;
 use App\Models\Ticket;
 use App\Models\TicketMessage;
+use App\Models\User;
 use App\Services\TicketService;
 use Illuminate\Http\Request;
 
+/**
+ * A staff member (a reseller) works with the tickets of its own customers,
+ * the users it invited - never another reseller's or the panel's.
+ */
 class TicketController extends Controller
 {
+    private function mine(Request $request)
+    {
+        return Ticket::whereIn('user_id', User::where('invite_user_id', $request->user['id'])->select('id'));
+    }
+
     public function fetch(Request $request)
     {
         if ($request->input('id')) {
-            $ticket = Ticket::where('id', $request->input('id'))
+            $ticket = $this->mine($request)->where('id', $request->input('id'))
                 ->first();
             if (!$ticket) {
                 abort(500, 'تیکت یافت نشد');
@@ -32,7 +42,7 @@ class TicketController extends Controller
         }
         $current = $request->input('current') ? $request->input('current') : 1;
         $pageSize = $request->input('pageSize') >= 10 ? $request->input('pageSize') : 10;
-        $model = Ticket::orderBy('created_at', 'DESC');
+        $model = $this->mine($request)->orderBy('created_at', 'DESC');
         if ($request->input('status') !== NULL) {
             $model->where('status', $request->input('status'));
         }
@@ -53,6 +63,9 @@ class TicketController extends Controller
         if (empty($request->input('message'))) {
             abort(500, 'پیام نمی‌تواند خالی باشد');
         }
+        if (!$this->mine($request)->where('id', $request->input('id'))->exists()) {
+            abort(500, 'تیکت یافت نشد');
+        }
         $ticketService = new TicketService();
         $ticketService->replyByAdmin(
             $request->input('id'),
@@ -69,7 +82,7 @@ class TicketController extends Controller
         if (empty($request->input('id'))) {
             abort(500, 'پارامتر نادرست است');
         }
-        $ticket = Ticket::where('id', $request->input('id'))
+        $ticket = $this->mine($request)->where('id', $request->input('id'))
             ->first();
         if (!$ticket) {
             abort(500, 'تیکت یافت نشد');

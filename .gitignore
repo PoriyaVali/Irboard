@@ -71,3 +71,6 @@ nohup.out
 # Generated knowledge-graph artefacts (52 MB). Swept in by a git add -A;
 # they are build output of the graphify tool, not part of the panel.
 graphify-out/
+
+# Python bytecode: the server-config agent imports scripts/node_ports.py
+__pycache__/
