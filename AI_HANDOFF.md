@@ -25,6 +25,17 @@ protocol answers:
   stay "UDP unverified". Both bundles re-patched (`--check` passes); admin
   cache key bumped to `node-endpoints-3`.
 
+Device bans now stay on the device (same PR): a device ban used to ban only
+the accounts it was applied to; its hash went into `v2_device_ban` and was
+never consulted again, so the same phone could sign up again at once.
+`DeviceIdentityService::bannedDevice($header)` matches the X-Device-Ids
+pairs and bare hashes against unreverted ban rows (a failed query never
+blocks sign-in). `AuthController::register` refuses a banned device;
+`login` refuses it unless the account is admin or staff. Google sign-in is a
+browser redirect without the header and is not covered; existing sessions
+of other accounts on that device are not cut (sign-in/up only).
+`tests/Feature/DeviceBanTest.php` (blocking CI step with StaffScopeTest).
+
 Validated: `tests/NodePortProbeTest.py` 17/17 (new: real local UDP servers
 for QUIC VN, Salamander and xplus, wrong key, DNS, ICMP-refused port, silent
 protocols, key absent from the report); `tests/AdminNodePortsTest.cjs` 14/14

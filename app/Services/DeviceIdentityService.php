@@ -88,6 +88,36 @@ class DeviceIdentityService
     }
 
     /**
+     * Whether a device in this X-Device-Ids header carries an active device
+     * ban: a v2_device_ban row naming one of its ids (a `kind:hash` pair or
+     * the bare hash) that has not been reverted.
+     *
+     * A device ban used to ban only the accounts it was applied to; the hash
+     * was recorded and never consulted again, so the same phone could sign up
+     * again at once. Sign-up and sign-in now ask this. Best effort by nature:
+     * an app that sends no header cannot be matched.
+     */
+    public static function bannedDevice($header): bool
+    {
+        if (!is_string($header) || $header === '') return false;
+        $pairs = self::parseHeader($header);
+        if (!$pairs) return false;
+        $ids = $pairs;
+        foreach ($pairs as $pair) $ids[] = substr($pair, strpos($pair, ':') + 1);
+        try {
+            return DB::table('v2_device_ban')
+                ->whereIn('hash', array_values(array_unique($ids)))
+                ->whereNull('reverted_at')
+                ->exists();
+        } catch (\Throwable $e) {
+            // A missing table (an install that never ran the migration) or a
+            // database hiccup must not stop everyone signing in.
+            Log::warning('device ban check failed', ['error' => $e->getMessage()]);
+            return false;
+        }
+    }
+
+    /**
      * The valid `kind:hash` pairs in a header, lowercased, de-duplicated and
      * sorted, so one device always produces the same list.
      *
