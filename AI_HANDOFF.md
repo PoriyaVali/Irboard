@@ -6,7 +6,8 @@ The owner's exposure audit (app side in drmobile 2.3.8/2.3.9) found that
 clients resolve node host names in plain DNS before the tunnel is up. New
 setting `subscribe_serve_ips` (subscribe group, default 0; ConfigSave +
 ConfigController fetch): `app/Services/NodeAddressResolver.php`, applied in
-`ClientController::subscribe`, serves a node's IPv4 address instead of its
+`ClientController::subscribe` (the relay mirror builds from it too) and the
+legacy `AppController::getConfig`, serves a node's IPv4 address instead of its
 host name where nothing depends on the name (rules in `docs/node-ports.md`):
 TLS name pinned to the old host, HTTP transports need their own Host header,
 Cloudflare addresses and `keep-domain`-tagged nodes untouched (tag not

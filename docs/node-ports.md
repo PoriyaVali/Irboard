@@ -150,6 +150,7 @@ name; nodes on Cloudflare addresses keep their name (a CDN edge must be found
 by name, near the client); a node tagged `keep-domain` is never touched (the
 tag is not served). MDNS, TrustTunnel, v2node and the Mihomo-native types are
 not touched. Code: `app/Services/NodeAddressResolver.php`, applied in
-`ClientController::subscribe`. If a node's IP changes, clients pick it up on
+`ClientController::subscribe` (which the relay mirror also builds from) and
+the legacy `AppController::getConfig`. If a node's IP changes, clients pick it up on
 their next subscription refresh.
 
