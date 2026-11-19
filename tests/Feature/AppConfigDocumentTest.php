@@ -64,6 +64,9 @@ class AppConfigDocumentTest extends TestCase
         $this->assertArrayNotHasKey('transfer_check_endpoints', $settings);
         $this->assertFalse($settings['enable-fake-dns']);
         $this->assertTrue($settings['independent-dns-cache']);
+        // On in the app since 2.3.11, on every core: the proxy can never
+        // reach a private address, so a tunnelled LAN is only a broken one.
+        $this->assertTrue($settings['bypass-lan']);
         // Empty means each region's own resolvers. The Shecan address that
         // used to be here reached Russian and Chinese users as well.
         $this->assertSame('', $settings['mh_direct_ns']);
