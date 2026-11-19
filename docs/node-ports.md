@@ -132,3 +132,25 @@ run. The agent log (`storage/logs/server_config.log`) records every change.
 
 The hosting provider's own firewall (a cloud security group) cannot be seen
 from the server: open the port there as well.
+
+## Node addresses as IPs in subscriptions
+
+Setting `subscribe_serve_ips` (subscribe group, off by default). A client
+has to look a node's host name up before its tunnel exists, and that lookup
+is plain DNS: the filter sees the node's name and the address it resolves
+to, and for REALITY it ties the cover site to the operator's own domain a
+moment before the handshake. With the setting on, subscriptions carry the
+node's IPv4 address instead (resolved on the panel, cached for 10 minutes),
+so clients make no lookup at all.
+
+A node is swapped only when nothing else depends on its name: the TLS name
+is pinned to the old host when the node had none; an HTTP transport (ws,
+httpupgrade, xhttp, h2) must carry its own Host header or the node keeps its
+name; nodes on Cloudflare addresses keep their name (a CDN edge must be found
+by name, near the client); a node tagged `keep-domain` is never touched (the
+tag is not served). MDNS, TrustTunnel, v2node and the Mihomo-native types are
+not touched. Code: `app/Services/NodeAddressResolver.php`, applied in
+`ClientController::subscribe` (which the relay mirror also builds from) and
+the legacy `AppController::getConfig`. If a node's IP changes, clients pick it up on
+their next subscription refresh.
+

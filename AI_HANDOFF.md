@@ -1,5 +1,30 @@
 # AI work log and handoff
 
+## Active handoff - 2026-11-19 - Claude - node IPs in subscriptions (server exposure audit)
+
+The owner's exposure audit (app side in drmobile 2.3.8/2.3.9) found that
+clients resolve node host names in plain DNS before the tunnel is up. New
+setting `subscribe_serve_ips` (subscribe group, default 0; ConfigSave +
+ConfigController fetch): `app/Services/NodeAddressResolver.php`, applied in
+`ClientController::subscribe` (the relay mirror builds from it too) and the
+legacy `AppController::getConfig`, serves a node's IPv4 address instead of its
+host name where nothing depends on the name (rules in `docs/node-ports.md`):
+TLS name pinned to the old host, HTTP transports need their own Host header,
+Cloudflare addresses and `keep-domain`-tagged nodes untouched (tag not
+served), only vless/vmess/trojan/hysteria/tuic/anytls/shadowsocks.
+`tests/Unit/NodeAddressResolverTest.php` 7/7 through a minimal PHPUnit
+stand-in, added to CI's focused phpunit gate. Not run: a live subscription
+with the setting on. The owner turns the setting on.
+
+Review fix (Codex P2): an empty top-level `server_name` (the AnyTLS column
+defaults to NULL) is filled with the node's nested TLS name when it has one
+(REALITY's cover site), else the old host. The AnyTLS link and Clash builder
+prefer the top-level value, so filling it with the host had replaced the
+cover site. Regression test failed on the first version, passes now.
+Lookups are cached 10 minutes; a failed one is cached as '' for 2 minutes so
+a name that stopped resolving does not cost every subscription a DNS
+timeout (checked with a stand-in cache: localhost, a `.invalid` name).
+
 ## Active handoff - 2026-11-19 - Claude - UDP nodes get a real port check
 
 The owner reported that every UDP node's badge read "UDP unverified". UDP

@@ -29,6 +29,9 @@ class ClientController extends Controller
 
         $serverService = new ServerService();
         $servers = $serverService->getAvailableServers($user);
+        // Node IPs in place of host names when the panel says so: clients
+        // then never look a node up in plain DNS before their tunnel is up.
+        $servers = \App\Services\NodeAddressResolver::apply($servers);
 
         if (!$flag) {
             $class = new General($user, $servers);
