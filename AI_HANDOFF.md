@@ -1,5 +1,41 @@
 # AI work log and handoff
 
+## Active handoff - 2026-11-19 - Claude - UDP nodes get a real port check
+
+The owner reported that every UDP node's badge read "UDP unverified". UDP
+has no generic connect, so the probe now asks each UDP node the question its
+protocol answers:
+
+- `app/Services/NodePortTargets.php`: UDP targets carry a `probe` hint:
+  `quic` for TUIC, ShadowQUIC, MASQUE and Hysteria (with `obfs`
+  salamander/xplus and `obfs_password` when the node is obfuscated; an
+  unknown obfuscation gets no probe), `dns` (+ first `domain`) for MDNS. A
+  relay takes its root's obfuscation. Other UDP types get no hint.
+- `scripts/node_port_probe.py`: `udp_endpoint()` sends a 1200-byte QUIC
+  long-header datagram in the reserved version 0x1a2a3a4a (wrapped in
+  Salamander: BLAKE2b-256(key||8-byte salt), or xplus: SHA-256(key||16-byte
+  salt), both read from the hysteria/mihomo sources) or a DNS query, three
+  tries a second apart, on a connected socket so an ICMP refusal surfaces.
+  Results: open/quic_version_negotiation, open/dns_answer, open/udp_reply
+  (any datagram back: the port is open), closed/refused,
+  unreachable/no_reply. The key is never written to the report. Targets
+  without a hint keep `udp_unverified` and get no packet.
+- `scripts/admin_mihomo_form.js` (badge): Open (UDP) / Closed (UDP) / No
+  reply (UDP) with a tooltip naming the protocol asked; silent protocols
+  stay "UDP unverified". Both bundles re-patched (`--check` passes); admin
+  cache key bumped to `node-endpoints-3`.
+
+Validated: `tests/NodePortProbeTest.py` 17/17 (new: real local UDP servers
+for QUIC VN, Salamander and xplus, wrong key, DNS, ICMP-refused port, silent
+protocols, key absent from the report); `tests/AdminNodePortsTest.cjs` 14/14
+(new UDP evidence test); `tests/Unit/NodePortTargetsTest.php` 11/11 through a
+minimal PHPUnit stand-in (CI runs the real one). Also checked against a real
+quic-go listener built from the fork Hysteria uses (apernet/quic-go), plain
+and behind a Salamander socket: both answered Version Negotiation; with a
+wrong key it still answered a decoded-as-garbage datagram (open/udp_reply),
+which is true of the port. Not run: a live Hysteria/TUIC/MDNS node from the
+panel server.
+
 ## Active handoff - 2026-11-18 - Claude - review of Codex's node-port work (PR #37 follow-up, #38, #39)
 
 The owner asked for Codex's recent work to be reviewed, integrated and its

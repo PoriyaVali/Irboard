@@ -81,10 +81,20 @@ TCP connect success is green **Open (TCP)**; explicit connection refusal is
 red **Closed (TCP)**. A timeout or unavailable route is **Unreachable**, not
 proof that a firewall closed the port. The tooltip names the vantage point
 (the panel server) and the tested transport. A CDN edge accepting TCP does
-not prove a working VPN handshake. UDP-only services and unsupported ranges
-remain unverified instead of being guessed from a TCP check or heartbeat.
-MDNS is a UDP DNS tunnel and is explicitly marked **UDP unverified**, not
-classified as closed just because a TCP connection would be refused.
+not prove a working VPN handshake. A UDP node is asked the question its
+protocol answers: a QUIC server (Hysteria, TUIC, ShadowQUIC, MASQUE) gets a
+datagram in an unknown QUIC version and answers with Version Negotiation
+(RFC 9000); for Hysteria the datagram is wrapped in the node's obfuscation
+(Salamander for Hysteria 2, xplus for Hysteria 1) with the node's key, and a
+relay uses its root's. The MDNS server (a UDP DNS tunnel) gets a DNS query
+under its domain and answers every query. An answer is green **Open (UDP)**,
+an ICMP refusal red **Closed (UDP)**, and no answer to three tries red **No
+reply (UDP)** (node down, port dropped by a firewall, or UDP blocked on the
+way). Protocols that never answer strangers (WireGuard, mKCP, Mieru,
+Shadowsocks UDP, ...) and unsupported ranges stay **UDP unverified** instead
+of being guessed from a TCP check or heartbeat. Checked against a real
+quic-go listener (the library Hysteria uses), plain and behind Salamander.
+The obfuscation key goes only to the probe, never into its report.
 Host/port changes, edits and stale snapshots invalidate the previous result.
 
 The observation worker deduplicates endpoints and uses bounded concurrency
