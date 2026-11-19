@@ -36,7 +36,7 @@ browser redirect without the header and is not covered; existing sessions
 of other accounts on that device are not cut (sign-in/up only).
 `tests/Feature/DeviceBanTest.php` (blocking CI step with StaffScopeTest).
 
-Validated: `tests/NodePortProbeTest.py` 17/17 (new: real local UDP servers
+Validated: `tests/NodePortProbeTest.py` 18/18 (new: real local UDP servers
 for QUIC VN, Salamander and xplus, wrong key, DNS, ICMP-refused port, silent
 protocols, key absent from the report); `tests/AdminNodePortsTest.cjs` 14/14
 (new UDP evidence test); `tests/Unit/NodePortTargetsTest.php` 11/11 through a

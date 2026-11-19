@@ -201,7 +201,8 @@ def udp_endpoint(kind, host, port, extra, secret, deadline, timeout=CONNECT_TIME
     """Ask a UDP endpoint the question its protocol answers.
 
     Open: the expected answer (or any datagram back). Closed: every address
-    refused the port (ICMP). Otherwise unreachable: no answer although a
+    refused the port (ICMP) - an address that could not even be tried (no
+    route to its family) leaves it unreachable, never closed. Otherwise unreachable: no answer although a
     live server of this protocol always answers. Sent again each second, so
     one lost datagram is not a verdict.
     """
@@ -251,7 +252,7 @@ def udp_endpoint(kind, host, port, extra, secret, deadline, timeout=CONNECT_TIME
                             selector.unregister(key.fileobj)
                             refused += 1
                         except OSError:
-                            pass
+                            pass  # no route now; it was not refused
                     sends, next_send = sends + 1, time.monotonic() + 1.0
                 until = min(stop, next_send) if sends < 3 else stop
                 for key, _ in selector.select(max(0.0, until - time.monotonic())):
@@ -264,7 +265,9 @@ def udp_endpoint(kind, host, port, extra, secret, deadline, timeout=CONNECT_TIME
                     except OSError:
                         continue
                     return 'open', expected if key.data[1](data) else 'udp_reply'
-            if asked and refused == asked:
+            # Closed only when every candidate address refused: one that
+            # could not be tried (connect failed) or stayed silent was not.
+            if asked and refused == len(candidates):
                 return 'closed', 'refused'
             return 'unreachable', 'no_reply'
         finally:

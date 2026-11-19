@@ -251,6 +251,17 @@ class UdpProbeTest(unittest.TestCase):
         state = probe.udp_endpoint('quic', '127.0.0.1', port, None, None, time.monotonic() + 5, timeout=1.5)
         self.assertEqual(state, ('closed', 'refused'))
 
+    def test_an_address_that_cannot_be_tried_keeps_a_refusal_from_reading_as_closed(self):
+        # Dual-stack name: no route to its IPv6 address, its IPv4 port refused.
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as free:
+            free.bind(('127.0.0.1', 0))
+            port = free.getsockname()[1]
+        answers = [(socket.AF_INET6, socket.SOCK_DGRAM, 17, '', ('fe80::1', port, 0, 0)),
+                   (socket.AF_INET, socket.SOCK_DGRAM, 17, '', ('127.0.0.1', port))]
+        with patch.object(probe.socket, 'getaddrinfo', return_value=answers):
+            state = probe.udp_endpoint('quic', 'dual.example.test', port, None, None, time.monotonic() + 5, timeout=1.5)
+        self.assertEqual(state, ('unreachable', 'no_reply'))
+
     def test_silent_protocols_and_unknown_obfuscation_stay_unverified_without_a_packet(self):
         calls = []
         def udp(*args):
