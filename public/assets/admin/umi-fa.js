@@ -6018,7 +6018,13 @@
                 }, f.a.createElement(l["a"], {
                     checked: parseInt(r.show_info_to_server_enable),
                     onChange: e=>this.set("subscribe", "show_info_to_server_enable", e ? 1 : 0)
-                })), f.a.createElement(m, {
+                })), /*__DSSI_ROW_START__*/f.a.createElement(m, {
+                    title: "\u202b\u0627\u0631\u0633\u0627\u0644 IP \u0646\u0648\u062f\u0647\u0627 \u062f\u0631 \u0627\u0634\u062a\u0631\u0627\u06a9\u202c",
+                    description: "\u202b\u0628\u0647\u200c\u062c\u0627\u06cc \u062f\u0627\u0645\u0646\u0647\u060c IP \u0647\u0631 \u0646\u0648\u062f \u062f\u0631 \u0627\u0634\u062a\u0631\u0627\u06a9 \u0641\u0631\u0633\u062a\u0627\u062f\u0647 \u0645\u06cc\u200c\u0634\u0648\u062f \u062a\u0627 \u0628\u0631\u0646\u0627\u0645\u0647 \u067e\u06cc\u0634 \u0627\u0632 \u0627\u062a\u0635\u0627\u0644 \u0646\u0627\u0645 \u0646\u0648\u062f\u0647\u0627 \u0631\u0627 \u0627\u0632 DNS \u0646\u067e\u0631\u0633\u062f. \u0646\u0648\u062f\u0647\u0627\u06cc Cloudflare\u060c \u0646\u0648\u062f\u0647\u0627\u06cc \u062f\u0627\u0631\u0627\u06cc \u062a\u06af keep-domain \u0648 \u0646\u0648\u062f\u0647\u0627\u06cc ws/httpupgrade/xhttp \u0628\u062f\u0648\u0646 Host \u062f\u0627\u0645\u0646\u0647\u200c\u06cc \u062e\u0648\u062f \u0631\u0627 \u0646\u06af\u0647 \u0645\u06cc\u200c\u062f\u0627\u0631\u0646\u062f.\u202c"
+                }, f.a.createElement(l["a"], {
+                    checked: parseInt(r.subscribe_serve_ips) === 1,
+                    onChange: e=>this.set("subscribe", "subscribe_serve_ips", e ? 1 : 0)
+                })), /*__DSSI_ROW_END__*/f.a.createElement(m, {
                     title: "\u202b\u062d\u0627\u0644\u062a \u0641\u0639\u0627\u0644\u200c\u0633\u0627\u0632\u06cc \u0644\u06cc\u0646\u06a9 \u0627\u0634\u062a\u0631\u0627\u06a9\u202c",
                     description: "\u202b\u0645\u062f\u062a \u0627\u0639\u062a\u0628\u0627\u0631 \u0644\u06cc\u0646\u06a9 \u0627\u0634\u062a\u0631\u0627\u06a9 \u067e\u0633 \u0627\u0632 \u062f\u0631\u06cc\u0627\u0641\u062a \u062a\u0648\u0633\u0637 \u06a9\u0627\u0631\u0628\u0631.\u202c"
                 }, f.a.createElement("select", {

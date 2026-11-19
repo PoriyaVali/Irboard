@@ -43,7 +43,7 @@
     // so a genuinely different umi-fa.js build would still be picked up.
     window.adminLang = localStorage.getItem('admin_lang') || 'fa';
     var umiFile = window.adminLang === 'fa' ? 'umi-fa.js' : 'umi.js';
-    document.write('<script src="/assets/admin/' + umiFile + '?v={{$version}}-native-admin-forms-node-endpoints-3"><\/script>');
+    document.write('<script src="/assets/admin/' + umiFile + '?v={{$version}}-native-admin-forms-node-endpoints-3-serve-ips-1"><\/script>');
 </script>
 </body>
 
