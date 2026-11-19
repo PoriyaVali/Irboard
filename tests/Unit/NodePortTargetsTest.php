@@ -82,6 +82,36 @@ class NodePortTargetsTest extends TestCase
         $this->assertSame('2096', $rows[0]['port']);
     }
 
+    public function testUdpNodesCarryTheQuestionTheirProtocolAnswers(): void
+    {
+        $rows = NodePortTargets::fromServers([
+            self::row(['type' => 'tuic', 'id' => 1]),
+            self::row(['type' => 'hysteria', 'id' => 2, 'version' => 2, 'obfs' => 'salamander', 'obfs_password' => 'key-2222']),
+            self::row(['type' => 'hysteria', 'id' => 3, 'version' => 1, 'obfs_password' => 'key-3333']),
+            self::row(['type' => 'hysteria', 'id' => 4, 'version' => 2, 'obfs' => null]),
+            self::row(['type' => 'mdns', 'id' => 5, 'domain' => ['T.Example.test', 'u.example.test']]),
+            self::row(['type' => 'wireguard', 'id' => 6]),
+        ]);
+        $this->assertSame(['probe' => 'quic'], array_intersect_key($rows[0], ['probe' => 1, 'obfs' => 1]));
+        $this->assertSame(['salamander', 'key-2222'], [$rows[1]['obfs'], $rows[1]['obfs_password']]);
+        $this->assertSame(['xplus', 'key-3333'], [$rows[2]['obfs'], $rows[2]['obfs_password']]);
+        $this->assertArrayNotHasKey('obfs', $rows[3]);
+        $this->assertSame(['dns', 't.example.test'], [$rows[4]['probe'], $rows[4]['domain']]);
+        $this->assertArrayNotHasKey('probe', $rows[5], 'WireGuard does not answer strangers');
+    }
+
+    public function testARelayUsesItsRootsObfuscationAndAnUnknownOneIsNotGuessed(): void
+    {
+        $rows = NodePortTargets::fromServers([
+            self::row(['type' => 'hysteria', 'id' => 1, 'version' => 2, 'obfs' => 'salamander', 'obfs_password' => 'root-key']),
+            self::row(['type' => 'hysteria', 'id' => 2, 'parent_id' => 1, 'host' => 'relay.example.test', 'port' => 8443]),
+            self::row(['type' => 'hysteria', 'id' => 3, 'version' => 2, 'obfs' => 'other', 'obfs_password' => 'x-key']),
+        ]);
+        $this->assertSame(['salamander', 'root-key'], [$rows[1]['obfs'], $rows[1]['obfs_password']]);
+        $this->assertSame('relay.example.test', $rows[1]['host']);
+        $this->assertArrayNotHasKey('probe', $rows[2]);
+    }
+
     public function testInvalidHostCannotLeakAnEmbeddedCredentialOrBecomeATarget(): void
     {
         $rows = NodePortTargets::fromServers([self::row(['host' => 'https://name:secret@example.test/path'])]);

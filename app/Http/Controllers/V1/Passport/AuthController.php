@@ -11,6 +11,7 @@ use App\Models\InviteCode;
 use App\Models\Plan;
 use App\Models\User;
 use App\Services\AuthService;
+use App\Services\DeviceIdentityService;
 use App\Utils\CacheKey;
 use App\Utils\Dict;
 use App\Utils\Helper;
@@ -22,6 +23,10 @@ class AuthController extends Controller
 {
     public function register(AuthRegister $request)
     {
+        // A device the admin banned cannot open a new account.
+        if (DeviceIdentityService::bannedDevice($request->header('x-device-ids'))) {
+            abort(500, 'این دستگاه مسدود شده است؛ برای پیگیری با پشتیبانی تماس بگیرید.');
+        }
         if ((int)config('v2board.register_limit_by_ip_enable', 0)) {
             $registerCountByIP = Cache::get(CacheKey::get('REGISTER_IP_RATE_LIMIT', $request->ip())) ?? 0;
             if ((int)$registerCountByIP >= (int)config('v2board.register_limit_count', 3)) {
@@ -172,6 +177,12 @@ class AuthController extends Controller
 
         if ($user->banned) {
             abort(500, __('Your account has been suspended'));
+        }
+        // Nor sign in to another account. Admins and staff are exempt: a ban
+        // tested on the operator's own phone must not lock them out.
+        if (!$user->is_admin && !$user->is_staff
+            && DeviceIdentityService::bannedDevice($request->header('x-device-ids'))) {
+            abort(500, 'این دستگاه مسدود شده است؛ برای پیگیری با پشتیبانی تماس بگیرید.');
         }
 
         $authService = new AuthService($user);

@@ -175,6 +175,25 @@ test('endpoint evidence cannot survive an address, port, edit or report freshnes
         assert.equal(f.result(row, { ...local, reachability }).state, 'unknown', 'no fallback to old local success');
     }
 });
+test('UDP evidence: a QUIC or DNS answer is open, an ICMP refusal closed, silence no reply', () => {
+    const f = fixture(), hy = f.row('hysteria'), mdns = f.row('mdns', 8);
+    const udp = (row, state, reason) => ({ ...endpoint(row), transport: 'udp', state, reason });
+    const open = f.result(hy, endpointReport(f, [udp(hy, 'open', 'quic_version_negotiation')]));
+    assert.equal(open.state, 'open');
+    assert.equal(open.label, 'Open (UDP)');
+    assert.match(open.detail, /QUIC server/);
+    const dns = f.result(mdns, endpointReport(f, [udp(mdns, 'open', 'dns_answer')]));
+    assert.equal(dns.label, 'Open (UDP)');
+    assert.match(dns.detail, /DNS server/);
+    assert.equal(f.result(hy, endpointReport(f, [udp(hy, 'open', 'udp_reply')])).state, 'open');
+    assert.equal(f.result(hy, endpointReport(f, [udp(hy, 'closed', 'refused')])).label, 'Closed (UDP)');
+    const silent = f.result(hy, endpointReport(f, [udp(hy, 'unreachable', 'no_reply')]));
+    assert.equal(silent.state, 'unreachable');
+    assert.equal(silent.label, 'No reply (UDP)');
+    // A UDP entry never takes a TCP-only reason as evidence.
+    assert.equal(f.result(hy, endpointReport(f, [udp(hy, 'open', 'connected')])).label, 'UDP unverified');
+    assert.equal(f.result(hy, endpointReport(f, [udp(hy, 'closed', 'timeout')])).label, 'UDP unverified');
+});
 test('TCP observations never claim UDP reachability or a closed port from a timeout', () => {
     const f = fixture(), udp = f.row('hysteria'), mixed = f.row('trusttunnel');
     assert.equal(f.result(udp, endpointReport(f, [endpoint(udp)])).state, 'unknown');

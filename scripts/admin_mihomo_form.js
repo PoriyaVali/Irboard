@@ -396,9 +396,36 @@ function imnEndpointResult(row, report, now) {
     }
     if (entry.reason === 'unsupported_range') return unknown(imnText('بازه پورت هنوز بررسی نشده است.', 'This port range has not been checked.'));
     if (entry.reason === 'budget_exceeded') return unknown(imnText('بررسی این گره در مهلت این نوبت کامل نشد.', 'This endpoint check did not complete within this batch deadline.'));
-    if (entry.transport === 'udp' || row.type === 'mdns' || !imnPortProtocols(row).includes('tcp')) {
+    if (entry.transport === 'udp') {
+        // Only a protocol answer, or an ICMP refusal, is UDP evidence: QUIC
+        // Version Negotiation (inside Hysteria's obfuscation), a DNS answer
+        // from MDNS, or any datagram back. Silent protocols stay unverified.
+        var udpOpen = entry.state === 'open' && ['quic_version_negotiation', 'dns_answer', 'udp_reply'].includes(entry.reason);
+        var udpClosed = entry.state === 'closed' && entry.reason === 'refused';
+        var udpSilent = entry.state === 'unreachable' && ['no_reply', 'dns_error', 'timeout'].includes(entry.reason);
+        if (!udpOpen && !udpClosed && !udpSilent) {
+            return {state: 'unknown', label: imnText('UDP بررسی نشده', 'UDP unverified'),
+                detail: imnText('این پروتکل به بسته ناشناس پاسخ نمی‌دهد، پس باز بودن پورت UDP آن از سرور پنل قابل تأیید نیست.',
+                    'This protocol does not answer unknown packets, so its UDP port cannot be verified from the panel server.')};
+        }
+        var udpAddress = (host.indexOf(':') >= 0 ? '[' + host + ']' : host) + ':' + port;
+        var how = entry.reason === 'quic_version_negotiation' ? 'QUIC' : entry.reason === 'dns_answer' ? 'DNS' : 'UDP';
+        var udpDetail = udpOpen ? imnText('سرور ' + how + ' روی ' + udpAddress + ' به سرور پنل پاسخ داد.',
+                'The ' + how + ' server at ' + udpAddress + ' answered the panel server.') :
+            udpClosed ? imnText('پورت UDP ' + udpAddress + ' رد شد؛ چیزی روی آن گوش نمی‌دهد.',
+                'UDP port ' + udpAddress + ' was refused; nothing listens on it.') :
+            imnText('از ' + udpAddress + ' پاسخی نیامد: گره خاموش است، پورت با فایروال بسته شده یا UDP در مسیر مسدود است.',
+                'No answer from ' + udpAddress + ': the node is down, a firewall drops the port, or UDP is blocked on the way.');
+        udpDetail += imnText(' این بررسی صحت اتصال کاربر یا VPN را تأیید نمی‌کند.', ' This does not verify user connections or the VPN.');
+        udpDetail += '\n' + imnText('آخرین بررسی: ', 'Last checked: ') + new Date(checked).toLocaleString(imnText('fa-IR', 'en-US'));
+        return {state: udpOpen ? 'open' : udpClosed ? 'closed' : 'unreachable',
+            label: udpOpen ? imnText('باز (UDP)', 'Open (UDP)') : udpClosed ? imnText('بسته (UDP)', 'Closed (UDP)') :
+                imnText('بدون پاسخ (UDP)', 'No reply (UDP)'), detail: udpDetail};
+    }
+    if (row.type === 'mdns' || !imnPortProtocols(row).includes('tcp')) {
+        // A UDP-only protocol never takes a TCP result as its own.
         return {state: 'unknown', label: imnText('UDP بررسی نشده', 'UDP unverified'),
-            detail: imnText('باز بودن UDP با اتصال TCP قابل تشخیص نیست؛ بررسی پروتکل لازم است.', 'UDP reachability needs a protocol response; TCP cannot verify it.')};
+            detail: imnText('باز بودن UDP با اتصال TCP قابل تشخیص نیست.', 'UDP reachability cannot be shown by a TCP connection.')};
     }
     if (entry.transport !== 'tcp') return unknown(imnText('روش بررسی این پروتکل پشتیبانی نشده است.', 'This protocol has no supported endpoint check.'));
     var state = entry.state;

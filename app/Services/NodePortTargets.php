@@ -13,6 +13,10 @@ class NodePortTargets
 
     public static function fromServers(array $servers): array
     {
+        $byRef = [];
+        foreach ($servers as $server) {
+            $byRef[strtolower((string)($server['type'] ?? '')) . '#' . (string)($server['id'] ?? '')] = $server;
+        }
         $targets = [];
         foreach ($servers as $server) {
             $type = strtolower((string)($server['type'] ?? ''));
@@ -23,15 +27,66 @@ class NodePortTargets
             $port = self::port($server);
             $transport = self::transport($server);
             if ($host === '' || $port === null || strpos($port, '-') !== false) $transport = 'unknown';
-            $targets[] = [
+            $target = [
                 'node' => $type . '#' . (int)$id,
                 'host' => $host,
                 'port' => $port,
                 'transport' => $transport,
                 'updated_at' => max(0, (int)($server['updated_at'] ?? 0)),
             ];
+            if ($transport === 'udp') {
+                // A relay carries its root's traffic end to end: the root's
+                // obfuscation is what answers on the relay's address too.
+                $root = $server;
+                for ($depth = 0; !empty($root['parent_id']) && $depth < 8; $depth++) {
+                    $parent = $byRef[$type . '#' . (string)$root['parent_id']] ?? null;
+                    if ($parent === null) break;
+                    $root = $parent;
+                }
+                $target += self::udpProbe($root);
+            }
+            $targets[] = $target;
         }
         return $targets;
+    }
+
+    /**
+     * How a UDP endpoint can be asked whether it is there, for the probe
+     * only (its report never repeats these fields). A QUIC server answers an
+     * unknown version with Version Negotiation (RFC 9000 section 6);
+     * Hysteria's obfuscation wraps that exchange, so its key travels with
+     * the target. The MDNS server answers any DNS query. Other UDP
+     * protocols stay silent to strangers by design and get no probe, so
+     * they stay "unverified" rather than being guessed.
+     */
+    public static function udpProbe(array $server): array
+    {
+        $type = strtolower((string)($server['type'] ?? ''));
+        if (in_array($type, ['tuic', 'shadowquic', 'masque'], true)) return ['probe' => 'quic'];
+        if ($type === 'hysteria') {
+            $password = (string)($server['obfs_password'] ?? '');
+            if ((int)($server['version'] ?? 2) === 1) {
+                // Hysteria 1 serves obfs_password as its "xplus" key.
+                return $password === '' ? ['probe' => 'quic']
+                    : ['probe' => 'quic', 'obfs' => 'xplus', 'obfs_password' => $password];
+            }
+            $obfs = strtolower(trim((string)($server['obfs'] ?? '')));
+            if ($obfs === '') return ['probe' => 'quic'];
+            if ($obfs === 'salamander' && strlen($password) >= 4) {
+                return ['probe' => 'quic', 'obfs' => 'salamander', 'obfs_password' => $password];
+            }
+            return []; // an obfuscation the probe cannot speak: no guess
+        }
+        if ($type === 'mdns') {
+            $domains = $server['domain'] ?? [];
+            if (is_string($domains)) {
+                $decoded = json_decode($domains, true);
+                $domains = is_array($decoded) ? $decoded : [$domains];
+            }
+            $first = is_array($domains) ? (string)(array_values($domains)[0] ?? '') : '';
+            return ['probe' => 'dns', 'domain' => self::host($first)];
+        }
+        return [];
     }
 
     public static function host(string $host): string
