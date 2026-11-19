@@ -1,5 +1,20 @@
 # AI work log and handoff
 
+## Active handoff - 2026-11-19 - Claude - node IPs in subscriptions (server exposure audit)
+
+The owner's exposure audit (app side in drmobile 2.3.8/2.3.9) found that
+clients resolve node host names in plain DNS before the tunnel is up. New
+setting `subscribe_serve_ips` (subscribe group, default 0; ConfigSave +
+ConfigController fetch): `app/Services/NodeAddressResolver.php`, applied in
+`ClientController::subscribe`, serves a node's IPv4 address instead of its
+host name where nothing depends on the name (rules in `docs/node-ports.md`):
+TLS name pinned to the old host, HTTP transports need their own Host header,
+Cloudflare addresses and `keep-domain`-tagged nodes untouched (tag not
+served), only vless/vmess/trojan/hysteria/tuic/anytls/shadowsocks.
+`tests/Unit/NodeAddressResolverTest.php` 6/6 through a minimal PHPUnit
+stand-in, added to CI's focused phpunit gate. Not run: a live subscription
+with the setting on. The owner turns the setting on.
+
 ## Active handoff - 2026-11-19 - Claude - UDP nodes get a real port check
 
 The owner reported that every UDP node's badge read "UDP unverified". UDP
