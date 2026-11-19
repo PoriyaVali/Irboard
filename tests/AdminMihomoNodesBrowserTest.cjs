@@ -53,7 +53,7 @@ async function advanced(page) {
     await page.wait('document.querySelector("[data-mihomo-advanced]").getAttribute("aria-expanded")==="true"');
 }
 
-async function openPage(lang = 'en', bundle = 'umi.js', auth = 'fixture-admin-token', viewport = { width: 1440, height: 1100 }) {
+async function openPage(lang = 'en', bundle = 'umi.js', auth = 'fixture-admin-token', viewport = { width: 1440, height: 1100 }, route = '/server/manage') {
     const { targetId } = await cdp.call('Target.createTarget', { url: 'about:blank' });
     const { sessionId } = await cdp.call('Target.attachToTarget', { targetId, flatten: true });
     const page = {
@@ -89,14 +89,18 @@ async function openPage(lang = 'en', bundle = 'umi.js', auth = 'fixture-admin-to
     await cdp.call('Page.enable', {}, sessionId);
     await cdp.call('Emulation.setDeviceMetricsOverride', { width: viewport.width, height: viewport.height, deviceScaleFactor: 1, mobile: viewport.width <= 768 }, sessionId);
     if (viewport.userAgent) await cdp.call('Network.setUserAgentOverride', { userAgent: viewport.userAgent }, sessionId);
-    await cdp.call('Page.navigate', { url: `${origin}/secure-fixture?lang=${lang}&bundle=${bundle}&token=${encodeURIComponent(auth)}#/server/manage` }, sessionId);
+    await cdp.call('Page.navigate', { url: `${origin}/secure-fixture?lang=${lang}&bundle=${bundle}&token=${encodeURIComponent(auth)}#${route}` }, sessionId);
+    if (route !== '/server/manage') { await page.wait('window.fixtureReady && document.querySelector("#main-container .ant-tabs-tab")'); return page; }
     await page.wait('window.fixtureReady && document.querySelector("#main-container .ant-table, #main-container .ant-list")');
     if (state.nodes.length) await page.wait('document.querySelectorAll("#main-container tr.ant-table-row, #main-container .v2board_node_mobile").length>=' + Math.min(10, state.nodes.length));
     return page;
 }
 function freshState() {
     return { protocols: JSON.parse(fs.readFileSync(path.join(__dirname, 'Fixtures/MihomoCatalog.json'), 'utf8')), nodes: [], requests: [], fail: false, forbidden: false,
-        portStatus: { ok: true, updated_at: new Date().toISOString(), ports: [] }, portRequests: [], portFailure: false };
+        portStatus: { ok: true, updated_at: new Date().toISOString(), ports: [] }, portRequests: [], portFailure: false,
+        config: { site: { app_name: 'Irboard fixture' }, subscribe: { plan_change_enable: 1, reset_traffic_method: 0, surplus_enable: 1, allow_new_period: 0, new_order_event_id: 0,
+            renew_order_event_id: 0, change_order_event_id: 0, show_info_to_server_enable: 0, show_subscribe_method: 0, show_subscribe_expire: 5, subscribe_serve_ips: 0 },
+            invite: {}, frontend: {}, server: {}, email: {}, telegram: {}, app: {}, safe: {}, ticket: {}, deposit: {} }, configSaves: [] };
 }
 function nativeNode(row) {
     return { host: '', port: null, server_port: null, group_id: ['1'], route_id: [], tags: [], rate: 1, sort: 0, show: 0, parent_id: null,
@@ -145,6 +149,14 @@ before(async () => {
                     state.nodes.sort((a, b) => a.sort - b.sort);
                 }
                 res.end(JSON.stringify(savedId ? { data: true, id: savedId } : { data: true })); return;
+            }
+            if (url.pathname.endsWith('/config/fetch')) { res.end(JSON.stringify({ data: state.config })); return; }
+            if (url.pathname.endsWith('/config/save')) {
+                let raw = ''; for await (const part of req) raw += part;
+                const saved = Object.fromEntries(new URLSearchParams(raw));
+                state.configSaves.push({ saved, auth: req.headers.authorization });
+                for (const [key, value] of Object.entries(saved)) if (key in state.config.subscribe) state.config.subscribe[key] = Number(value);
+                res.end(JSON.stringify({ data: true })); return;
             }
             const user = { email: 'fixture@example.invalid', is_admin: 1, avatar_url: '', balance: 0, commission_balance: 0 };
             const data = /\/user\/(info|checkLogin)$/.test(url.pathname) ? user :
@@ -778,4 +790,31 @@ test('remote endpoint port status displays actual client and relay outcomes on t
     await portScreenshot(page, 'reachability-fa-mobile.png');
     await page.evaluate(`document.querySelector(${JSON.stringify(portSelector('mdns#10'))}).scrollIntoView({block:'center'})`);
     await portScreenshot(page, 'reachability-fa-mobile-mdns.png');
+});
+
+test('the subscription settings tab offers the serve-node-IPs switch and saves it in both Umi bundles', async () => {
+    for (const [lang, bundle] of [['en', 'umi.js'], ['fa', 'umi-fa.js']]) {
+        state = freshState();
+        const page = await openPage(lang, bundle, 'fixture-admin-token', { width: 1440, height: 1100 }, '/config/system');
+        // The subscription tab is the third one in every locale; its label is the bundle's own.
+        await page.evaluate(`document.querySelectorAll('#main-container .ant-tabs-tab')[2].click()`);
+        const row = `Array.from(document.querySelectorAll('.ant-tabs-tabpane-active .row')).find(row => row.textContent.includes('ارسال IP نودها در اشتراک'))`;
+        await page.wait(row);
+        assert.equal(await page.evaluate(`${row}.querySelectorAll('.ant-switch').length`), 1, bundle);
+        assert.ok(await page.evaluate(`${row}.textContent.includes('keep-domain')`), bundle);
+        assert.equal(await page.evaluate(`${row}.querySelector('.ant-switch').getAttribute('aria-checked')`), 'false', bundle);
+        await page.evaluate(`${row}.querySelector('.ant-switch').click()`);
+        const deadline = Date.now() + 10000;
+        while (!state.configSaves.length && Date.now() < deadline) await delay(30);
+        assert.equal(state.configSaves.length, 1, bundle + ': one save');
+        const { saved, auth } = state.configSaves[0];
+        assert.equal(auth, 'fixture-admin-token');
+        assert.equal(saved.subscribe_serve_ips, '1', bundle);
+        // The rest of the tab goes out unchanged with it.
+        assert.equal(saved.show_subscribe_expire, '5', bundle);
+        assert.equal(saved.plan_change_enable, '1', bundle);
+        // After the save the page reads the settings back and shows the switch on.
+        await page.wait(`${row} && ${row}.querySelector('.ant-switch').getAttribute('aria-checked') === 'true'`);
+        await page.close();
+    }
 });

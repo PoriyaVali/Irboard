@@ -135,7 +135,11 @@ from the server: open the port there as well.
 
 ## Node addresses as IPs in subscriptions
 
-Setting `subscribe_serve_ips` (subscribe group, off by default). A client
+Setting `subscribe_serve_ips` (subscribe group, off by default). In the web
+admin: Settings > System settings > Subscription tab, the switch
+"ارسال IP نودها در اشتراک" (`scripts/patch_admin_subscribe_serve_ips.py` adds it
+to both bundles). Without the admin UI: `'subscribe_serve_ips' => 1,` in
+`config/v2board.php`, then `php artisan config:clear` and a webman restart. A client
 has to look a node's host name up before its tunnel exists, and that lookup
 is plain DNS: the filter sees the node's name and the address it resolves
 to, and for REALITY it ties the cover site to the operator's own domain a

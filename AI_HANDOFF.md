@@ -1,5 +1,30 @@
 # AI work log and handoff
 
+## Active handoff - 2026-11-19 - Claude - the IP-subscription switch in the web admin
+
+The owner updated the panel and could not find `subscribe_serve_ips`: the
+setting was saved and read by the server, but the prebuilt admin bundles only
+draw the settings they were built with, so no switch existed in the web admin
+(the app shows it only from drmobile 2.3.10, not built yet).
+
+- `scripts/patch_admin_subscribe_serve_ips.py` (new, same contract as the
+  smart-bot patch: one fenced row, anchors checked before writing, idempotent,
+  `--check`): a switch "ارسال IP نودها در اشتراک" with a description, right after
+  "نمایش اطلاعات اشتراک در اشتراک" on Settings > System settings >
+  Subscription. It saves through the tab's own `config/save` call.
+- Applied to `public/assets/admin/umi.js` and `umi-fa.js`; admin cache key
+  bumped to `node-endpoints-3-serve-ips-1` in `resources/views/admin.blade.php`.
+- CI runs the patch's `--check`. `tests/AdminMihomoNodesBrowserTest.cjs`: the
+  fixture server answers `config/fetch` and `config/save`, `openPage` takes a
+  route, and a new test opens the subscription tab in both bundles, finds the
+  switch off, turns it on, checks the save carries `subscribe_serve_ips=1` with
+  the rest of the tab unchanged, and that the switch reads on after the reload.
+- `docs/node-ports.md`: where the switch is, and the config-file fallback.
+
+Validated: the new browser test passes on the patched bundles and fails on the
+unpatched ones (no row); `node --check` on both bundles; the other four bundle
+patches still `--check`. Not run: the panel itself with a real browser login.
+
 ## Active handoff - 2026-11-19 - Claude - node IPs in subscriptions (server exposure audit)
 
 The owner's exposure audit (app side in drmobile 2.3.8/2.3.9) found that
