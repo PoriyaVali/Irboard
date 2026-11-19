@@ -11,9 +11,15 @@ host name where nothing depends on the name (rules in `docs/node-ports.md`):
 TLS name pinned to the old host, HTTP transports need their own Host header,
 Cloudflare addresses and `keep-domain`-tagged nodes untouched (tag not
 served), only vless/vmess/trojan/hysteria/tuic/anytls/shadowsocks.
-`tests/Unit/NodeAddressResolverTest.php` 6/6 through a minimal PHPUnit
+`tests/Unit/NodeAddressResolverTest.php` 7/7 through a minimal PHPUnit
 stand-in, added to CI's focused phpunit gate. Not run: a live subscription
 with the setting on. The owner turns the setting on.
+
+Review fix (Codex P2): an empty top-level `server_name` (the AnyTLS column
+defaults to NULL) is filled with the node's nested TLS name when it has one
+(REALITY's cover site), else the old host. The AnyTLS link and Clash builder
+prefer the top-level value, so filling it with the host had replaced the
+cover site. Regression test failed on the first version, passes now.
 
 ## Active handoff - 2026-11-19 - Claude - UDP nodes get a real port check
 

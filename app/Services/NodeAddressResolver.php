@@ -120,10 +120,15 @@ class NodeAddressResolver
             }
             $server['tls_settings'] = $tls;
         }
+        // A top-level server_name some generators prefer over the nested one:
+        // when empty, it takes the name the node already had in effect (the
+        // nested TLS name, e.g. REALITY's cover site), else the old host.
+        $nested = is_array($server['tls_settings'] ?? null) ? trim((string)($server['tls_settings']['server_name'] ?? '')) : '';
+        $effective = $nested !== '' ? $nested : $host;
         if (array_key_exists('server_name', $server) && trim((string)$server['server_name']) === '') {
-            $server['server_name'] = $host;
+            $server['server_name'] = $effective;
         } elseif (in_array($type, ['trojan', 'hysteria', 'tuic'], true) && !array_key_exists('server_name', $server)) {
-            $server['server_name'] = $host;
+            $server['server_name'] = $effective;
         }
         return $server;
     }

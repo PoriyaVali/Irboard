@@ -39,6 +39,18 @@ class NodeAddressResolverTest extends TestCase
         $this->assertSame('own.example.test', $set['server_name']);
     }
 
+    public function testAnEmptyTopLevelNameTakesTheNestedTlsNameNotTheHost(): void
+    {
+        // AnyTLS over REALITY: server_name null, the cover site nested. The
+        // AnyTLS link prefers the top-level name, so filling it with the
+        // node's host would replace the cover site in the handshake.
+        $out = self::swap(['type' => 'anytls', 'host' => 'node.example.test', 'tls' => 2, 'server_name' => null,
+            'tls_settings' => ['server_name' => 'www.cover.example']]);
+        $this->assertSame('198.51.100.7', $out['host']);
+        $this->assertSame('www.cover.example', $out['server_name']);
+        $this->assertSame('www.cover.example', $out['tls_settings']['server_name']);
+    }
+
     public function testAnHttpTransportNeedsItsOwnHostHeader(): void
     {
         $bare = ['type' => 'vless', 'host' => 'node.example.test', 'tls' => 1, 'network' => 'ws',
