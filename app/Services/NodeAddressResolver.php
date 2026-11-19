@@ -145,14 +145,24 @@ class NodeAddressResolver
         return false;
     }
 
-    /** One A record for the name, cached briefly so a subscription stays fast. */
+    /**
+     * One A record for the name, cached briefly so a subscription stays fast.
+     * A failed lookup is remembered too (as ''), for less time: a name that
+     * no longer resolves must not cost every subscription a DNS timeout.
+     */
     public static function resolveCached(string $host): ?string
     {
-        return Cache::remember('node_address:' . strtolower($host), 600, function () use ($host) {
+        $key = 'node_address:' . strtolower($host);
+        $ip = Cache::get($key);
+        if (!is_string($ip)) {
             $ips = @gethostbynamel($host);
-            if (!is_array($ips) || !$ips) return null;
-            sort($ips);
-            return $ips[0];
-        });
+            $ip = '';
+            if (is_array($ips) && $ips) {
+                sort($ips);
+                $ip = (string)$ips[0];
+            }
+            Cache::put($key, $ip, $ip !== '' ? 600 : 120);
+        }
+        return $ip !== '' ? $ip : null;
     }
 }

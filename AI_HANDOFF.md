@@ -20,6 +20,9 @@ defaults to NULL) is filled with the node's nested TLS name when it has one
 (REALITY's cover site), else the old host. The AnyTLS link and Clash builder
 prefer the top-level value, so filling it with the host had replaced the
 cover site. Regression test failed on the first version, passes now.
+Lookups are cached 10 minutes; a failed one is cached as '' for 2 minutes so
+a name that stopped resolving does not cost every subscription a DNS
+timeout (checked with a stand-in cache: localhost, a `.invalid` name).
 
 ## Active handoff - 2026-11-19 - Claude - UDP nodes get a real port check
 
