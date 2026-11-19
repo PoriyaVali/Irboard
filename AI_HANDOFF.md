@@ -1,5 +1,18 @@
 # AI work log and handoff
 
+## Active handoff - 2026-11-19 - Claude - app template: `bypass-lan` on
+
+Doctor Mobile 2.3.11 turns the LAN bypass on by default and makes all four of
+its cores read the `bypass-lan` key (it used to reach sing-box only; MDns and
+TrustTunnel had no LAN bypass at all). The template the app adopts as its
+defaults must carry the app's own values, or publishing it changes phones, so
+`resources/rules/default.dm-app.json` now has `"bypass-lan": true` (with a
+note that every core reads it), and `tests/Feature/AppConfigDocumentTest.php`
+asserts it. A panel that publishes its own `custom.dm-app.json` with `false`
+keeps LAN traffic in the tunnel on sing-box, MDns and TrustTunnel.
+
+Validated: `php artisan test --filter=AppConfigDocumentTest` (see the PR).
+
 ## Active handoff - 2026-11-19 - Claude - the IP-subscription switch in the web admin
 
 The owner updated the panel and could not find `subscribe_serve_ips`: the

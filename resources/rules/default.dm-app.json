@@ -122,7 +122,7 @@
           "_": "Anti-censorship levers of the sing-box core. mirage-* is our own TLS-record fragmentation.",
           "block-ads": false,   // true | false
           "block-quic": false,   // true | false
-          "bypass-lan": false,   // true | false
+          "bypass-lan": true,   // true | false - the local network (router, printer, casting) stays off the tunnel; all four cores read it
           "enable-mux": false,   // true | false
           "mirage-coalesce": false,   // true | false - true sends the records in one TCP write
           "mirage-enable": false,   // true | false - matches the app's compiled default
