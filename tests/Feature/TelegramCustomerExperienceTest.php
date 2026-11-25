@@ -70,7 +70,7 @@ class TelegramCustomerExperienceTest extends TestCase
     private function messages(): array
     {
         return array_values(array_map(fn ($request) => $request->data(), array_filter($this->sent,
-            fn ($request) => str_ends_with($request->url(), '/sendMessage'))));
+            fn ($request) => preg_match('~/(sendMessage|editMessageText)$~', $request->url()))));
     }
 
     private function text(): string
@@ -89,7 +89,7 @@ class TelegramCustomerExperienceTest extends TestCase
         return array_column(array_merge(...($this->markup()['inline_keyboard'] ?? [[]])), 'callback_data');
     }
 
-    public function testMainMenuHasAnEscapedDashboardAndPersistentNavigation(): void
+    public function testMainMenuHasAnEscapedDashboardAndInlineNavigation(): void
     {
         $user = $this->makeUser(['telegram_id' => 7001, 'balance' => 25000]);
         BotText::set('text_start', 'سلام <دوست> & همراه');
@@ -97,8 +97,8 @@ class TelegramCustomerExperienceTest extends TestCase
         $this->assertStringContainsString('Irboard', $this->text());
         $this->assertStringContainsString('&lt;دوست&gt; &amp;', $this->text());
         $this->assertStringContainsString('25,000 تومان', $this->text());
-        $this->assertTrue($this->markup()['is_persistent']);
-        $labels = array_column(array_merge(...$this->markup()['keyboard']), 'text');
+        $this->assertArrayNotHasKey('keyboard', $this->markup());
+        $labels = array_column(array_merge(...$this->markup()['inline_keyboard']), 'text');
         $this->assertContains('🧾 سفارش‌های من', $labels);
         $this->assertContains('📞 پشتیبانی', $labels);
     }
@@ -260,7 +260,7 @@ class TelegramCustomerExperienceTest extends TestCase
         $this->assertSame(2 * 1073741824, (int) $fresh->transfer_enable);
         $this->assertGreaterThan(time() + 7100, (int) $fresh->expired_at);
         $this->assertSame(1, (int) $fresh->bot_test_count);
-        $this->assertStringContainsString('لینک اتصال', $this->text());
+        $this->assertContains('get_sub_link', $this->callbacks());
         $this->tap($user, 'trial_activate');
         $this->assertSame($fresh->expired_at, $user->fresh()->expired_at);
         $this->assertSame(1, (int) $user->fresh()->bot_test_count);
@@ -311,7 +311,7 @@ class TelegramCustomerExperienceTest extends TestCase
         $this->assertSame(1, (int) $ticket->fresh()->status);
     }
 
-    public function testLongTicketMessagesAreDeliveredInBoundedChunksAndHistoryIsPaged(): void
+    public function testLongTicketMessagesArePagedInPlaceAndHistoryIsPaged(): void
     {
         $user = $this->makeUser(['telegram_id' => 7016]);
         $ticket = Ticket::create(['user_id' => $user->id, 'subject' => 'اتصال', 'level' => 1, 'status' => 0]);
@@ -319,9 +319,16 @@ class TelegramCustomerExperienceTest extends TestCase
             'ticket_id' => $ticket->id, 'user_id' => $user->id, 'message' => "پیام {$i} " . str_repeat('🙂', 1900),
         ]);
         $this->tap($user, 'view_ticket_' . $ticket->id);
-        $this->assertStringContainsString('پیام ۷', strtr($this->text(), ['7' => '۷']));
+        $allText = $this->text();
+        $this->assertStringContainsString('پیام 3 ', $allText);
         $this->assertStringNotContainsString('پیام 1 ', $this->text());
-        foreach ($this->messages() as $message) $this->assertLessThanOrEqual(4096, strlen(mb_convert_encoding($message['text'], 'UTF-16LE', 'UTF-8')) / 2);
+        $page = 2;
+        while (in_array('menu_page_' . $page, $this->callbacks(), true)) {
+            $this->tap($user, 'menu_page_' . $page++);
+            $allText .= $this->text();
+            foreach ($this->messages() as $message) $this->assertLessThanOrEqual(4096, strlen(mb_convert_encoding($message['text'], 'UTF-16LE', 'UTF-8')) / 2);
+        }
+        $this->assertStringContainsString('پیام 7 ', $allText);
         $this->assertContains('ticket_thread_' . $ticket->id . '_2', $this->callbacks());
         $this->tap($user, 'ticket_thread_' . $ticket->id . '_2');
         $this->assertStringContainsString('پیام 1 ', $this->text());

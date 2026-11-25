@@ -20,6 +20,9 @@ class TelegramBotService
     protected ?array $update = null;
     protected ?User $user = null;
     protected bool $callbackAnswered = false;
+    protected ?TelegramMenu $menu = null;
+    protected ?array $pendingMenu = null;
+    protected bool $restoringMenu = false;
 
     public function __construct()
     {
@@ -35,6 +38,9 @@ class TelegramBotService
         $this->update = $update;
         $this->user = null;
         $this->callbackAnswered = false;
+        $this->menu = null;
+        $this->pendingMenu = null;
+        $this->restoringMenu = false;
 
         try {
             if (isset($update['message'])) {
@@ -52,6 +58,11 @@ class TelegramBotService
             $from = $update['message']['from']['id'] ?? $update['callback_query']['from']['id'] ?? null;
             if ($this->user && (int) ($chat['id'] ?? 0) === (int) $from && ($chat['type'] ?? 'private') === 'private') {
                 $this->sendMessage((int) $chat['id'], 'مشکلی در پردازش درخواست پیش آمد. دوباره تلاش کنید یا با پشتیبانی تماس بگیرید.', null, [BotView::home()]);
+            }
+        } finally {
+            if ($this->menu && $this->pendingMenu) {
+                [$text, $buttons, $mode] = $this->pendingMenu;
+                $this->menu->render($text, $buttons, $mode);
             }
         }
     }
@@ -85,6 +96,7 @@ class TelegramBotService
 
         // پیدا کردن یا ساخت کاربر
         $this->user = $this->findOrCreateUser($message['from']);
+        $this->menu = new TelegramMenu($this->user, $this->token);
 
         // بررسی بن بودن
         if ($this->user->banned) {
@@ -152,9 +164,13 @@ class TelegramBotService
         switch ($text) {
             case '/start':
             case '/menu':
-            case '/cancel':
             case '🏠 منوی اصلی':
                 $this->sendMainMenu($chatId);
+                break;
+            case '/cancel':
+            case '/back':
+            case '‹ برگشت':
+                $this->restoreMenu($chatId, $this->menu ? $this->menu->back() : ['name' => 'home', 'args' => []]);
                 break;
             case '/setting':
                 Log::info("Setting command received", ["is_admin" => $this->user->is_admin]);
@@ -236,6 +252,7 @@ class TelegramBotService
      */
     protected function sendMainMenu(int $chatId): void
     {
+        $this->setMenuScreen('home');
         $this->clearInput();
         $brand = BotView::escape(config('v2board.app_name') ?: 'Irboard');
         $welcome = BotText::get('text_start', 'خوش آمدید؛ همه‌چیز برای مدیریت اشتراک شما اینجاست.');
@@ -247,21 +264,21 @@ class TelegramBotService
         }
         $text .= "\n\nبرای شروع، یکی از گزینه‌های زیر را انتخاب کنید ↓";
         $keyboard = [
-            [['text' => '🛒 خرید اشتراک'], ['text' => '📦 سرویس‌های من']],
-            [['text' => '💰 کیف پول'], ['text' => '🧾 سفارش‌های من']],
-            [['text' => '👤 حساب کاربری'], ['text' => '🎁 گیفت کارت']],
-            [['text' => '📞 پشتیبانی'], ['text' => '📚 راهنما']],
-            [['text' => '👥 زیرمجموعه']],
+            [['text' => '🛒 خرید اشتراک', 'callback_data' => 'plans_list'], ['text' => '📦 سرویس‌های من', 'callback_data' => 'nav_services']],
+            [['text' => '💰 کیف پول', 'callback_data' => 'nav_wallet'], ['text' => '🧾 سفارش‌های من', 'callback_data' => 'orders_page_1']],
+            [['text' => '👤 حساب کاربری', 'callback_data' => 'nav_account'], ['text' => '🎁 گیفت کارت', 'callback_data' => 'nav_gift']],
+            [['text' => '📞 پشتیبانی', 'callback_data' => 'support_menu'], ['text' => '📚 راهنما', 'callback_data' => 'nav_help']],
+            [['text' => '👥 زیرمجموعه', 'callback_data' => 'nav_affiliate']],
         ];
         if (config('v2board.try_out_plan_id') && (int) BotSetting::get('test_limit', 1) > 0
             && !$this->user->plan_id && !$this->user->bot_test_count) {
-            $keyboard[4][] = ['text' => '🎁 اکانت تست'];
+            $keyboard[4][] = ['text' => '🎁 اکانت تست', 'callback_data' => 'nav_trial'];
         }
         $panelUrl = TelegramLoginLink::make($this->user, 'dashboard');
         if (filter_var($panelUrl, FILTER_VALIDATE_URL) && parse_url($panelUrl, PHP_URL_SCHEME) === 'https') {
             array_unshift($keyboard, [['text' => '🌐 ورود به پنل', 'web_app' => ['url' => $panelUrl]]]);
         }
-        $this->sendMessage($chatId, $text, $keyboard, null, 'HTML');
+        $this->sendMessage($chatId, $text, null, $keyboard, 'HTML');
     }
 
     /**
@@ -269,6 +286,7 @@ class TelegramBotService
      */
     protected function sendPlansList(int $chatId, int $page = 1): void
     {
+        $this->setMenuScreen('plans', ['page' => $page]);
         $query = Plan::where('show', true)->where(function ($query) {
             foreach (BotView::PERIODS as $period => $label) $query->orWhereNotNull($period . '_price');
         });
@@ -299,6 +317,7 @@ class TelegramBotService
      */
     protected function sendAccountInfo(int $chatId): void
     {
+        $this->setMenuScreen('account');
         $user = $this->user;
         $text = "👤 <b>حساب کاربری</b>\n\n";
         $text .= "شناسهٔ حساب: <code>{$user->id}</code>\n";
@@ -319,6 +338,7 @@ class TelegramBotService
      */
     protected function handleTestAccount(int $chatId): void
     {
+        $this->setMenuScreen('trial');
         $plan = Plan::find((int) config('v2board.try_out_plan_id', 0));
         $hours = (float) config('v2board.try_out_hour', 1);
         if (!$plan || $hours <= 0 || $plan->transfer_enable <= 0 || (int) BotSetting::get('test_limit', 1) <= 0) {
@@ -339,6 +359,7 @@ class TelegramBotService
      */
     protected function sendWalletInfo(int $chatId): void
     {
+        $this->setMenuScreen('wallet');
         $text = "💰 <b>کیف پول شما</b>\n\nموجودی قابل استفاده\n<b>" . BotView::money($this->user->balance) . "</b>\n\n";
         $text .= 'موجودی کیف پول هنگام خرید اشتراک به‌صورت خودکار استفاده می‌شود. سوابق و وضعیت پرداخت‌ها در بخش سفارش‌ها در دسترس است.';
         $this->sendMessage($chatId, $text, null, [
@@ -368,6 +389,8 @@ class TelegramBotService
             return;
         }
 
+        $this->menu = new TelegramMenu($this->user, $this->token, $callback['message']);
+
         if ($this->user->banned) {
             $this->answerCallback($callback['id'], '⛔ حساب شما مسدود شده است.');
             return;
@@ -380,6 +403,28 @@ class TelegramBotService
         if ($data === 'check_join') {
             $this->answerCallback($callback['id'], '✅ عضویت شما تأیید شد.');
             $this->sendMainMenu($chatId);
+            return;
+        }
+
+        if ($this->menu->isStale() && !Str::startsWith($data, ['card_', 'remind_admin_'])) {
+            $this->answerCallback($callback['id'], 'این پیام قدیمی است؛ از منوی فعلی استفاده کنید.');
+            return;
+        }
+        $action = Str::startsWith($data, ['buy_', 'pay_', 'charge_amount_', 'coupon_yes_', 'coupon_no_', 'cancel_order_'])
+            || in_array($data, ['trial_activate', 'cred_reset_yes', 'ticket_send_now', 'transfer_commission', 'create_invite_code'], true);
+        if ($action && !$this->menu->claimAction($data)) {
+            $this->answerCallback($callback['id'], 'این مرحله تغییر کرده است؛ از دکمه‌های فعلی استفاده کنید.');
+            return;
+        }
+
+        if ($data === 'menu_back' || $data === 'cancel_input') {
+            $this->answerCallback($callback['id']);
+            $this->restoreMenu($chatId, $this->menu->back());
+            return;
+        }
+        if (preg_match('/^menu_page_(\d+)$/D', $data, $matches)) {
+            $this->answerCallback($callback['id']);
+            if (!$this->menu->page((int) $matches[1])) $this->sendMainMenu($chatId);
             return;
         }
 
@@ -408,6 +453,14 @@ class TelegramBotService
             $this->sendMyServices($chatId);
         } elseif ($data === 'nav_wallet') {
             $this->sendWalletInfo($chatId);
+        } elseif ($data === 'nav_account') {
+            $this->sendAccountInfo($chatId);
+        } elseif ($data === 'nav_gift') {
+            $this->askForGiftCard($chatId);
+        } elseif ($data === 'nav_affiliate') {
+            $this->sendAffiliateInfo($chatId);
+        } elseif ($data === 'nav_trial') {
+            $this->handleTestAccount($chatId);
         } elseif ($data === 'nav_help') {
             $this->sendHelpInfo($chatId);
         } elseif (preg_match('/^plans_page_(\d+)$/D', $data, $matches)) {
@@ -430,7 +483,7 @@ class TelegramBotService
             $this->sendMessage($chatId, ($result['success'] ? '✅ ' : 'ℹ️ ') . $result['message'], null, [BotView::home()]);
             if ($result['success']) {
                 $this->sendMyServices($chatId);
-                $this->sendSubscriptionLink($chatId);
+                $this->pendingMenu[0] = '✅ ' . $result['message'] . "\n\n" . $this->pendingMenu[0];
             }
         } elseif (preg_match('/^charge_amount_(50000|100000|200000)$/D', $data, $matches)) {
             $this->processChargeAmount($chatId, $matches[1]);
@@ -520,6 +573,7 @@ class TelegramBotService
             return;
         } elseif ($data === 'cred_reset') {
             $this->answerCallback($callback['id']);
+            $this->setMenuScreen('credential_reset');
             $this->sendMessage($chatId, "⚠️ با ساخت رمز جدید، رمز فعلی دیگر کار نمی‌کند و برنامه روی همه‌ی دستگاه‌ها باید دوباره وارد شود.\n\nرمز جدید ساخته شود؟", null, [
                 [['text' => '✅ بله، رمز جدید بساز', 'callback_data' => 'cred_reset_yes']],
                 [['text' => '🏠 بازگشت', 'callback_data' => 'main_menu']],
@@ -537,6 +591,14 @@ class TelegramBotService
             }
             $this->sendCredentials($chatId, true);
             return;
+        } elseif (preg_match('/^help_file_(android|ios|windows)_(\d+)$/D', $data, $matches)) {
+            $this->sendHelpFile($chatId, $matches[1], (int) $matches[2]);
+        } elseif (preg_match('/^help_image_(android|ios|windows)$/D', $data, $matches)) {
+            $image = BotText::get('help_' . $matches[1] . '_image', '');
+            if ($image !== '') $this->sendPhoto($chatId, $image, 'راهنمای اتصال');
+        } elseif (preg_match('/^help_credentials_(android|ios|windows)$/D', $data, $matches)) {
+            if (BotText::get('help_' . $matches[1] . '_send_credentials', '0') === '1') $this->sendCredentials($chatId);
+            else $this->sendHelpPlatform($chatId, $matches[1]);
         } elseif (Str::startsWith($data, 'help_')) {
             $this->answerCallback($callback['id']);
             $this->sendHelpPlatform($chatId, Str::after($data, 'help_'));
@@ -555,17 +617,92 @@ class TelegramBotService
         }
     }
 
+    protected function setMenuScreen(string $name, array $args = []): void
+    {
+        if ($this->menu) $this->menu->visit($name, $args, $this->restoringMenu);
+    }
+
+    /** Restore only display/prompt routes. Buying, paying and other actions never enter history. */
+    protected function restoreMenu(int $chatId, array $screen): void
+    {
+        $this->restoringMenu = true;
+        try {
+            $this->renderStoredMenu($chatId, $screen);
+        } finally {
+            $this->restoringMenu = false;
+        }
+    }
+
+    protected function renderStoredMenu(int $chatId, array $screen): void
+    {
+        $name = $screen['name'];
+        $args = $screen['args'];
+        $this->clearInput();
+        if ($this->hasPendingCardClaim() && in_array($name, ['charge', 'gift', 'trial', 'coupon', 'gateways', 'checkout', 'receipt'], true)) {
+            $this->showOrders($chatId);
+            return;
+        }
+        switch ($name) {
+            case 'plans': $this->sendPlansList($chatId, (int) ($args['page'] ?? 1)); break;
+            case 'plan': $this->showPlanDetails($chatId, 0, (int) $args['id']); break;
+            case 'services': $this->sendMyServices($chatId); break;
+            case 'subscription': $this->sendSubscriptionLink($chatId); break;
+            case 'account': $this->sendAccountInfo($chatId); break;
+            case 'wallet': $this->sendWalletInfo($chatId); break;
+            case 'charge': $this->askChargeAmount($chatId); break;
+            case 'gift': $this->askForGiftCard($chatId); break;
+            case 'affiliate': $this->sendAffiliateInfo($chatId); break;
+            case 'trial': $this->handleTestAccount($chatId); break;
+            case 'reserved': $this->showReservedPlans($chatId, 0); break;
+            case 'support': $this->sendSupportInfo($chatId); break;
+            case 'help': $this->sendHelpInfo($chatId); break;
+            case 'help_platform': $this->sendHelpPlatform($chatId, $args['platform']); break;
+            case 'credentials': $this->sendCredentials($chatId); break;
+            case 'credential_reset':
+                $this->setMenuScreen('credential_reset');
+                $this->sendMessage($chatId, 'رمز جدید ساخته شود؟ رمز قبلی دیگر کار نخواهد کرد.', null, [
+                    [['text' => '✅ بله، رمز جدید بساز', 'callback_data' => 'cred_reset_yes']],
+                ]);
+                break;
+            case 'orders': $this->showOrders($chatId, (int) ($args['page'] ?? 1)); break;
+            case 'order': $this->showOrderDetails($chatId, $args['trade_no']); break;
+            case 'checkout': $this->showCheckout($chatId, $args['trade_no']); break;
+            case 'gateways': $this->showPaymentGateways($chatId, $args['trade_no']); break;
+            case 'coupon': $this->askForCouponCode($chatId, $args['trade_no']); break;
+            case 'receipt': $this->showReceiptInstructions($chatId, $args['trade_no']); break;
+            case 'tickets': $this->showMyTickets($chatId, (int) ($args['page'] ?? 1)); break;
+            case 'ticket': $this->viewTicket($chatId, (int) $args['id'], (int) ($args['page'] ?? 1)); break;
+            case 'ticket_close': $this->closeTicket($chatId, (int) $args['id'], false); break;
+            case 'ticket_reply': $this->startReplyTicket($chatId, (int) $args['id']); break;
+            case 'ticket_subject': $this->startNewTicket($chatId); break;
+            case 'ticket_confirm': $this->showTicketConfirmation($chatId, $args['subject'] ?? ''); break;
+            case 'ticket_message':
+                $this->user->update(['bot_step' => 'ticket_confirm', 'bot_data' => json_encode(['subject' => $args['subject'] ?? ''], JSON_UNESCAPED_UNICODE)]);
+                $this->askTicketMessage($chatId);
+                break;
+            case 'settings':
+            case 'files':
+            case 'transit':
+                if (!$this->user->is_admin) { $this->sendMainMenu($chatId); break; }
+                if ($name === 'files') $this->sendFilesStatus($chatId);
+                elseif ($name === 'transit') $this->askTransitUrl($chatId);
+                else $this->showSettings($chatId);
+                break;
+            default: $this->sendMainMenu($chatId);
+        }
+    }
+
     protected function isReadOnlyCommand(string $text): bool
     {
         return in_array($text, [
-            '/start', '/menu', '/cancel', '/account', '/services', '/traffic', '/orders', '/support', '/help', '/wallet',
+            '/start', '/menu', '/cancel', '/back', '‹ برگشت', '/account', '/services', '/traffic', '/orders', '/support', '/help', '/wallet',
             '🏠 منوی اصلی', '👤 حساب کاربری', '📦 سرویس‌های من', '🧾 سفارش‌های من', '📞 پشتیبانی', '📚 راهنما', '💰 کیف پول',
         ], true);
     }
 
     protected function isReadOnlyCallback(string $data): bool
     {
-        return in_array($data, ['main_menu', 'cancel_input', 'nav_services', 'nav_wallet', 'nav_help', 'get_sub_link', 'reserved_plans',
+        return in_array($data, ['main_menu', 'cancel_input', 'menu_back', 'nav_account', 'nav_services', 'nav_wallet', 'nav_help', 'get_sub_link', 'reserved_plans',
                 'support_menu', 'my_tickets', 'new_ticket', 'ticket_add_message', 'ticket_send_now'], true)
             || Str::startsWith($data, ['orders_page_', 'order_view_', 'tickets_page_', 'ticket_thread_', 'view_ticket_', 'reply_ticket_', 'ticket_close_', 'help_']);
     }
@@ -588,6 +725,7 @@ class TelegramBotService
 
     protected function showOrders(int $chatId, int $page = 1): void
     {
+        $this->setMenuScreen('orders', ['page' => $page]);
         $query = Order::where('user_id', $this->user->id);
         $pages = max(1, (int) ceil((clone $query)->count() / 5));
         $page = max(1, min($page, $pages));
@@ -608,6 +746,7 @@ class TelegramBotService
 
     protected function showOrderDetails(int $chatId, string $tradeNo): void
     {
+        $this->setMenuScreen('order', ['trade_no' => $tradeNo]);
         $order = Order::where('user_id', $this->user->id)->where('trade_no', $tradeNo)->first();
         if (!$order) {
             $this->sendMessage($chatId, 'سفارش یافت نشد.', null, [BotView::home()]);
@@ -644,6 +783,7 @@ class TelegramBotService
 
     protected function closeTicket(int $chatId, int $ticketId, bool $confirmed): void
     {
+        $this->setMenuScreen($confirmed ? 'ticket' : 'ticket_close', ['id' => $ticketId, 'page' => 1]);
         $ticket = \App\Models\Ticket::where('id', $ticketId)->where('user_id', $this->user->id)->where('status', 0)->first();
         if (!$ticket) {
             $this->sendMessage($chatId, 'درخواست یافت نشد یا قبلاً بسته شده است.', null, [[['text' => '📋 درخواست‌های من', 'callback_data' => 'my_tickets']]]);
@@ -762,6 +902,7 @@ class TelegramBotService
      */
     protected function sendJoinChannelMessage(int $chatId): void
     {
+        $this->setMenuScreen('join');
         $channels = BotChannel::where('status', true)->get();
 
         $text = "⚠️ برای استفاده از ربات ابتدا در کانال‌های زیر عضو شوید:\n\n";
@@ -781,6 +922,20 @@ class TelegramBotService
      */
     public function sendMessage(int $chatId, string $text, ?array $keyboard = null, ?array $inlineKeyboard = null, string $parseMode = ''): void
     {
+        if ($this->menu && $this->user && $chatId === (int) $this->user->telegram_id) {
+            // One final render per update: confirmations and redirects cannot flood the chat.
+            if ($this->pendingMenu && !$this->pendingMenu[1] && $inlineKeyboard
+                && mb_strlen($this->pendingMenu[0]) <= 700) {
+                [$notice, , $noticeMode] = $this->pendingMenu;
+                if ($parseMode === 'HTML' && $noticeMode !== 'HTML') $notice = BotView::escape($notice);
+                elseif ($parseMode === '' && $noticeMode === 'HTML') $notice = html_entity_decode(strip_tags($notice), ENT_QUOTES, 'UTF-8');
+                if ($parseMode === $noticeMode || $parseMode === 'HTML' || ($parseMode === '' && $noticeMode === 'HTML')) {
+                    $text = $notice . "\n\n" . $text;
+                }
+            }
+            $this->pendingMenu = [$text, $inlineKeyboard ?? $keyboard ?? [], $parseMode];
+            return;
+        }
         // Long ticket conversations must still be delivered within Telegram's limit.
         // Split as plain text so no HTML entity or tag is cut in half.
         if (mb_strlen($text, 'UTF-8') > 1800) {
@@ -875,6 +1030,7 @@ class TelegramBotService
      */
     protected function sendMyServices(int $chatId): void
     {
+        $this->setMenuScreen('services');
         $user = $this->user;
         $plan = $user->plan_id ? Plan::find($user->plan_id) : null;
         if (!$user->plan_id) {
@@ -915,6 +1071,7 @@ class TelegramBotService
      */
     protected function askForGiftCard(int $chatId): void
     {
+        $this->setMenuScreen('gift');
         $this->user->update(['bot_step' => 'enter_giftcard', 'bot_data' => null]);
         $this->sendMessage($chatId, "🎁 <b>فعال‌سازی گیفت کارت</b>\n\nکد هدیه را ارسال کنید. نتیجهٔ فعال‌سازی همین‌جا نمایش داده می‌شود.\n\nبرای بازگشت /cancel را بفرستید.", null, BotView::cancel(), 'HTML');
     }
@@ -923,6 +1080,7 @@ class TelegramBotService
      */
     protected function sendAffiliateInfo(int $chatId): void
     {
+        $this->setMenuScreen('affiliate');
         $user = $this->user;
         $codes = \App\Models\InviteCode::where('user_id', $user->id)->where('status', 0)->orderBy('id')->get();
         $count = User::where('invite_user_id', $user->id)->count();
@@ -956,6 +1114,7 @@ class TelegramBotService
      */
     protected function sendSupportInfo(int $chatId): void
     {
+        $this->setMenuScreen('support');
         $openTicket = \App\Models\Ticket::where('user_id', $this->user->id)->where('status', 0)->first();
         $text = "📞 <b>کنار شما هستیم</b>\n\nبرای مشکلات اتصال، خرید یا پرداخت، درخواست پشتیبانی ثبت کنید. موضوع و جزئیات مشکل را بنویسید تا سریع‌تر بررسی شود.";
         $buttons = [];
@@ -975,39 +1134,40 @@ class TelegramBotService
      */
     protected function sendHelpPlatform(int $chatId, string $platform): void
     {
-        $valid = ['android', 'ios', 'windows'];
-        if (!in_array($platform, $valid, true)) {
-            $this->sendMainMenu($chatId);
+        if (!in_array($platform, ['android', 'ios', 'windows'], true)) {
+            $this->sendHelpInfo($chatId);
             return;
         }
-        $text  = BotText::get('help_' . $platform . '_text', '');
-        $image = BotText::get('help_' . $platform . '_image', '');
-        $links = json_decode(BotText::get('help_' . $platform . '_links', '[]'), true);
-        if (!is_array($links)) $links = [];
-        if ($text === '') $text = 'محتوای این بخش هنوز تنظیم نشده است.';
-
-        $inline = [];
-        foreach ($links as $lk) {
-            if (($lk['type'] ?? '') === 'url' && !empty($lk['url'])) {
-                $label = !empty($lk['label']) ? $lk['label'] : '🔗 لینک';
-                $inline[] = [['text' => $label, 'url' => $lk['url']]];
+        $this->setMenuScreen('help_platform', ['platform' => $platform]);
+        $text = BotText::get('help_' . $platform . '_text', '') ?: 'محتوای این بخش هنوز تنظیم نشده است.';
+        $links = json_decode(BotText::get('help_' . $platform . '_links', '[]'), true) ?: [];
+        $buttons = [];
+        foreach ($links as $index => $link) {
+            $label = $link['label'] ?? 'دریافت برنامه';
+            if (($link['type'] ?? '') === 'file' && !empty($link['file'])) {
+                $buttons[] = [['text' => '⬇️ ' . $label, 'callback_data' => "help_file_{$platform}_{$index}"]];
+            } elseif (($link['type'] ?? '') === 'url' && !empty($link['url'])) {
+                $buttons[] = [['text' => $label, 'url' => $link['url']]];
             }
         }
-        $inline[] = [['text' => '📚 انتخاب دستگاه دیگر', 'callback_data' => 'nav_help']];
-        $inline[] = BotView::home();
-
-        if ($image !== '') {
-            if (mb_strlen($text) > 1000) {
-                $this->sendPhoto($chatId, $image, '', null);
-                $this->sendMessage($chatId, $text, null, $inline);
-            } else {
-                $this->sendPhoto($chatId, $image, $text, $inline);
-            }
-        } else {
-            $this->sendMessage($chatId, $text, null, $inline);
+        if (BotText::get('help_' . $platform . '_image', '') !== '') {
+            $buttons[] = [['text' => '🖼 تصویر راهنما', 'callback_data' => 'help_image_' . $platform]];
         }
+        if (BotText::get('help_' . $platform . '_send_credentials', '0') === '1') {
+            $buttons[] = [['text' => '🔐 دریافت اطلاعات ورود', 'callback_data' => 'help_credentials_' . $platform]];
+        }
+        $this->sendMessage($chatId, $text, null, $buttons);
+    }
 
-        foreach ($links as $lk) {
+    protected function sendHelpFile(int $chatId, string $platform, int $index): void
+    {
+        if (!in_array($platform, ['android', 'ios', 'windows'], true)) return;
+        $links = json_decode(BotText::get('help_' . $platform . '_links', '[]'), true) ?: [];
+        if (!isset($links[$index]) || ($links[$index]['type'] ?? '') !== 'file' || empty($links[$index]['file'])) {
+            $this->sendHelpPlatform($chatId, $platform);
+            return;
+        }
+        foreach ([$links[$index]] as $lk) {
             if (($lk['type'] ?? '') !== 'file' || empty($lk['file'])) continue;
             $path    = public_path(ltrim($lk['file'], '/'));
             $caption = !empty($lk['label']) ? $lk['label'] : '';
@@ -1038,15 +1198,12 @@ class TelegramBotService
             }
         }
 
-        // تیک «ارسال ایمیل و رمز» این بخش در ربات هوشمند
-        if (BotText::get('help_' . $platform . '_send_credentials', '0') === '1') {
-            $this->sendCredentials($chatId);
-        }
     }
 
     /** The email and password for the app, after a help section that says to log in with them. */
     protected function sendCredentials(int $chatId, bool $renewed = false): void
     {
+        $this->setMenuScreen('credentials');
         $cred = BotCredentials::forUser($this->user);
         $email = htmlspecialchars($cred['email'], ENT_QUOTES);
 
@@ -1139,6 +1296,7 @@ class TelegramBotService
     /** /files: what the help sections will send, file or link. */
     protected function sendFilesStatus(int $chatId): void
     {
+        $this->setMenuScreen('files');
         $this->sendMessage($chatId, $this->filesStatusText());
     }
 
@@ -1222,6 +1380,7 @@ class TelegramBotService
 
     protected function sendHelpInfo(int $chatId): void
     {
+        $this->setMenuScreen('help');
         $intro = BotText::get('text_help', 'دستگاه خود را انتخاب کنید تا آموزش، برنامه و فایل‌های اتصال را دریافت کنید.');
         $text = "📚 <b>راهنمای اتصال</b>\n\n" . BotView::escape($intro);
         $text .= "\n\n۱. برنامهٔ مناسب دستگاه را نصب کنید.\n۲. لینک اشتراک را از «سرویس‌های من» بگیرید.\n۳. لینک را در برنامه وارد و اتصال را فعال کنید.\n\nاگر مشکلی داشتید، پشتیبانی در دسترس شماست.";
@@ -1436,6 +1595,7 @@ class TelegramBotService
      */
     protected function askChargeAmount(int $chatId): void
     {
+        $this->setMenuScreen('charge');
         $this->user->update(['bot_step' => 'enter_charge_amount', 'bot_data' => null]);
         $this->sendMessage($chatId, "💳 <b>شارژ کیف پول</b>\n\nمبلغ دلخواه را به تومان ارسال کنید.\nحداقل: ۱۰٬۰۰۰ تومان\nمثال: <code>۵۰٬۰۰۰</code>\n\nیا یکی از مبلغ‌های زیر را انتخاب کنید:", null, [
             [['text' => '۵۰٬۰۰۰ تومان', 'callback_data' => 'charge_amount_50000'], ['text' => '۱۰۰٬۰۰۰ تومان', 'callback_data' => 'charge_amount_100000']],
@@ -1523,6 +1683,7 @@ class TelegramBotService
      */
     protected function showPlanDetails(int $chatId, int $messageId, int $planId): void
     {
+        $this->setMenuScreen('plan', ['id' => $planId]);
         $plan = Plan::find($planId);
         $renewal = $plan && (int) $this->user->plan_id === $planId && $plan->renew;
         if (!$plan || (!$plan->show && !$renewal)) {
@@ -1578,6 +1739,7 @@ class TelegramBotService
                 : "سرویس شما فعال شد!";
             $this->clearInput();
             $this->user->refresh();
+            $this->setMenuScreen('order', ['trade_no' => $result['order']->trade_no]);
             $this->sendMessage($chatId, "✅ " . $result["message"] . "\n\n" . $done, null, [
                 [['text' => '📦 مشاهده سرویس و راهنمای اتصال', 'callback_data' => 'nav_services']],
                 [['text' => '🧾 جزئیات سفارش', 'callback_data' => 'order_view_' . $result['order']->trade_no]], BotView::home(),
@@ -1585,24 +1747,48 @@ class TelegramBotService
             return;
         }
 
-        $tradeNo = $result["trade_no"];
-        $amount = $result["amount"];
-        
-        // ذخیره اطلاعات سفارش برای مرحله بعد
-        $this->user->update(['bot_step' => null, 'bot_data' => json_encode(['trade_no' => $tradeNo, 'amount' => $amount])]);
+        $this->clearInput();
+        $this->showCheckout($chatId, $result['trade_no']);
+    }
 
-        // پرسش کد تخفیف
-        $text = "🛒 سفارش ایجاد شد\n\n";
-        $text .= "💰 مبلغ: " . number_format($amount) . " تومان\n\n";
-        $text .= "🎫 آیا کد تخفیف دارید؟";
+    protected function showCheckout(int $chatId, string $tradeNo): void
+    {
+        $order = Order::where('user_id', $this->user->id)->where('trade_no', $tradeNo)->first();
+        if (!$order || (int) $order->status !== 0) {
+            $this->showOrderDetails($chatId, $tradeNo);
+            return;
+        }
+        $this->setMenuScreen('checkout', ['trade_no' => $tradeNo]);
+        $this->clearInput();
+        $text = "🛒 <b>تکمیل سفارش</b>\n\nشناسه: <code>" . BotView::escape($tradeNo) . "</code>\n";
+        $text .= 'مبلغ قابل پرداخت: <b>' . BotView::money($order->total_amount) . "</b>\n\n🎫 آیا کد تخفیف دارید؟";
+        $buttons = [];
+        if (!$order->coupon_id) $buttons[] = [['text' => '🎫 واردکردن کد تخفیف', 'callback_data' => 'coupon_yes_' . $tradeNo]];
+        $buttons[] = [['text' => '💳 ادامهٔ پرداخت', 'callback_data' => 'coupon_no_' . $tradeNo]];
+        $buttons[] = [['text' => '✖️ لغو سفارش', 'callback_data' => 'cancel_order_' . $tradeNo]];
+        $this->sendMessage($chatId, $text, null, $buttons, 'HTML');
+    }
 
-        $buttons = [
-            [['text' => '✅ بله، کد تخفیف دارم', 'callback_data' => 'coupon_yes_' . $tradeNo]],
-            [['text' => '❌ خیر، ادامه پرداخت', 'callback_data' => 'coupon_no_' . $tradeNo]],
-            [['text' => '🗑 لغو سفارش', 'callback_data' => 'cancel_order_' . $tradeNo]]
-        ];
-
-        $this->sendMessage($chatId, $text, null, $buttons);
+    protected function showReceiptInstructions(int $chatId, string $tradeNo): void
+    {
+        $payment = \App\Models\CardPayment::where('user_id', $this->user->id)->where('trade_no', $tradeNo)->orderByDesc('id')->first();
+        $order = Order::where('user_id', $this->user->id)->where('trade_no', $tradeNo)->first();
+        if (!$payment || !$order || (int) $order->status !== 0 || !$payment->canBeClaimed()) {
+            $this->showOrderDetails($chatId, $tradeNo);
+            return;
+        }
+        $this->setMenuScreen('receipt', ['trade_no' => $tradeNo]);
+        $this->user->update(['bot_step' => 'waiting_card_receipt', 'bot_data' => json_encode([
+            'trade_no' => $tradeNo, 'payment_id' => $payment->id, 'amount' => $payment->expected_amount,
+        ])]);
+        $text = "💳 <b>پرداخت کارت‌به‌کارت</b>\n\nشماره کارت:\n<code>" . BotView::escape($payment->card_number) . "</code>\n";
+        $text .= 'صاحب کارت: ' . BotView::escape($payment->card_holder) . "\n";
+        $text .= 'مبلغ: <b>' . BotView::money($payment->expected_amount) . "</b>\n";
+        $text .= 'مهلت باقی‌مانده: ' . max(0, (int) ceil(($payment->expires_at - time()) / 60)) . " دقیقه\n\n";
+        $text .= 'مبلغ دقیق را واریز و عکس رسید را همین‌جا ارسال کنید. برگشت از این صفحه، سفارش را لغو نمی‌کند.';
+        $this->sendMessage($chatId, $text, null, [
+            [['text' => '✖️ لغو سفارش', 'callback_data' => 'cancel_order_' . $tradeNo]],
+        ], 'HTML');
     }
 
     /**
@@ -1620,6 +1806,7 @@ class TelegramBotService
      */
     protected function sendSubscriptionLink(int $chatId): void
     {
+        $this->setMenuScreen('subscription');
         $user = $this->user;
         if (!$user->plan_id || ($user->expired_at !== null && $user->expired_at <= time())) {
             $this->sendMessage($chatId, 'برای دریافت لینک اتصال، یک اشتراک معتبر تهیه یا تمدید کنید.', null, [
@@ -1660,6 +1847,7 @@ class TelegramBotService
 
         // type 1 = redirect URL
         if ($result['type'] == 1) {
+            $this->setMenuScreen('order', ['trade_no' => $tradeNo]);
             $order = Order::where('user_id', $this->user->id)->where('trade_no', $tradeNo)->first();
             $text = "💳 <b>پرداخت سفارش</b>\n\n";
             $text .= 'مبلغ نهایی درگاه: <b>' . BotView::money($order->total_amount + $order->handling_amount) . "</b>\n";
@@ -1672,26 +1860,9 @@ class TelegramBotService
             ];
             $this->sendMessage($chatId, $text, null, $buttons, 'HTML');
         } elseif ($result['type'] == 0) {
-            $d = $result['data'];
-            $text = "💳 *پرداخت کارت به کارت*\n\n";
-            $text .= "━━━━━━━━━━━━━━\n";
-            $text .= "🏦 بانک: " . ($d['bank_name'] ?? '-') . "\n";
-            $text .= "💳 شماره کارت:\n`" . ($d['card_number'] ?? '----') . "`\n";
-            $text .= "👤 صاحب کارت: " . ($d['card_holder'] ?? '-') . "\n";
-            $text .= "━━━━━━━━━━━━━━\n";
-            $text .= "💰 مبلغ: *" . number_format($d['amount_toman'] ?? 0) . " تومان*\n";
-            $text .= "⏱ مهلت: " . (int)(($d['remaining_seconds'] ?? 1800) / 60) . " دقیقه\n\n";
-            $text .= "⚠️ لطفاً دقیقاً همین مبلغ را واریز کنید\n\n";
-            $text .= "📸 *پس از واریز، عکس رسید بانکی را ارسال کنید*";
-            $this->user->update([
-                'bot_step' => 'waiting_card_receipt',
-                'bot_data' => json_encode(['trade_no' => $d['trade_no'], 'payment_id' => $d['payment_id'], 'amount' => $d['amount_toman']])
-            ]);
-            $buttons = [
-                [['text' => '❌ انصراف از پرداخت', 'callback_data' => 'cancel_order_' . $tradeNo]]
-            ];
-            $this->sendMessage($chatId, $text, null, $buttons, 'Markdown');
+            $this->showReceiptInstructions($chatId, $tradeNo);
         } else {
+            $this->setMenuScreen('order', ['trade_no' => $tradeNo]);
             $this->sendMessage($chatId, 'درخواست پرداخت ثبت شد. وضعیت و ادامهٔ مراحل را از جزئیات سفارش دنبال کنید.', null, [
                 [['text' => '🧾 جزئیات سفارش', 'callback_data' => 'order_view_' . $tradeNo]], BotView::home(),
             ]);
@@ -1703,6 +1874,7 @@ class TelegramBotService
      */
     protected function handleCancelOrder(int $chatId, string $tradeNo): void
     {
+        $this->setMenuScreen('order', ['trade_no' => $tradeNo]);
         $result = (new TelegramOrderService($this->user))->cancelOrder($tradeNo);
         if ($result['success']) $this->clearInput();
         $this->sendMessage($chatId, ($result['success'] ? '✅ ' : '❌ ') . $result['message'], null, [
@@ -1727,7 +1899,7 @@ class TelegramBotService
             '📞 پشتیبانی',
             '📚 راهنما',
             '🧾 سفارش‌های من',
-            '/start', '/menu', '/cancel', '/help', '/plans', '/account',
+            '/start', '/menu', '/cancel', '/back', '‹ برگشت', '/help', '/plans', '/account',
             '/services', '/traffic', '/wallet', '/orders', '/support',
         ];
         return in_array($text, $menuButtons);
@@ -1756,6 +1928,7 @@ class TelegramBotService
      */
     protected function askForCouponCode(int $chatId, string $tradeNo): void
     {
+        $this->setMenuScreen('coupon', ['trade_no' => $tradeNo]);
         $order = Order::where('user_id', $this->user->id)->where('trade_no', $tradeNo)->where('status', 0)->first();
         if (!$order) {
             $this->showOrderDetails($chatId, $tradeNo);
@@ -1949,6 +2122,7 @@ class TelegramBotService
      */
     protected function showPaymentGateways(int $chatId, string $tradeNo): void
     {
+        $this->setMenuScreen('gateways', ['trade_no' => $tradeNo]);
         $order = Order::where('trade_no', $tradeNo)->where('user_id', $this->user->id)->first();
         if (!$order || (int) $order->status !== 0) {
             $this->showOrderDetails($chatId, $tradeNo);
@@ -2296,6 +2470,7 @@ class TelegramBotService
      */
     protected function startNewTicket(int $chatId): void
     {
+        $this->setMenuScreen('ticket_subject');
         // بررسی تیکت باز
         $openTicket = \App\Models\Ticket::where('user_id', $this->user->id)
             ->where('status', 0)
@@ -2341,6 +2516,7 @@ class TelegramBotService
             $this->sendSupportInfo($chatId);
             return;
         }
+        $this->setMenuScreen('ticket_message', ['subject' => $data['subject']]);
         $this->user->update(['bot_step' => 'ticket_message']);
         $this->sendMessage($chatId, '📝 جزئیات مشکل را بنویسید؛ مثل نام برنامه، دستگاه و متن خطا. رمز عبور خود را ارسال نکنید.', null, BotView::cancel());
     }
@@ -2357,6 +2533,22 @@ class TelegramBotService
         }
         $this->createTicket($chatId, $data['subject'], $data['subject'], 1);
     }
+
+    protected function showTicketConfirmation(int $chatId, string $subject): void
+    {
+        if (mb_strlen($subject) < 3 || mb_strlen($subject) > 120
+            || (int) config('v2board.ticket_status', 0) === 2
+            || \App\Models\Ticket::where('user_id', $this->user->id)->where('status', 0)->exists()) {
+            $this->sendSupportInfo($chatId);
+            return;
+        }
+        $this->setMenuScreen('ticket_confirm', ['subject' => $subject]);
+        $this->user->update(['bot_step' => 'ticket_confirm', 'bot_data' => json_encode(['subject' => $subject], JSON_UNESCAPED_UNICODE)]);
+        $this->sendMessage($chatId, "📋 موضوع: {$subject}\n\nجزئیات بیشتری برای پشتیبانی دارید؟", null, [
+            [['text' => '📝 افزودن توضیحات', 'callback_data' => 'ticket_add_message']],
+            [['text' => '📨 ارسال همین متن', 'callback_data' => 'ticket_send_now']],
+        ]);
+    }
     
     /**
      * پردازش مراحل تیکت
@@ -2370,12 +2562,7 @@ class TelegramBotService
                 $this->sendMessage($chatId, 'موضوع را بین ۳ تا ۱۲۰ نویسه بنویسید.', null, BotView::cancel());
                 return;
             }
-            $this->user->update(['bot_step' => 'ticket_confirm', 'bot_data' => json_encode(['subject' => $text], JSON_UNESCAPED_UNICODE)]);
-            $this->sendMessage($chatId, "📋 موضوع: {$text}\n\nجزئیات بیشتری برای پشتیبانی دارید؟", null, [
-                [['text' => '📝 افزودن توضیحات', 'callback_data' => 'ticket_add_message']],
-                [['text' => '📨 ارسال همین متن', 'callback_data' => 'ticket_send_now']],
-                BotView::cancel()[0],
-            ]);
+            $this->showTicketConfirmation($chatId, $text);
         } elseif ($step === 'ticket_message') {
             if (mb_strlen($text) < 3 || mb_strlen($text) > 3500 || empty($botData['subject'])) {
                 $this->sendMessage($chatId, 'توضیحات را بین ۳ تا ۳۵۰۰ نویسه بنویسید.', null, BotView::cancel());
@@ -2443,6 +2630,7 @@ class TelegramBotService
             
             // ارسال اعلان به ادمین
             $this->sendTicketNotifyToAdmin($ticket, $message);
+            $this->setMenuScreen('ticket', ['id' => (int) $ticket->id, 'page' => 1]);
             
             $levelText = ['🟢 پایین', '🟡 متوسط', '🔴 بالا'][$level] ?? 'متوسط';
             
@@ -2504,6 +2692,7 @@ class TelegramBotService
      */
     protected function showMyTickets(int $chatId, int $page = 1): void
     {
+        $this->setMenuScreen('tickets', ['page' => $page]);
         $query = \App\Models\Ticket::where('user_id', $this->user->id);
         $pages = max(1, (int) ceil((clone $query)->count() / 5));
         $page = max(1, min($page, $pages));
@@ -2528,6 +2717,7 @@ class TelegramBotService
      */
     protected function viewTicket(int $chatId, int $ticketId, int $page = 1): void
     {
+        $this->setMenuScreen('ticket', ['id' => $ticketId, 'page' => $page]);
         $ticket = \App\Models\Ticket::where('id', $ticketId)->where('user_id', $this->user->id)->first();
         if (!$ticket) {
             $this->sendMessage($chatId, 'درخواست یافت نشد.', null, [[['text' => '📋 درخواست‌های من', 'callback_data' => 'my_tickets']]]);
@@ -2561,6 +2751,7 @@ class TelegramBotService
      */
     protected function startReplyTicket(int $chatId, int $ticketId): void
     {
+        $this->setMenuScreen('ticket_reply', ['id' => $ticketId]);
         $ticket = \App\Models\Ticket::where('id', $ticketId)
             ->where('user_id', $this->user->id)
             ->where('status', 0)
@@ -2638,6 +2829,7 @@ class TelegramBotService
         
         // بروزرسانی reply_status تیکت
         $ticket->update(['reply_status' => 0]);
+        $this->setMenuScreen('ticket', ['id' => (int) $ticketId, 'page' => 1]);
         
         $this->user->update(['bot_step' => null, 'bot_data' => null]);
         
@@ -2655,6 +2847,7 @@ class TelegramBotService
      */
     protected function showSettings(int $chatId): void
     {
+        $this->setMenuScreen('settings');
         $transitEnable = \DB::table('v2_bot_settings')->where('key', 'payment_transit_enable')->value('value');
         $transitUrl = \DB::table('v2_bot_settings')->where('key', 'payment_transit_url')->value('value');
         $proxyEnable = \DB::table('v2_bot_settings')->where('key', 'payment_proxy_enable')->value('value');
@@ -2715,6 +2908,7 @@ class TelegramBotService
      */
     protected function askTransitUrl(int $chatId): void
     {
+        $this->setMenuScreen('transit');
         $this->user->update(['bot_step' => 'setting_transit_url', 'bot_data' => null]);
         
         $this->sendMessage($chatId, "🔗 آدرس صفحه ترانزیت را وارد کنید:\n\nمثال: https://example.com/transit.php\n\n(برای انصراف /cancel بزنید)");
@@ -3111,7 +3305,10 @@ class TelegramBotService
             $cardPayment->save();
         }
 
-        $this->sendMessage($chatId, "✅ رسید شما ارسال شد.\nمنتظر تأیید ادمین باشید. نتیجه از طریق ربات اطلاع‌رسانی می‌شود.");
+        $this->setMenuScreen('order', ['trade_no' => $tradeNo]);
+        $this->sendMessage($chatId, "✅ رسید شما ارسال شد.\nمنتظر تأیید ادمین باشید. نتیجه از طریق ربات اطلاع‌رسانی می‌شود.", null, [
+            [['text' => '🧾 پیگیری رسید', 'callback_data' => 'order_view_' . $tradeNo]],
+        ]);
     }
 
 
@@ -3119,6 +3316,7 @@ class TelegramBotService
 
     protected function showReservedPlans(int $chatId, int $messageId): void
     {
+        $this->setMenuScreen('reserved');
         $reserved = \App\Models\ReservedPlan::where('user_id', $this->user->id)->where('status', 0)->orderBy('id')->get();
         $text = "📋 <b>بسته‌های رزرو</b>\n\nبسته‌ها به ترتیب رزرو و پس از پایان حجم یا اعتبار سرویس فعلی، طبق قوانین پنل فعال می‌شوند.\n";
         foreach ($reserved as $index => $item) {

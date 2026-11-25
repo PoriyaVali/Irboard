@@ -82,7 +82,8 @@ class TelegramService
         foreach ([
             'start' => 'شروع و نمایش میز کار', 'menu' => 'منوی اصلی', 'plans' => 'خرید اشتراک',
             'services' => 'وضعیت سرویس و لینک اتصال', 'wallet' => 'کیف پول', 'orders' => 'پیگیری سفارش‌ها و پرداخت‌ها',
-            'account' => 'حساب کاربری', 'support' => 'درخواست پشتیبانی', 'help' => 'راهنمای اتصال', 'cancel' => 'انصراف از مرحلهٔ فعلی',
+            'account' => 'حساب کاربری', 'support' => 'درخواست پشتیبانی', 'help' => 'راهنمای اتصال',
+            'back' => 'برگشت به مرحلهٔ قبلی', 'cancel' => 'انصراف و برگشت',
         ] as $command => $description) {
             $commands[$command] = ['command' => $command, 'description' => $description];
         }

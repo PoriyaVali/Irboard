@@ -826,7 +826,7 @@ jobs:
         run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter NodeApiContractTest
 
       - name: Purchased gifts and money-path regressions
-        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'CustomPlanGiftOrderTest|CustomPlanAdminTest|CustomPlanOrderTest|PurchasedGiftOrderTest|OrderMoneyFlowTest|TelegramCustomerExperienceTest|TelegramBotFixesTest|TelegramBotFilesTest|TelegramBotCredentialsTest|ExchangeRateTest'
+        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'CustomPlanGiftOrderTest|CustomPlanAdminTest|CustomPlanOrderTest|PurchasedGiftOrderTest|OrderMoneyFlowTest|TelegramMenuNavigationTest|TelegramCustomerExperienceTest|TelegramBotFixesTest|TelegramBotFilesTest|TelegramBotCredentialsTest|ExchangeRateTest'
 
       - name: Staff reach only their own customers; a banned device stays banned
         run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'StaffScopeTest|DeviceBanTest'
