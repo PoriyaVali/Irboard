@@ -11,9 +11,10 @@ class TelegramBotController extends Controller
     public function webhook(Request $request)
     {
         $token = $request->input('access_token');
-        $expectedToken = md5(config('v2board.telegram_bot_token'));
+        $botToken = (string) config('v2board.telegram_bot_token', '');
+        $expectedToken = md5($botToken);
 
-        if ($token !== $expectedToken) {
+        if ($botToken === '' || !is_string($token) || !hash_equals($expectedToken, $token)) {
             abort(403, 'Invalid access token');
         }
 

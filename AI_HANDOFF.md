@@ -1,5 +1,58 @@
 # AI work log and handoff
 
+## Active handoff - 2026-11-25 - Codex - Telegram customer experience
+
+Owner requested a professional, attractive and usable Telegram bot with working
+customer features. Started from clean main 839bdb3d34122c69c8c504f9680e00adf65491b4
+in /workspace/Irboard; branch fix/telegram-customer-experience. Work is scoped to
+the actual Telegram conversation and its command registration, not a web-admin
+bundle redesign.
+
+TelegramBotService now uses escaped HTML cards, a persistent Persian dashboard,
+complete sale-period buttons (including zero-price and perpetual plans), bounded
+plan/order/ticket pages, correct perpetual-service links, usage/expiry status,
+wallet presets and strict Persian/Arabic/ASCII integer amounts. Added owner-scoped
+order details, payment resumption/status refresh and clear unavailable-gateway
+handling. Existing TelegramOrderService/OrderService still own money operations.
+Financial actions stay blocked during claimed card-receipt review, while tracking,
+service information and support remain accessible. Returning home/cancelling input
+clears both bot_step and bot_data; cancelling input retains the unpaid order.
+
+Message and callback entry points enforce private owner chats, banned status and
+channel membership; check_join now works. Empty-token webhooks are rejected.
+Callbacks are acknowledged, long conversation text is chunked within Telegram's
+limit, and parse errors can fall back to plain text. Incoming text and complete
+Telegram sendMessage responses are no longer written to logs. Older media/payment
+transport code is otherwise retained; this is not an audit of every Telegram log.
+
+TelegramTrialService replaces the fake external-panel test success with a real,
+row-locked activation of the existing native try_out_plan_id/try_out_hour plan.
+It respects test_limit, refuses admin/staff/existing-plan/paid-order accounts,
+preserves existing service and does not consume quota through old test_ID buttons.
+External Marzban/X-UI provisioning is not implemented. BotView centralizes periods,
+escaping, status, navigation and amount parsing. Tickets have guarded confirmation,
+history pages and owner-scoped closure confirmation. TelegramService command
+discovery adds customer shortcuts, strips unsupported leading slashes and dedupes.
+
+Validation: PHP 8.2.36 in a temporary php:8.2-cli Docker container; Composer install
+from unchanged lock, ignoring ext-pcntl ONLY for this test container (no Horizon
+workers are run). All six changed/new PHP files lint. Exact CI money-path gate,
+including new TelegramCustomerExperienceTest and CustomPlanAdminTest, PASS
+180 tests / 1300 assertions, --fail-on-warning --fail-on-risky. The 29 new customer
+tests cover navigation, channel checks, bans/group privacy, periods, pagination,
+order ownership, perpetual/missing plans, amount validation, pending receipt
+support, real trials/replays, ticket closure/history, command registration, HTML
+fallback and unconfigured webhook rejection. CI's existing focused gate includes
+the new test. git diff --check passes. Full repository suite was not run.
+
+docs/telegram-bot.fa.md documents features and configuration. A local illustrative
+preview renders actual faked outgoing payloads with synthetic SQLite data:
+/workspace/scratch/irboard-telegram-preview.{html,png}; inspected with headless
+Chromium, no horizontal overflow. It is a presentation preview, not a Telegram
+client capture. No real bot token, gateway, production database, deployment,
+live Telegram send, merge or release used. Native trial configuration and HTTPS
+app_url must be set on the target panel; re-saving its webhook refreshes commands.
+
 ## Active handoff - 2026-11-19 - Claude - app template: `bypass-lan` on
 
 Doctor Mobile 2.3.11 turns the LAN bypass on by default and makes all four of

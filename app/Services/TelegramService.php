@@ -79,6 +79,13 @@ class TelegramService
     public function discoverCommands(string $directory): array
     {
         $commands = [];
+        foreach ([
+            'start' => 'شروع و نمایش میز کار', 'menu' => 'منوی اصلی', 'plans' => 'خرید اشتراک',
+            'services' => 'وضعیت سرویس و لینک اتصال', 'wallet' => 'کیف پول', 'orders' => 'پیگیری سفارش‌ها و پرداخت‌ها',
+            'account' => 'حساب کاربری', 'support' => 'درخواست پشتیبانی', 'help' => 'راهنمای اتصال', 'cancel' => 'انصراف از مرحلهٔ فعلی',
+        ] as $command => $description) {
+            $commands[$command] = ['command' => $command, 'description' => $description];
+        }
         foreach (glob($directory . '/*.php') as $file) {
             $className = 'App\\Plugins\\Telegram\\Commands\\' . basename($file, '.php');
             if (!class_exists($className)) {
@@ -101,7 +108,9 @@ class TelegramService
                     $description = $descProp->isStatic()
                         ? $descProp->getValue()
                         : $ref->newInstanceWithoutConstructor()->description;
-                    $commands[] = [
+                    $command = ltrim(strtolower($command), '/');
+                    if (!preg_match('/^[a-z0-9_]{1,32}$/D', $command) || isset($commands[$command])) continue;
+                    $commands[$command] = [
                         'command' => $command,
                         'description' => $description,
                     ];
@@ -110,7 +119,7 @@ class TelegramService
                 continue;
             }
         }
-        return $commands;
+        return array_values($commands);
     }
     
     public function setMyCommands(array $commands)
