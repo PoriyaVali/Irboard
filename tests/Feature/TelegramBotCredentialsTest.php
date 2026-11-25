@@ -15,7 +15,7 @@ use Tests\Feature\Concerns\PanelFixtures;
 use Tests\TestCase;
 
 /**
- * "Send email and password" after a smart-bot help section. Telegram is faked.
+ * "Send email and password" on request from a smart-bot help section. Telegram is faked.
  */
 class TelegramBotCredentialsTest extends TestCase
 {
@@ -58,6 +58,13 @@ class TelegramBotCredentialsTest extends TestCase
             'from' => ['id' => (int) $user->telegram_id],
             'message' => ['chat' => ['id' => (int) $user->telegram_id], 'message_id' => 5],
         ]]);
+
+    }
+
+    private function requestHelpCredentials(User $user): void
+    {
+        $this->tap($user, 'help_android');
+        $this->tap($user, 'help_credentials_android');
     }
 
     /** Texts of the sendMessage calls to [chatId], in order. */
@@ -65,7 +72,7 @@ class TelegramBotCredentialsTest extends TestCase
     {
         $out = [];
         foreach ($this->sent as $r) {
-            if (str_ends_with($r->url(), '/sendMessage') && (string) ($r->data()['chat_id'] ?? '') === (string) $chatId) {
+            if (preg_match('~/(sendMessage|editMessageText)$~', $r->url()) && (string) ($r->data()['chat_id'] ?? '') === (string) $chatId) {
                 $out[] = (string) $r['text'];
             }
         }
@@ -92,7 +99,7 @@ class TelegramBotCredentialsTest extends TestCase
         BotText::set('help_android_send_credentials', '1');
         $user = $this->botUser(5001);
 
-        $this->tap($user, 'help_android');
+        $this->requestHelpCredentials($user);
 
         $text = $this->credentialMessage(5001);
         $this->assertNotNull($text, 'a credentials message follows the help');
@@ -110,11 +117,11 @@ class TelegramBotCredentialsTest extends TestCase
         BotText::set('help_android_send_credentials', '1');
         $user = $this->botUser(5002);
 
-        $this->tap($user, 'help_android');
+        $this->requestHelpCredentials($user);
         $first = $this->shownPassword($this->credentialMessage(5002));
         $hash = $user->fresh()->password;
 
-        $this->tap($user, 'help_android');
+        $this->requestHelpCredentials($user);
         $second = $this->shownPassword($this->credentialMessage(5002));
 
         $this->assertSame($first, $second);
@@ -126,7 +133,7 @@ class TelegramBotCredentialsTest extends TestCase
         $user = $this->botUser(5003);
         $hash = $user->password;
 
-        $this->tap($user, 'help_android');
+        $this->requestHelpCredentials($user);
 
         $this->assertNull($this->credentialMessage(5003));
         $this->assertSame($hash, $user->fresh()->password);
@@ -138,7 +145,7 @@ class TelegramBotCredentialsTest extends TestCase
         $user = $this->makeUser(['telegram_id' => 5004, 'email' => 'owner@example.com', 'password' => password_hash('mine', PASSWORD_DEFAULT)]);
         $hash = $user->password;
 
-        $this->tap($user, 'help_android');
+        $this->requestHelpCredentials($user);
 
         $text = $this->credentialMessage(5004);
         $this->assertStringContainsString('owner@example.com', $text);
@@ -153,7 +160,7 @@ class TelegramBotCredentialsTest extends TestCase
         BotCredentials::forUser($user); // the bot set one ...
         $user->fresh()->forceFill(['password' => password_hash('changed-on-the-site', PASSWORD_DEFAULT)])->save(); // ... then it changed
 
-        $this->tap($user, 'help_android');
+        $this->requestHelpCredentials($user);
 
         $this->assertNull($this->shownPassword($this->credentialMessage(5005)));
         $this->assertTrue(password_verify('changed-on-the-site', $user->fresh()->password));
@@ -178,7 +185,7 @@ class TelegramBotCredentialsTest extends TestCase
         BotText::set('help_android_send_credentials', '1');
         $admin = $this->makeUser(['telegram_id' => 5007, 'is_admin' => 1, 'email' => 'tg_5007@telegram.user', 'password' => password_hash('admin-secret', PASSWORD_DEFAULT)]);
 
-        $this->tap($admin, 'help_android');
+        $this->requestHelpCredentials($admin);
         $this->assertNull($this->shownPassword((string) $this->credentialMessage(5007)));
 
         $this->tap($admin, 'cred_reset_yes');
@@ -202,7 +209,7 @@ class TelegramBotCredentialsTest extends TestCase
     {
         $mode = null;
         foreach ($this->sent as $r) {
-            if (str_ends_with($r->url(), '/sendMessage') && (string) ($r->data()['chat_id'] ?? '') === (string) $chatId) {
+            if (preg_match('~/(sendMessage|editMessageText)$~', $r->url()) && (string) ($r->data()['chat_id'] ?? '') === (string) $chatId) {
                 $mode = $r->data()['parse_mode'] ?? null;
             }
         }

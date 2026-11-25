@@ -96,12 +96,17 @@ class TelegramBotFilesTest extends TestCase
         ];
     }
 
-    private function tapAndroidHelp(User $user): void
+    private function downloadAndroidFile(User $user): void
     {
         $this->sent = [];
         (new TelegramBotService())->handleWebhook(['callback_query' => [
             'id' => 'cb' . uniqid(),
             'data' => 'help_android',
+            'from' => ['id' => (int) $user->telegram_id],
+            'message' => ['chat' => ['id' => (int) $user->telegram_id], 'message_id' => 5],
+        ]]);
+        (new TelegramBotService())->handleWebhook(['callback_query' => [
+            'id' => 'file-' . uniqid(), 'data' => 'help_file_android_0',
             'from' => ['id' => (int) $user->telegram_id],
             'message' => ['chat' => ['id' => (int) $user->telegram_id], 'message_id' => 5],
         ]]);
@@ -141,7 +146,7 @@ class TelegramBotFilesTest extends TestCase
 
     private function linkButtons(int $chatId): array
     {
-        return array_values(array_filter($this->sentTo('sendMessage', $chatId), function (SentRequest $r) {
+        return array_values(array_filter(array_merge($this->sentTo('sendMessage', $chatId), $this->sentTo('editMessageText', $chatId)), function (SentRequest $r) {
             return str_contains((string) $r['reply_markup'], 'bot_files');
         }));
     }
@@ -152,7 +157,7 @@ class TelegramBotFilesTest extends TestCase
         $user = $this->makeUser(['telegram_id' => 901]);
         $this->androidLinks([$this->link($this->copyOnDisk(200))]);
 
-        $this->tapAndroidHelp($user);
+        $this->downloadAndroidFile($user);
 
         $this->assertCount(1, $this->linkButtons(901), 'the user gets the link');
         $this->assertCount(0, $this->sentTo('sendDocument'));
@@ -160,7 +165,7 @@ class TelegramBotFilesTest extends TestCase
         $this->assertCount(1, $asked, 'the admin is told which file to send');
         $this->assertStringContainsString('DoctorMobile-2.2.5-android-arm64-v8a.apk', (string) $asked[0]['text']);
 
-        $this->tapAndroidHelp($user);
+        $this->downloadAndroidFile($user);
         $this->assertCount(0, $this->sentTo('sendMessage', 900), 'only once per file');
     }
 
@@ -171,14 +176,14 @@ class TelegramBotFilesTest extends TestCase
         $this->androidLinks([$this->link($this->copyOnDisk(200))]);
 
         $this->unreachableChat = 970;
-        $this->tapAndroidHelp($user);
+        $this->downloadAndroidFile($user);
         $this->assertCount(1, $this->sentTo('sendMessage', 970), 'tried');
 
         $this->unreachableChat = null;
-        $this->tapAndroidHelp($user);
+        $this->downloadAndroidFile($user);
         $this->assertCount(1, $this->sentTo('sendMessage', 970), 'and tried again, because nobody got it');
 
-        $this->tapAndroidHelp($user);
+        $this->downloadAndroidFile($user);
         $this->assertCount(0, $this->sentTo('sendMessage', 970), 'but not once it was delivered');
     }
 
@@ -196,7 +201,7 @@ class TelegramBotFilesTest extends TestCase
         $this->assertCount(1, $reply);
         $this->assertStringContainsString('✅', (string) $reply[0]['text']);
 
-        $this->tapAndroidHelp($user);
+        $this->downloadAndroidFile($user);
 
         $docs = $this->sentTo('sendDocument', 911);
         $this->assertCount(1, $docs);
@@ -237,13 +242,13 @@ class TelegramBotFilesTest extends TestCase
         $file = $this->copyOnDisk(50);
         $this->androidLinks([$this->link($file)]);
 
-        $this->tapAndroidHelp($user);
+        $this->downloadAndroidFile($user);
         $first = $this->sentTo('sendDocument', 930);
         $this->assertCount(1, $first);
         $this->assertTrue($first[0]->isMultipart(), 'the first one is an upload');
         $this->assertSame('UPLOADED-ID', BotFileCache::get($file, 50));
 
-        $this->tapAndroidHelp($user);
+        $this->downloadAndroidFile($user);
         $second = $this->sentTo('sendDocument', 930);
         $this->assertCount(1, $second);
         $this->assertFalse($second[0]->isMultipart(), 'then by id');
@@ -261,7 +266,7 @@ class TelegramBotFilesTest extends TestCase
         // The admin saves the next release: a new download, even of the same size.
         $new = $this->copyOnDisk(200);
         $this->androidLinks([$this->link($new, 'گوشی های جدید', '2.2.6')]);
-        $this->tapAndroidHelp($user);
+        $this->downloadAndroidFile($user);
 
         $this->assertCount(0, $this->sentTo('sendDocument', 941));
         $this->assertCount(1, $this->linkButtons(941), 'a link until the new file is sent');
@@ -274,7 +279,7 @@ class TelegramBotFilesTest extends TestCase
         $this->androidLinks([$this->link($file)]);
         BotFileCache::put($file, 50, 'GONE-ID');
 
-        $this->tapAndroidHelp($user);
+        $this->downloadAndroidFile($user);
 
         $docs = $this->sentTo('sendDocument', 950);
         $this->assertCount(2, $docs, 'the refused id, then an upload');

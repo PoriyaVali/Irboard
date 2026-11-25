@@ -1,5 +1,104 @@
 # AI work log and handoff
 
+## Active handoff - 2026-11-25 - Codex - one editable Telegram menu and contextual Back
+
+Owner's follow-up explicitly requested menu transitions without a flood of
+messages, Back returning one step, and more improvements. Continued on the clean
+fix/telegram-customer-experience branch from c505f5a, draft PR45, with main still
+839bdb3. No deployment/merge requested or performed.
+
+New TelegramMenu holds a bot/account/binding-scoped cache session (4h, max16
+view entries), current message ID and bounded content pages. Customer menus,
+forms and help now use inline buttons. handleWebhook buffers text rendering and
+edits the final screen once per update; short feedback survives redirects.
+Main menu resets history; menu_back, legacy cancel_input, /back and /cancel
+restore the previous safe view/prompt. Refresh and list pagination replace the
+current history entry. Back restores ticket subjects, clears obsolete input,
+revalidates owner/status for coupons/checkout/receipts and never re-executes
+purchase/payment/fulfilment/reset/ticket-send actions. Card receipt instructions
+can be rebuilt from the existing record without creating another payment.
+
+Telegram "not modified" is successful. Missing/uneditable menu -> one replacement,
+best-effort retirement of old buttons; 429/5xx/timeouts never send a duplicate
+fallback menu. Old message callbacks are rejected. Important current-menu actions
+are checked against the offered buttons and reserved with atomic Cache::add
+before business execution, preventing queued/double taps even before the first
+menu edit completes. This complements, rather than replaces, existing financial
+validators/transactions. Cache must be persistent (normal file/Redis; array is
+test-only). Expired history recovers to home, editing the callback's text menu.
+
+Help text remains in the panel; files, images and credentials are requested with
+explicit buttons. Returning to help never downloads files or shows credentials
+automatically. The existing per-platform credentials checkbox now enables the
+request button. Existing file-id cache/upload/link fallbacks remain covered;
+their test flows now explicitly request a file/credentials. Long ticket content
+uses in-place text pages instead of emitting many messages. External notifications,
+requested files/photos and incoming user messages are separate from the menu.
+
+Validation on PHP8.2.36: all7 changed/new PHP source/test files lint; exact focused
+CI money/order/gift/Telegram gate PASS196tests/1487assertions with
+--fail-on-warning --fail-on-risky. Added16 TelegramMenuNavigationTest cases,
+including an interleaved callback arriving after settlement but before menu edit;
+existing180 tests still pass with updated interaction assertions. CI gate now
+includes navigation tests. git diff --check PASS. Full repository suite and live
+Telegram/gateway not run. SQLite :memory: and HTTP fakes only; no schema change.
+docs/telegram-bot.fa.md updated. Refreshed the illustrative preview from actual
+faked outgoing send/edit payloads at /workspace/scratch/irboard-telegram-preview
+(.html/.png), visually inspected with headless Chromium, no horizontal overflow.
+
+## Active handoff - 2026-11-25 - Codex - Telegram customer experience
+
+Owner requested a professional, attractive and usable Telegram bot with working
+customer features. Started from clean main 839bdb3d34122c69c8c504f9680e00adf65491b4
+in /workspace/Irboard; branch fix/telegram-customer-experience. Work is scoped to
+the actual Telegram conversation and its command registration, not a web-admin
+bundle redesign.
+
+TelegramBotService now uses escaped HTML cards, a persistent Persian dashboard,
+complete sale-period buttons (including zero-price and perpetual plans), bounded
+plan/order/ticket pages, correct perpetual-service links, usage/expiry status,
+wallet presets and strict Persian/Arabic/ASCII integer amounts. Added owner-scoped
+order details, payment resumption/status refresh and clear unavailable-gateway
+handling. Existing TelegramOrderService/OrderService still own money operations.
+Financial actions stay blocked during claimed card-receipt review, while tracking,
+service information and support remain accessible. Returning home/cancelling input
+clears both bot_step and bot_data; cancelling input retains the unpaid order.
+
+Message and callback entry points enforce private owner chats, banned status and
+channel membership; check_join now works. Empty-token webhooks are rejected.
+Callbacks are acknowledged, long conversation text is chunked within Telegram's
+limit, and parse errors can fall back to plain text. Incoming text and complete
+Telegram sendMessage responses are no longer written to logs. Older media/payment
+transport code is otherwise retained; this is not an audit of every Telegram log.
+
+TelegramTrialService replaces the fake external-panel test success with a real,
+row-locked activation of the existing native try_out_plan_id/try_out_hour plan.
+It respects test_limit, refuses admin/staff/existing-plan/paid-order accounts,
+preserves existing service and does not consume quota through old test_ID buttons.
+External Marzban/X-UI provisioning is not implemented. BotView centralizes periods,
+escaping, status, navigation and amount parsing. Tickets have guarded confirmation,
+history pages and owner-scoped closure confirmation. TelegramService command
+discovery adds customer shortcuts, strips unsupported leading slashes and dedupes.
+
+Validation: PHP 8.2.36 in a temporary php:8.2-cli Docker container; Composer install
+from unchanged lock, ignoring ext-pcntl ONLY for this test container (no Horizon
+workers are run). All six changed/new PHP files lint. Exact CI money-path gate,
+including new TelegramCustomerExperienceTest and CustomPlanAdminTest, PASS
+180 tests / 1300 assertions, --fail-on-warning --fail-on-risky. The 29 new customer
+tests cover navigation, channel checks, bans/group privacy, periods, pagination,
+order ownership, perpetual/missing plans, amount validation, pending receipt
+support, real trials/replays, ticket closure/history, command registration, HTML
+fallback and unconfigured webhook rejection. CI's existing focused gate includes
+the new test. git diff --check passes. Full repository suite was not run.
+
+docs/telegram-bot.fa.md documents features and configuration. A local illustrative
+preview renders actual faked outgoing payloads with synthetic SQLite data:
+/workspace/scratch/irboard-telegram-preview.{html,png}; inspected with headless
+Chromium, no horizontal overflow. It is a presentation preview, not a Telegram
+client capture. No real bot token, gateway, production database, deployment,
+live Telegram send, merge or release used. Native trial configuration and HTTPS
+app_url must be set on the target panel; re-saving its webhook refreshes commands.
+
 ## Active handoff - 2026-11-19 - Claude - app template: `bypass-lan` on
 
 Doctor Mobile 2.3.11 turns the LAN bypass on by default and makes all four of
