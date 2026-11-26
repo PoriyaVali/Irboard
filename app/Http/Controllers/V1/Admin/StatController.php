@@ -67,6 +67,19 @@ class StatController extends Controller
         ];
     }
 
+    /**
+     * The last 31 days of the daily statistics, five entries per day.
+     *
+     * Each entry keeps the `type` label and "m-d" `date` the web admin's chart
+     * reads, and now also says which column it is (`key`) and which day
+     * (`record_at`), so a client can read it without matching labels or
+     * guessing the year.
+     *
+     * Amounts are as stored. They were divided by 100, a v2board habit for
+     * prices kept in cents; this panel keeps them in toman (the dashboard
+     * shows month_income as is), so the chart's income read a hundredth of
+     * what it was.
+     */
     public function getOrder(Request $request)
     {
         $statistics = Stat::where('record_type', 'd')
@@ -74,34 +87,25 @@ class StatController extends Controller
             ->orderBy('record_at', 'DESC')
             ->get()
             ->toArray();
+        $columns = [
+            'register_count' => 'تعداد ثبت‌نام',
+            'paid_total' => 'مبلغ دریافتی',
+            'paid_count' => 'تعداد تراکنش دریافتی',
+            'commission_total' => 'مبلغ پورسانت (پرداخت‌شده)',
+            'commission_count' => 'تعداد پورسانت (پرداخت‌شده)',
+        ];
         $result = [];
         foreach ($statistics as $statistic) {
             $date = date('m-d', $statistic['record_at']);
-            $result[] = [
-                'type' => 'تعداد ثبت‌نام',
-                'date' => $date,
-                'value' => $statistic['register_count']
-            ];
-            $result[] = [
-                'type' => 'مبلغ دریافتی',
-                'date' => $date,
-                'value' => $statistic['paid_total'] / 100
-            ];
-            $result[] = [
-                'type' => 'تعداد تراکنش دریافتی',
-                'date' => $date,
-                'value' => $statistic['paid_count']
-            ];
-            $result[] = [
-                'type' => 'مبلغ پورسانت (پرداخت‌شده)',
-                'date' => $date,
-                'value' => $statistic['commission_total'] / 100
-            ];
-            $result[] = [
-                'type' => 'تعداد پورسانت (پرداخت‌شده)',
-                'date' => $date,
-                'value' => $statistic['commission_count']
-            ];
+            foreach ($columns as $key => $type) {
+                $result[] = [
+                    'type' => $type,
+                    'key' => $key,
+                    'date' => $date,
+                    'record_at' => (int)$statistic['record_at'],
+                    'value' => (int)$statistic[$key],
+                ];
+            }
         }
         $result = array_reverse($result);
         return [
