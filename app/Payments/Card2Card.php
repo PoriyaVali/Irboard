@@ -5,6 +5,7 @@ namespace App\Payments;
 use App\Models\CardPayment;
 use App\Models\CardPaymentConfig;
 use App\Models\Order;
+use App\Services\CardReceiptStore;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 
@@ -72,10 +73,15 @@ class Card2Card
             'user_id' => $order['user_id']
         ]);
 
+        // ⚠️ abort(), not a bare Exception: outside debug mode the panel
+        // shows a plain Exception as "we've had some problems", so a user
+        // never learned the amount was under the minimum, or why the
+        // payment would not open.
+
         // بررسی تنظیمات
         if (empty($this->config['card_number']) || empty($this->config['card_holder'])) {
             Log::channel('payment')->error('CardToCard config incomplete');
-            throw new \Exception('تنظیمات کارت به کارت ناقص است');
+            abort(500, 'تنظیمات کارت به کارت ناقص است');
         }
 
         // بررسی محدودیت مبلغ
@@ -87,11 +93,24 @@ class Card2Card
         $maxAmount = (int)(($this->config['max_amount'] ?? '') !== '' ? $this->config['max_amount'] : 50000000);
         
         if ($order['total_amount'] < $minAmount) {
-            throw new \Exception('مبلغ سفارش کمتر از حداقل مجاز است');
+            abort(400, 'مبلغ سفارش کمتر از حداقل مجاز برای کارت به کارت است');
         }
         
         if ($order['total_amount'] > $maxAmount) {
-            throw new \Exception('مبلغ سفارش بیشتر از حداکثر مجاز است');
+            abort(400, 'مبلغ سفارش بیشتر از حداکثر مجاز برای کارت به کارت است');
+        }
+
+        // One card payment per order (a unique key). A transfer already
+        // reported for this order is waiting for the admin: paying again made
+        // a second record collide with it and the user saw only a generic
+        // error. Say what is going on instead.
+        $orderModel = \App\Models\Order::where('trade_no', $order['trade_no'])->first();
+        $existing = $orderModel ? CardPayment::where('order_id', $orderModel->id)->first() : null;
+        if ($existing && $existing->status === CardPayment::STATUS_CLAIMED) {
+            abort(400, 'واریز این سفارش ثبت شده و در انتظار تأیید ادمین است');
+        }
+        if ($existing && !in_array($existing->status, [CardPayment::STATUS_PENDING, CardPayment::STATUS_EXPIRED], true)) {
+            abort(400, 'برای این سفارش قبلاً پرداخت کارت به کارت ثبت شده است؛ یک سفارش تازه ثبت کنید');
         }
 
         $expireMinutes = $this->config['expire_minutes'] ?? 30;
@@ -99,7 +118,10 @@ class Card2Card
 
         try {
             // حذف رکورد قبلی در صورت وجود
-            $orderModel = \App\Models\Order::where('trade_no', $order['trade_no'])->first();
+            // A receipt attached to the record being replaced goes with it.
+            if ($existing) {
+                CardReceiptStore::delete($existing->receipt_file_id);
+            }
             CardPayment::where('order_id', $orderModel->id)->whereIn('status', ['pending', 'expired'])->delete();
 
             // ایجاد رکورد پرداخت
