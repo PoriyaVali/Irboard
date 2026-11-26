@@ -117815,7 +117815,7 @@ html+='<div class="cp-item-header"><span><b>#'+p.id+'</b> - کاربر: '+p.user
 html+='<div class="cp-row"><span>شماره سفارش:</span><b style="direction:ltr">'+p.trade_no+'</b></div>';
 html+='<div class="cp-row"><span>مبلغ:</span><b>'+Number(p.amount_toman).toLocaleString("fa-IR")+' تومان</b></div>';
 if(p.tracking_number)html+='<div class="cp-row"><span>شماره پیگیری:</span><b style="direction:ltr">'+p.tracking_number+'</b></div>';
-if(p.card_number)html+='<div class="cp-row"><span>کارت مقصد:</span><b style="direction:ltr">'+p.card_number+'</b></div>';
+if(p.card_number)html+='<div class="cp-row"><span>کارت مقصد:</span><b style="direction:ltr">'+p.card_number+'</b></div>';/*__DCR_ROW_START__*/if(p.receipt_file_id)html+='<div class="cp-row"><span>تصویر رسید:</span><button class="cp-btn" type="button" onclick="cpShowReceipt('+Number(p.id)+')">🧾 مشاهدهٔ رسید</button></div>';/*__DCR_ROW_END__*/
 html+='<div class="cp-row"><span>تاریخ:</span><b>'+date+'</b></div>';
 if(p.status==="claimed"){
 html+='<div class="cp-actions">';
@@ -117827,6 +117827,17 @@ html+='</div>';});
 list.innerHTML=html;
 }).catch(function(e){list.innerHTML='<div class="cp-empty">خطا در بارگذاری</div>';console.error(e)})}
 
+/*__DCR_FN_START__*/
+window.cpShowReceipt=function(id){
+var o=document.createElement("div");o.style.cssText="position:fixed;inset:0;z-index:100000;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:16px";o.onclick=function(e){if(e.target===o)o.remove()};
+var b=document.createElement("div");b.style.cssText="background:#fff;color:#333;border-radius:10px;max-width:96vw;max-height:94vh;overflow:auto;padding:10px;text-align:center";b.textContent="⏳ در حال دریافت رسید…";o.appendChild(b);document.body.appendChild(o);
+fetch("/api/v1/"+window.settings.secure_path+"/card-payment/receipt?id="+encodeURIComponent(id),{headers:{"Authorization":cpGetToken()}}).then(function(r){return r.json()}).then(function(j){
+var d=j&&j.data;if(!d||!d.image){b.textContent=(j&&j.message)||"رسیدی موجود نیست";return}
+var t=/^image\/(jpeg|png|webp|gif)$/.test(d.mime||"")?d.mime:"image/jpeg";b.textContent="";
+var im=document.createElement("img");im.alt="رسید";im.src="data:"+t+";base64,"+d.image;im.style.cssText="max-width:92vw;max-height:82vh;display:block;margin:0 auto 8px";
+var c=document.createElement("button");c.type="button";c.className="cp-btn";c.textContent="بستن";c.onclick=function(){o.remove()};b.appendChild(im);b.appendChild(c)
+}).catch(function(){b.textContent="دریافت رسید ناموفق بود"})};
+/*__DCR_FN_END__*/
 window.cpVerifyFull=function(id){
 if(!confirm("آیا پرداخت #"+id+" را تأیید می‌کنید؟"))return;
 fetch("/api/v1/"+window.settings.secure_path+"/card-payment/verify-full",{method:"POST",headers:{"Content-Type":"application/json","Authorization":cpGetToken()},body:JSON.stringify({id:id})}).then(function(r){return r.json()}).then(function(j){if(j.data){alert("✅ پرداخت تأیید شد");cpLoadList(cpCurrentTab);cpCheckCount()}else{alert(j.message||"خطا")}}).catch(function(){alert("خطا در ارتباط")})};
