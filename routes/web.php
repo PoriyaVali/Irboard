@@ -169,6 +169,7 @@ Route::get('/api/v1/user/reserved-plans', 'V1\\User\\UserController@getReservedP
 Route::prefix('api/v1/user/card-payment')->middleware('user')->group(function () {
     Route::get('/info', 'V1\\User\\CardPaymentController@getInfo');
     Route::post('/claim', 'V1\\User\\CardPaymentController@claim');
+    Route::post('/receipt', 'V1\\User\\CardPaymentController@attachReceipt');
     Route::post('/cancel', 'V1\\User\\CardPaymentController@cancel');
 });
 

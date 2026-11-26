@@ -202,6 +202,19 @@ class CardPaymentController extends Controller
         if (empty($payment->receipt_file_id)) {
             return response(['data' => null]); // این پرداخت رسیدِ عکسی ندارد
         }
+        // Sent from the app or the site: on this panel's disk.
+        if (\App\Services\CardReceiptStore::isLocal($payment->receipt_file_id)) {
+            $image = \App\Services\CardReceiptStore::read($payment->receipt_file_id);
+            if ($image === null) {
+                abort(404, 'فایل رسید پیدا نشد');
+            }
+            return response([
+                'data' => [
+                    'mime' => $image[1],
+                    'image' => base64_encode($image[0]),
+                ]
+            ]);
+        }
         $token = config('v2board.telegram_bot_token');
         if (!$token) {
             abort(500, 'توکن ربات تلگرام تنظیم نشده است');

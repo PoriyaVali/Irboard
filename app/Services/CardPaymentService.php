@@ -81,7 +81,13 @@ class CardPaymentService
         $text .= "👤 کاربر: " . ($user->email ?? 'نامشخص') . "\n";
         $text .= "📱 شناسه کاربر: `{$cardPayment->user_id}`\n\n";
         $text .= "💰 مبلغ سفارش: *{$amountToman} تومان*\n";
-        $text .= "🏦 شماره پیگیری: `{$cardPayment->tracking_number}`\n\n";
+        $text .= $cardPayment->tracking_number
+            ? "🏦 شماره پیگیری: `{$cardPayment->tracking_number}`\n"
+            : "🏦 شماره پیگیری: — (در تصویر رسید)\n";
+        if (!empty($cardPayment->receipt_file_id)) {
+            $text .= "🧾 تصویر رسید: پیوست شد\n";
+        }
+        $text .= "\n";
         $text .= "⏰ زمان سفارش: {$createdAt}\n";
         $text .= "⏰ زمان ادعا: {$claimedAt}\n";
         $text .= "⏳ فاصله: {$diffMinutes} دقیقه و {$diffSecondsRem} ثانیه\n\n";
@@ -129,6 +135,8 @@ class CardPaymentService
                         $firstChat = $cid;
                     }
                     $sentAny = true;
+                    // The receipt under the request it belongs to.
+                    $this->sendReceiptPhoto($cardPayment, $cid, $result['result']['message_id']);
                 } else {
                     Log::channel('payment')->error('Failed to send admin notification', [
                         'payment_id' => $cardPayment->id,
@@ -155,6 +163,69 @@ class CardPaymentService
             return true;
         }
         return false;
+    }
+
+    /**
+     * A receipt the user sent from the app or the site, as a photo to [chatId]
+     * (under [replyTo] when given). Receipts sent through the bot are already
+     * in the admins' chat, so only stored ones are sent.
+     */
+    private function sendReceiptPhoto(CardPayment $cardPayment, $chatId, $replyTo = null): bool
+    {
+        if (!CardReceiptStore::isLocal($cardPayment->receipt_file_id)) {
+            return false;
+        }
+        $image = CardReceiptStore::read($cardPayment->receipt_file_id);
+        if ($image === null) {
+            return false;
+        }
+        [$bytes, $mime] = $image;
+        $ext = $mime === 'image/png' ? 'png' : ($mime === 'image/webp' ? 'webp' : 'jpg');
+        try {
+            $fields = [
+                'chat_id' => $chatId,
+                'caption' => "🧾 رسید سفارش {$cardPayment->trade_no}",
+            ];
+            if ($replyTo) {
+                $fields['reply_to_message_id'] = $replyTo;
+            }
+            $response = Http::attach('photo', $bytes, "receipt.{$ext}")
+                ->post("https://api.telegram.org/bot{$this->telegramToken}/sendPhoto", $fields);
+            if (!$response->successful()) {
+                Log::channel('payment')->warning('Receipt photo not sent', [
+                    'payment_id' => $cardPayment->id,
+                    'chat_id' => $chatId,
+                    'response' => $response->json(),
+                ]);
+                return false;
+            }
+            return true;
+        } catch (\Throwable $e) {
+            Log::channel('payment')->warning('Receipt photo not sent', [
+                'payment_id' => $cardPayment->id,
+                'chat_id' => $chatId,
+                'error' => $e->getMessage(),
+            ]);
+            return false;
+        }
+    }
+
+    /**
+     * A receipt attached after the claim: to every admin chat, under the
+     * request message where that chat has it.
+     */
+    public function sendReceiptToAdmins(CardPayment $cardPayment): bool
+    {
+        $targets = $this->getAdminChatIds();
+        if (empty($this->telegramToken) || empty($targets)) {
+            return false;
+        }
+        $sent = false;
+        foreach ($targets as $cid) {
+            $replyTo = (string)$cid === (string)$cardPayment->telegram_chat_id ? $cardPayment->telegram_message_id : null;
+            $sent = $this->sendReceiptPhoto($cardPayment, $cid, $replyTo) || $sent;
+        }
+        return $sent;
     }
 
     /**
