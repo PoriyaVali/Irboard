@@ -136,12 +136,45 @@ class AppConfigDocumentTest extends TestCase
         $this->assertSame(['64500' => 'example'], $doc['operator_asns']);
     }
 
+    public function testTheStoreIsPassedOnWithOnlyWhatCanBeShown()
+    {
+        $custom = base_path('resources/rules/custom.dm-app.json');
+        $this->assertFileDoesNotExist($custom, 'a custom file would be overwritten by this test');
+        file_put_contents($custom, <<<'JSON'
+        {
+          "version": 4,
+          "settings": { "app": { "selected_core": "singbox" } },
+          "store": {
+            "_readme": "dropped",
+            "banners": [
+              { "image": "https://panel.example.com/b.jpg", "link": "https://panel.example.com", "title": "Sale" },
+              { "image": "http://panel.example.com/plain.jpg" },
+              { "title": "no image" }
+            ],
+            "apps": [
+              { "id": "tg", "name": "Telegram", "url": "https://panel.example.com/tg.apk", "platforms": ["android", "ios"] },
+              { "name": "No download" },
+              { "name": "Plain", "url": "http://panel.example.com/p.apk" }
+            ]
+          }
+        }
+        JSON);
+        try {
+            $doc = $this->document();
+        } finally {
+            @unlink($custom);
+        }
+        $this->assertSame([['image' => 'https://panel.example.com/b.jpg', 'link' => 'https://panel.example.com', 'title' => 'Sale']], $doc['store']['banners']);
+        $this->assertSame([['id' => 'tg', 'name' => 'Telegram', 'url' => 'https://panel.example.com/tg.apk', 'platforms' => ['android']]], $doc['store']['apps']);
+    }
+
     public function testTheShippedFileSendsNoOperatorSections()
     {
         // Documented in the file's notes, never applied by publishing it.
         $doc = $this->document();
         $this->assertArrayNotHasKey('operators', $doc);
         $this->assertArrayNotHasKey('operator_codes', $doc);
+        $this->assertArrayNotHasKey('store', $doc);
     }
 
     public function testTheBodyIsTheSameEveryTime()
