@@ -1,5 +1,82 @@
 # AI work log and handoff
 
+## Active handoff - 2026-11-26 - Codex - WebMan CI passed; fixture shutdown synchronization
+
+CI45848870556 for ce1df6d passed ALL4 jobs (PHP8.1,PHP8.2,installer,schema), with
+no failed step. Production implementation remains the same tested e651562d file.
+Pre-merge review identified a valid P2 race in the test: TCP connect/send did
+not prove that the child accepted the socket before SIGQUIT. Fixed test-only:
+peek one response byte using MSG_PEEK before signaling; this confirms serving
+has begun without consuming the pending response being tested. Fresh actual
+PHP8.1 default-ini regression PASS both cases. No production change/restart.
+Review finding: PR53 discussion_r4710367941. New head CI must be checked before
+merge; the previous all-green run is recorded as previous, not as a new run.
+
+## Active handoff - 2026-11-26 - Codex - WebMan CI fixture configuration corrected
+
+Both initial runs (baef044,609895c) failed fixture startup in PHP8.1/8.2.
+The second run's new stdout diagnostics prove Adapterman refused to initialize
+because the fixture used the default PHP ini instead of the repository's
+cli-php.ini (required native HTTP/session functions were not disabled).
+Correction is test-only: default to the existing application cli-php.ini while
+retaining PHP_INI override and startup stdout diagnostics. No runtime source,
+dependency or ini content change. Fresh portable default-ini invocation on the
+actual PHP8.1 server PASS both lifecycle tests; GitHub rerun is still pending.
+These previous failures must not be relabeled as passed. Live runtime remains
+the independently verified e651562d patch. No new service restart.
+
+## Active handoff - 2026-11-26 - Codex - WebMan CI startup failure under investigation
+
+PR53 initial commit baef044: both PHP matrix jobs FAILED in the new isolated
+fixture startup (no child observed within5s); installer/schema jobs passed.
+This is NOT a CI pass. Live server remains on the independently verified patch
+and is healthy. Added fixture stdout to startup errors so CI can report the
+actual startup reason; no production implementation change. Do not merge this
+branch while validation is failing. New isolated portable tests passed on the
+actual PHP8.1 server; GitHub startup difference is not diagnosed yet.
+
+## Active handoff - 2026-11-26 - Codex - WebMan restart lifecycle repaired
+
+Owner requested fixing the production WebMan restart. The inherited deployment
+at 252782b had returned to the original webman.php (SHA256 484c45f0...) and was
+STOPPING on graceful QUIT. Four drained HTTP children retained no listening or
+HTTP socket; one retained only Redis sockets. Verified exact parent/command,
+PID start time and idle CPU, then SIGINT only those drained children. The
+owner's already-pending Supervisor restart completed. No SIGKILL was requested.
+
+This integrates the previously documented Nov8 lifecycle patch into repository
+source, so future installs/updates retain it. Replace undefined Worker::stopSelf
+with supported child-local stopAll, which drains output before replacement.
+During graceful shutdown, finish once TcpConnection::$connections is empty;
+the destructor-based connection counter can retain closed Adapterman objects.
+Do not exit while a live keepalive or pending output connection remains.
+No vendor, dependency lock, runtime configuration, DB or Supervisor policy edit.
+
+Exact source files: webman.php; tests/WebmanLifecycleTest.py (portable isolated
+real Workerman/Adapterman subprocess regression); .github/workflows/ci.yml
+(PHP8.1/8.2 build matrix runs it after composer install); AI_HANDOFF.md.
+The regression harness is adapted from the private Nov8 four-case reproducer.
+It uses temporary logs/PIDs, loopback ephemeral ports and the installed autoload,
+without loading Laravel/start.php or connecting to the application DB.
+
+ACTUAL validation before commit: PHP8.1.32/Workerman5.2.2/Adapterman0.7.1 syntax
+PASS; original hang and undefined-method fatal both reproduced in isolation;
+patched graceful keepalive/full512KiB response and request-limit recycle both
+PASS. Portable committed-form harness also PASS both cases on the same runtime.
+Scoped atomic live webman replacement preserved uid/gid/mode. Protected hashes
+(.env, composer.lock, cli-php.ini, custom app rules, update.sh, webman-manager.php,
+Supervisor WebMan.ini) all unchanged. Warm managed restart completed in5.614s,
+without manual signals, with24 direct/HTTPS HTTP checks PASS, expected403 for
+anonymous user info,30s monitor and2manager health cycles, no new inspected log
+errors/fatals. Other services remain running. An existing owner updater restarted
+the config agent after the initial unblock; that restart was not requested here.
+
+At preparation: live webman patch is UNCOMMITTED at inherited252782b; source PR
+commit/CI/merge are not yet complete. Full repository regression and GitHub CI
+have NOT run for this change yet; don't claim them passed. Private backup and
+verification receipts are /root/irboard-webman-repair-20261126. Prior untracked
+transfer/node-probe files preserved. No server reboot or public release.
+
 ## Active handoff - 2026-11-25 - Codex - one editable Telegram menu and contextual Back
 
 Owner's follow-up explicitly requested menu transitions without a flood of
