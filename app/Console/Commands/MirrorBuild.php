@@ -15,6 +15,7 @@ use App\Services\AuthService;
 use Illuminate\Console\Command;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 /**
  * Renders the snapshot the Iranian relay serves when it cannot reach us.
@@ -63,6 +64,14 @@ class MirrorBuild extends Command
         {--limit=0 : stop after this many accounts (0 = all)}';
 
     protected $description = 'Render the relay\'s offline snapshot into v2_mirror_export';
+
+    /** What subscribeHeaders() carries; lower case, as the header bag keys them. */
+    public const SUBSCRIBE_HEADERS = [
+        'subscription-userinfo',
+        'profile-update-interval',
+        'profile-title',
+        'content-disposition',
+    ];
 
     public function handle()
     {
@@ -285,7 +294,8 @@ class MirrorBuild extends Command
                 'bucket' => $bucket,
                 'subject' => hash('sha256', $user->token . '|' . $bucket),
                 'body' => $this->body($response),
-                'content_type' => $this->contentType($response),
+                'content_type' => self::contentType($response),
+                'headers' => self::subscribeHeaders($response),
             ];
         }
 
@@ -334,18 +344,57 @@ class MirrorBuild extends Command
         return (string) $response;
     }
 
-    private function contentType($response): string
+    /**
+     * The response headers a client reads off the configuration file, which
+     * the relay has to give back with the body.
+     *
+     * 🔑 Without them a configuration served from the mirror is a node list
+     * with no account attached: sing-box clients - the Doctor Mobile app
+     * among them - take the quota and expiry from `subscription-userinfo` and
+     * the name from `profile-title`, and an update that arrives without them
+     * is an update that says the account has none.
+     *
+     * Only these, never the whole set. `dm-config-url` is left out on
+     * purpose: the renderer builds it from the host of the request, and in
+     * this command that is localhost - an address no device can reach. A
+     * client that gets no such header keeps the settings document it has.
+     *
+     * The Clash family sets its headers through the global header(), inert
+     * in CLI, so its entries carry none - and the app's mihomo core reads only
+     * the body.
+     *
+     * @return array<string, string>
+     */
+    public static function subscribeHeaders($response): array
     {
-        if (is_object($response) && method_exists($response, 'headers')) {
-            // Symfony responses expose headers as a bag; the Clash family sets
-            // its content type through the global header() instead, which is
-            // inert in CLI - so those come back as the default and the relay
-            // serves text/plain, which is what a Clash client is reading anyway.
+        if (!$response instanceof SymfonyResponse) {
+            return [];
+        }
+        $out = [];
+        foreach (self::SUBSCRIBE_HEADERS as $name) {
+            $value = $response->headers->get($name);
+            if (is_string($value) && $value !== '') {
+                $out[$name] = $value;
+            }
+        }
+        return $out;
+    }
+
+    public static function contentType($response): string
+    {
+        // `headers` is a property on a Symfony response, not a method: this
+        // asked method_exists() and so answered text/plain for every body,
+        // the sing-box JSON included.
+        if ($response instanceof SymfonyResponse) {
             $type = $response->headers->get('Content-Type');
             if ($type) {
                 return $type;
             }
         }
+        // The Clash family sets its content type through the global header()
+        // instead, which is inert in CLI - so those come back as the default
+        // and the relay serves text/plain, which is what a Clash client is
+        // reading anyway.
         return 'text/plain; charset=utf-8';
     }
 }
