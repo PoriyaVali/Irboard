@@ -1,4 +1,19 @@
 {
+  "_store": [
+    "The app's store tab. Add a \"store\" map next to \"settings\"; the tab",
+    "appears once it has something (https addresses only):",
+    "",
+    "  \"store\": {",
+    "    \"banners\": [{\"image\": \"https://panel.example.com/banner.jpg\", \"link\": \"https://panel.example.com/promo\", \"title\": \"...\"}],",
+    "    \"apps\": [{\"id\": \"telegram\", \"name\": \"Telegram\", \"description\": \"...\",",
+    "              \"icon\": \"https://panel.example.com/icon.png\", \"url\": \"https://panel.example.com/app.apk\",",
+    "              \"version\": \"11.2\", \"size\": \"68 MB\", \"platforms\": [\"android\"]}]",
+    "  }",
+    "",
+    "On Android the app downloads an APK itself (several connections, progress)",
+    "and opens the installer; on Windows it opens the link. Banners rotate and",
+    "open their link in the browser."
+  ],
   "_operators": [
     "Per-operator settings. The app knows which operator's network it is on:",
     "on mobile data from the SIM (MCC+MNC), on Wi-Fi or a wired line from the",

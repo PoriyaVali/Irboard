@@ -138,7 +138,9 @@ class CardPaymentController extends Controller
     public function reject(Request $request)
     {
         $id = $request->input('id');
-        $reason = $request->input('reason', '');
+        // An empty reason arrives as null (ConvertEmptyStringsToNull), and the
+        // service takes a string: rejecting without a reason was a 500.
+        $reason = trim((string) $request->input('reason', ''));
 
         $payment = CardPayment::find($id);
 

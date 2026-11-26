@@ -85,6 +85,12 @@ class CommController extends Controller
                         $document[$key] = (object)$map;
                     }
                 }
+                // The app's store tab: banners and apps to download. Passed on
+                // only when it has something, https addresses only.
+                $store = $this->appStore($parsed['store'] ?? null);
+                if ($store !== []) {
+                    $document['store'] = $store;
+                }
                 return $document;
             }
         );
@@ -212,6 +218,63 @@ class CommController extends Controller
             $out[$name] = $entry;
         }
         ksort($out);
+        return $out;
+    }
+
+    /**
+     * The store section: {"banners": [{image, link?, title?}], "apps": [{id?,
+     * name, url, description?, icon?, version?, size?, platforms?}]}. An entry
+     * missing what it needs, or with an address that is not https, is dropped;
+     * editor notes (keys starting with "_") too.
+     */
+    private function appStore($store): array
+    {
+        if (!is_array($store) || array_is_list($store)) {
+            return [];
+        }
+        $https = function ($v) {
+            if (!is_string($v)) return null;
+            $v = trim($v);
+            return preg_match('#^https://[^\s/]+#i', $v) ? $v : null;
+        };
+        $text = function ($v, int $max) {
+            if (!is_string($v) && !is_int($v) && !is_float($v)) return null;
+            $v = trim((string)$v);
+            return $v === '' ? null : mb_substr($v, 0, $max);
+        };
+        $banners = [];
+        foreach (is_array($store['banners'] ?? null) ? $store['banners'] : [] as $b) {
+            if (!is_array($b) || !($image = $https($b['image'] ?? null))) continue;
+            $banners[] = array_filter([
+                'image' => $image,
+                'link' => $https($b['link'] ?? null),
+                'title' => $text($b['title'] ?? null, 120),
+            ], fn($v) => $v !== null);
+        }
+        $apps = [];
+        foreach (is_array($store['apps'] ?? null) ? $store['apps'] : [] as $a) {
+            if (!is_array($a)) continue;
+            $name = $text($a['name'] ?? null, 80);
+            $url = $https($a['url'] ?? null);
+            if ($name === null || $url === null) continue;
+            $platforms = [];
+            foreach (is_array($a['platforms'] ?? null) ? $a['platforms'] : [] as $p) {
+                if (in_array($p, ['android', 'windows'], true)) $platforms[] = $p;
+            }
+            $apps[] = array_filter([
+                'id' => $text($a['id'] ?? null, 64) ?? $name,
+                'name' => $name,
+                'url' => $url,
+                'description' => $text($a['description'] ?? null, 500),
+                'icon' => $https($a['icon'] ?? null),
+                'version' => $text($a['version'] ?? null, 32),
+                'size' => $text($a['size'] ?? null, 32),
+                'platforms' => $platforms ?: null,
+            ], fn($v) => $v !== null);
+        }
+        $out = [];
+        if ($banners) $out['banners'] = $banners;
+        if ($apps) $out['apps'] = $apps;
         return $out;
     }
 

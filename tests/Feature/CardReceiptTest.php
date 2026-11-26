@@ -186,6 +186,27 @@ class CardReceiptTest extends TestCase
         $this->assertSame(self::PNG, $data['image']);
     }
 
+    public function testTheAdminRejectsWithoutAReason()
+    {
+        [, $order, $payment] = $this->pending();
+        DB::table('v2_card_payments')->where('id', $payment->id)->update(['status' => CardPayment::STATUS_CLAIMED, 'claimed_at' => time()]);
+        $admin = $this->makeUser(['is_admin' => 1]);
+        $token = 'reject-admin-' . bin2hex(random_bytes(8));
+        \Illuminate\Support\Facades\Cache::put($token, $admin->only(['id', 'email', 'is_admin', 'is_staff']), 3600);
+        $path = null;
+        foreach (app('router')->getRoutes() as $route) {
+            if ($route->getActionName() === 'App\\Http\\Controllers\\V1\\Admin\\CardPaymentController@reject') $path = '/' . $route->uri();
+        }
+        $this->assertNotNull($path);
+        // An empty reason reaches the controller as null.
+        $this->withHeaders(['authorization' => $token])
+            ->postJson($path, ['id' => $payment->id, 'reason' => ''])
+            ->assertStatus(200);
+        $this->assertSame(CardPayment::STATUS_REJECTED, $payment->fresh()->status);
+        $this->assertSame('واریز تأیید نشد', $payment->fresh()->reject_reason);
+        $this->assertSame(2, (int)DB::table('v2_order')->where('id', $order->id)->value('status'));
+    }
+
     public function testAStoredIdThatPointsElsewhereIsNeverRead()
     {
         $this->assertNull(CardReceiptStore::read('local:card-receipts/../../.env'));
