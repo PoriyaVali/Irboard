@@ -98,6 +98,52 @@ class AppConfigDocumentTest extends TestCase
         }
     }
 
+    public function testOperatorSectionsArePassedOnFlattened()
+    {
+        $custom = base_path('resources/rules/custom.dm-app.json');
+        $this->assertFileDoesNotExist($custom, 'a custom file would be overwritten by this test');
+        file_put_contents($custom, <<<'JSON'
+        {
+          "version": 3,
+          "settings": { "app": { "selected_core": "singbox" } },
+          "operators": {
+            "_readme": "notes are dropped",
+            "Irancell": {
+              "settings": { "mihomo": { "mh_ipv6": true, "_note": "dropped" }, "selected_core": "mihomo" },
+              "force": ["selected_core"]
+            },
+            "wifi": { "mdns_racing": true },   // shorthand: the section is the settings
+            "empty": { "force": true },
+            "bad": ["not", "a", "map"]
+          },
+          "operator_codes": { "43221": "Rightel", "_x": "y", "43222": 5 },
+          "operator_asns": { "64500": "example" }
+        }
+        JSON);
+        try {
+            $doc = $this->document();
+        } finally {
+            @unlink($custom);
+        }
+
+        $this->assertSame(['selected_core' => 'singbox'], $doc['settings']);
+        $this->assertSame(['irancell', 'wifi'], array_keys($doc['operators']));
+        $this->assertSame(['mh_ipv6' => true, 'selected_core' => 'mihomo'], $doc['operators']['irancell']['settings']);
+        $this->assertSame(['selected_core'], $doc['operators']['irancell']['force']);
+        $this->assertSame(['mdns_racing' => true], $doc['operators']['wifi']['settings']);
+        $this->assertArrayNotHasKey('force', $doc['operators']['wifi']);
+        $this->assertSame(['43221' => 'rightel'], $doc['operator_codes']);
+        $this->assertSame(['64500' => 'example'], $doc['operator_asns']);
+    }
+
+    public function testTheShippedFileSendsNoOperatorSections()
+    {
+        // Documented in the file's notes, never applied by publishing it.
+        $doc = $this->document();
+        $this->assertArrayNotHasKey('operators', $doc);
+        $this->assertArrayNotHasKey('operator_codes', $doc);
+    }
+
     public function testTheBodyIsTheSameEveryTime()
     {
         // The app skips a document it has already applied by comparing it, so

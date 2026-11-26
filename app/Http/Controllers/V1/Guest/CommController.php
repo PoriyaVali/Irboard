@@ -71,6 +71,20 @@ class CommController extends Controller
                 if ($force === true || (is_array($force) && $force !== [])) {
                     $document['force'] = $force;
                 }
+                // Per-operator settings: the app knows which operator's network
+                // it is on (SIM code on mobile data, the address's network on
+                // Wi-Fi) and lays that operator's section over `settings`.
+                // Passed on only when present, so older files are unchanged.
+                $operators = $this->appOperatorSections($parsed['operators'] ?? null);
+                if ($operators !== []) {
+                    $document['operators'] = (object)$operators;
+                }
+                foreach (['operator_codes', 'operator_asns'] as $key) {
+                    $map = $this->appStringMap($parsed[$key] ?? null);
+                    if ($map !== []) {
+                        $document[$key] = (object)$map;
+                    }
+                }
                 return $document;
             }
         );
@@ -162,6 +176,63 @@ class CommController extends Controller
      * setting. Keys starting with _ are notes for whoever edits the file, at
      * either level, and never reach a device.
      */
+    /**
+     * The `operators` map, each section as {"settings": {...}, "force": ...}.
+     *
+     * A section is named by an operator id (irancell, mci, shatel, ...), a
+     * transport (cellular, wifi, ethernet) or both (wifi:irancell); the app
+     * applies the most specific one that matches. Its settings are grouped and
+     * commented like the top-level ones and flattened the same way; a section
+     * without a "settings" key is read as the settings themselves. Keys
+     * starting with "_" are notes for the editor, as everywhere in this file.
+     */
+    private function appOperatorSections($operators): array
+    {
+        if (!is_array($operators) || array_is_list($operators)) {
+            return [];
+        }
+        $out = [];
+        foreach ($operators as $name => $section) {
+            $name = strtolower(trim((string)$name));
+            if ($name === '' || strncmp($name, '_', 1) === 0 || !is_array($section) || array_is_list($section)) {
+                continue;
+            }
+            $settings = isset($section['settings']) && is_array($section['settings'])
+                ? $section['settings']
+                : array_diff_key($section, ['force' => true]);
+            $flat = $this->flattenAppSettings($settings);
+            if ($flat === []) {
+                continue;
+            }
+            $entry = ['settings' => (object)$flat];
+            $force = $section['force'] ?? false;
+            if ($force === true || (is_array($force) && $force !== [])) {
+                $entry['force'] = $force;
+            }
+            $out[$name] = $entry;
+        }
+        ksort($out);
+        return $out;
+    }
+
+    /** A {key: "id"} map with string ids, editor notes dropped. */
+    private function appStringMap($map): array
+    {
+        if (!is_array($map) || array_is_list($map)) {
+            return [];
+        }
+        $out = [];
+        foreach ($map as $key => $value) {
+            $key = trim((string)$key);
+            if ($key === '' || strncmp($key, '_', 1) === 0 || !is_string($value) || trim($value) === '') {
+                continue;
+            }
+            $out[$key] = strtolower(trim($value));
+        }
+        ksort($out);
+        return $out;
+    }
+
     private function flattenAppSettings(array $settings)
     {
         $flat = [];
