@@ -7,6 +7,7 @@ use App\Models\CardPayment;
 use App\Models\Order;
 use App\Models\User;
 use App\Services\CardPaymentService;
+use App\Services\CardReceiptStore;
 use App\Services\OrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -55,6 +56,7 @@ class CardPaymentController extends Controller
                 'tracking_number' => $cardPayment->tracking_number,
                 'reject_reason' => $cardPayment->reject_reason,
                 'can_claim' => $cardPayment->canBeClaimed(),
+                'has_receipt' => !empty($cardPayment->receipt_file_id),
             ]
         ]);
     }
@@ -65,27 +67,32 @@ class CardPaymentController extends Controller
     public function claim(Request $request)
     {
         $tradeNo = $request->input('trade_no');
-        $trackingNumber = $request->input('tracking_number');
+        $trackingNumber = trim((string)$request->input('tracking_number', ''));
+        $receiptData = $request->input('receipt');
 
         // اعتبارسنجی
         if (empty($tradeNo)) {
             abort(400, 'شماره سفارش الزامی است');
         }
 
-        if (empty($trackingNumber)) {
-            abort(400, 'شماره پیگیری الزامی است');
+        // A photo of the receipt stands in for the tracking number: many
+        // banking apps put the number only on the receipt image, and the
+        // admin reads it from there. One of the two is required.
+        $receipt = ($receiptData !== null && $receiptData !== '') ? CardReceiptStore::decode($receiptData) : null;
+        if ($trackingNumber === '' && !$receipt) {
+            abort(400, 'شماره پیگیری یا تصویر رسید را وارد کنید');
         }
 
-        $trackingNumber = trim($trackingNumber);
-        
-        // بررسی طول شماره پیگیری
-        if (strlen($trackingNumber) < 4 || strlen($trackingNumber) > 30) {
-            abort(400, 'شماره پیگیری نامعتبر است');
-        }
+        if ($trackingNumber !== '') {
+            // بررسی طول شماره پیگیری
+            if (strlen($trackingNumber) < 4 || strlen($trackingNumber) > 30) {
+                abort(400, 'شماره پیگیری نامعتبر است');
+            }
 
-        // فقط عدد مجاز است
-        if (!preg_match('/^\d+$/', $trackingNumber)) {
-            abort(400, 'شماره پیگیری باید فقط شامل اعداد باشد');
+            // فقط عدد مجاز است
+            if (!preg_match('/^\d+$/', $trackingNumber)) {
+                abort(400, 'شماره پیگیری باید فقط شامل اعداد باشد');
+            }
         }
 
         $cardPayment = CardPayment::where('trade_no', $tradeNo)
@@ -105,7 +112,7 @@ class CardPaymentController extends Controller
         }
 
         // بررسی شماره پیگیری تکراری
-        if (CardPayment::isTrackingNumberUsed($trackingNumber, $cardPayment->id)) {
+        if ($trackingNumber !== '' && CardPayment::isTrackingNumberUsed($trackingNumber, $cardPayment->id)) {
             Log::channel('payment')->warning('Duplicate tracking number attempted', [
                 'tracking_number' => $trackingNumber,
                 'payment_id' => $cardPayment->id,
@@ -131,6 +138,10 @@ class CardPaymentController extends Controller
 
         $now = time();
 
+        // The file first, so the claim names it; removed again if the claim
+        // loses the race below.
+        $receiptId = $receipt ? CardReceiptStore::save($cardPayment, $receipt[0], $receipt[1]) : null;
+
         // بروزرسانی رکورد
         // Only a record that is still pending turns into a claim, decided in
         // the UPDATE itself: a cancel or a second claim racing this one cannot
@@ -139,8 +150,9 @@ class CardPaymentController extends Controller
             ->where('status', CardPayment::STATUS_PENDING)
             ->update([
                 'status' => CardPayment::STATUS_CLAIMED,
-                'tracking_number' => $trackingNumber,
-                'tracking_fingerprint' => CardPayment::generateTrackingFingerprint($trackingNumber),
+                'tracking_number' => $trackingNumber !== '' ? $trackingNumber : null,
+                'tracking_fingerprint' => $trackingNumber !== '' ? CardPayment::generateTrackingFingerprint($trackingNumber) : null,
+                'receipt_file_id' => $receiptId ?? $cardPayment->receipt_file_id,
                 'claimed_at' => $now,
                 'claim_ip' => $request->ip(),
                 'claim_user_agent' => $request->header('User-Agent'),
@@ -148,7 +160,11 @@ class CardPaymentController extends Controller
                 'updated_at' => $now,
             ]);
         if (!$claimed) {
+            CardReceiptStore::delete($receiptId);
             abort(400, 'این پرداخت قابل ثبت نیست');
+        }
+        if ($receiptId !== null && $receiptId !== $cardPayment->receipt_file_id) {
+            CardReceiptStore::delete($cardPayment->receipt_file_id);
         }
         $cardPayment = CardPayment::find($cardPayment->id);
 
@@ -176,9 +192,66 @@ class CardPaymentController extends Controller
                 'success' => true,
                 'message' => 'درخواست شما ثبت شد. پس از تأیید ادمین، سفارش فعال می‌شود.',
                 'status' => $cardPayment->status,
-                'status_label' => $cardPayment->getStatusLabel()
+                'status_label' => $cardPayment->getStatusLabel(),
+                'receipt' => !empty($cardPayment->receipt_file_id),
             ]
         ]);
+    }
+
+    /**
+     * A receipt image for a payment that is not settled yet: before the claim
+     * (it is then sent with the claim) or after it, while the admin has not
+     * decided. A new image replaces the earlier one. Once claimed, the admins
+     * get it on Telegram as well.
+     */
+    public function attachReceipt(Request $request)
+    {
+        $tradeNo = $request->input('trade_no');
+        if (empty($tradeNo)) {
+            abort(400, 'شماره سفارش الزامی است');
+        }
+        [$bytes, $ext] = CardReceiptStore::decode($request->input('receipt'));
+
+        $cardPayment = CardPayment::where('trade_no', $tradeNo)
+            ->where('user_id', $request->user['id'])
+            ->first();
+        if (!$cardPayment) {
+            abort(404, 'پرداخت یافت نشد');
+        }
+        $open = $cardPayment->status === CardPayment::STATUS_CLAIMED
+            || ($cardPayment->status === CardPayment::STATUS_PENDING && !$cardPayment->isExpired());
+        if (!$open) {
+            abort(400, 'برای این پرداخت دیگر نمی‌توان رسید فرستاد');
+        }
+
+        $previous = $cardPayment->receipt_file_id;
+        $receiptId = CardReceiptStore::save($cardPayment, $bytes, $ext);
+        // Only while still unsettled, decided in the UPDATE itself, so an
+        // admin's decision in between is not followed by a stray receipt.
+        $updated = CardPayment::where('id', $cardPayment->id)
+            ->whereIn('status', [CardPayment::STATUS_PENDING, CardPayment::STATUS_CLAIMED])
+            ->update(['receipt_file_id' => $receiptId, 'updated_at' => time()]);
+        if (!$updated) {
+            CardReceiptStore::delete($receiptId);
+            abort(400, 'برای این پرداخت دیگر نمی‌توان رسید فرستاد');
+        }
+        if (CardReceiptStore::isLocal($previous)) {
+            CardReceiptStore::delete($previous);
+        }
+        $cardPayment = CardPayment::find($cardPayment->id);
+
+        if ($cardPayment->status === CardPayment::STATUS_CLAIMED) {
+            try {
+                (new CardPaymentService())->sendReceiptToAdmins($cardPayment);
+            } catch (\Throwable $e) {
+                Log::channel('payment')->error('Failed to send the receipt to admins', [
+                    'payment_id' => $cardPayment->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return response(['data' => ['receipt' => true]]);
     }
 
     /**
