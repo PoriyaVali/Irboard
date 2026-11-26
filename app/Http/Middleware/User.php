@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Services\AuthService;
 use App\Services\DeviceIdentityService;
+use App\Services\UserNetworkService;
 use Closure;
 
 class User
@@ -32,6 +33,11 @@ class User
         // per account and device every six hours, and it cannot fail the
         // request.
         DeviceIdentityService::recordFromHeader((int)$user['id'], $request->header('x-device-ids'));
+        // And which network each device is on now (X-Network), for the
+        // admin's view of operators. Gated the same way; never fails.
+        if ($request->hasHeader('x-network')) {
+            UserNetworkService::recordFromHeader((int)$user['id'], $request->header('x-network'), $request->header('x-device-ids'));
+        }
         return $next($request);
     }
 }

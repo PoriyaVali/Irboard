@@ -1625,6 +1625,27 @@ CREATE TABLE `v2_user_banned_backup` (
   `banned` tinyint(1) NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
+DROP TABLE IF EXISTS `v2_user_network`;
+-- The network each device of an account is on now, as the app reports it in
+-- its X-Network header (see app/Services/UserNetworkService.php): mobile data
+-- or Wi-Fi, and whose network - the SIM's operator, or for Wi-Fi the operator
+-- the relay matched the line's address to. One row per account and device,
+-- moved in place as the device moves between networks.
+CREATE TABLE `v2_user_network` (
+  `user_id` int(11) NOT NULL,
+  `device` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '' COMMENT 'first 16 hex of the device hash it was reported with; empty without X-Device-Ids',
+  `transport` varchar(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL COMMENT 'cellular, wifi, ethernet or other',
+  `operator` varchar(32) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL COMMENT 'mci, irancell, tci, ... or as<number>; null when unknown',
+  `mccmnc` varchar(6) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL COMMENT 'the SIM on mobile data',
+  `asn` int(11) unsigned DEFAULT NULL COMMENT 'the line, as the relay saw it',
+  `name` varchar(64) DEFAULT NULL COMMENT 'the network registered name, for an operator without an id',
+  `changed_at` int(11) NOT NULL COMMENT 'when the device moved to this network',
+  `seen_at` int(11) NOT NULL COMMENT 'last report from this network',
+  PRIMARY KEY (`user_id`,`device`),
+  KEY `idx_seen` (`seen_at`),
+  KEY `idx_operator` (`operator`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='the network each device of an account is on';
+
 INSERT INTO `migrations` (`id`,`migration`,`batch`) VALUES
 (1,'2019_08_19_000000_create_failed_jobs_table',1),
 (2,'2025_09_02_032551_create_sms_logs_table',2),

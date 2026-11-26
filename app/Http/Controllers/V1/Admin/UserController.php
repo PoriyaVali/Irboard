@@ -122,6 +122,9 @@ class UserController extends Controller
             ->with('plan:id,name')
             ->orderBy('created_at', 'asc')
             ->get();
+        // The network each of the account's devices is on now, newest first
+        // (UserNetworkService); empty until the app reports one.
+        $user['networks'] = \App\Services\UserNetworkService::forUsers([$user->id])[$user->id] ?? [];
         return response([
             'data' => $user
         ]);

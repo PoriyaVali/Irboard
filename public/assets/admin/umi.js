@@ -118753,7 +118753,7 @@ function short(h){var a=h.indexOf(':');var k=a<0?'':h.slice(0,a);var d=a<0?h:h.s
   return '<span class="text-muted">'+esc(k)+'</span>:<code>'+esc(d.slice(0,12))+'…</code>';}
 
 var injected=false;
-var state={tab:'shared',busy:false};
+var state={tab:'shared',busy:false,hours:24,op:''};
 
 /* ---------- shared markup ---------------------------------------------
    The panel's own vocabulary: a block shell around an ant-table. custom.css
@@ -118767,6 +118767,44 @@ function table(head,body){
 function note(text){return '<div class="text-muted mb-3" style="font-size:12px;line-height:1.9">'+text+'</div>';}
 function empty(text){return '<div class="text-center text-muted p-4">'+esc(text)+'</div>';}
 function bannedTag(b){return b?' <span class="ant-tag ant-tag-red">مسدود</span>':'';}
+
+/* ---------- networks: which operator each device is on now ------------
+   The app reports it in X-Network (UserNetworkService). Ids are the ones the
+   app and the app-config document's `operators` sections use; `as<number>`
+   is a network without one, shown by its registered name. */
+var OPS={mci:'همراه اول',irancell:'ایرانسل',rightel:'رایتل',shatel:'شاتل',samantel:'سامانتل',
+  taliya:'تالیا',tkc:'ارتباطات کیش',mtce:'اسپادان',azartel:'آذرتل',aryantel:'آریان‌تل',iraphone:'ایرافون',
+  zitel:'زی‌تل',tci:'مخابرات',itc:'فناوری اطلاعات (DCI)',tic:'زیرساخت',respina:'رسپینا',
+  asiatech:'آسیاتک',ngs:'ندا گستر صبا',mobinnet:'مبین‌نت',fanap:'فناپ تلکام',pishgaman:'پیشگامان',
+  parsonline:'پارس‌آنلاین',afranet:'افرانت',datak:'داتک',mabna:'مبنا',sabanet:'صبانت',
+  farahoosh:'فراهوش',fanava:'فن‌آوا',hamara:'همارا',hiweb:'های‌وب',khalijfars:'خلیج فارس آنلاین',
+  maxnet:'مکث‌نت',sepanta:'سپنتا',mahannet:'ماهان‌نت',parvasystem:'پروا سیستم',arvan:'ابر آروان',
+  academic:'شبکهٔ علمی'};
+var TRS={cellular:'داده همراه',wifi:'وای‌فای',ethernet:'کابلی',other:'سایر'};
+function opName(n){
+  if(!n||!n.operator)return n&&n.name?n.name:'نامشخص';
+  if(OPS[n.operator])return OPS[n.operator];
+  if(/^as\d+$/.test(n.operator))return (n.name||'شبکه')+' (AS'+n.operator.slice(2)+')';
+  return n.operator;
+}
+function trName(t){return TRS[t]||t||'—';}
+function ago(t){
+  if(!t)return '—';
+  var s=Math.max(0,Math.floor(Date.now()/1000)-t);
+  if(s<90)return 'همین حالا';
+  if(s<3600)return Math.round(s/60).toLocaleString('fa-IR')+' دقیقه پیش';
+  if(s<86400)return Math.round(s/3600).toLocaleString('fa-IR')+' ساعت پیش';
+  return Math.round(s/86400).toLocaleString('fa-IR')+' روز پیش';
+}
+function netCell(nets){
+  if(!nets||!nets.length)return '<span class="text-muted" style="font-size:11px">گزارشی نرسیده</span>';
+  return nets.map(function(n){
+    return '<div class="mb-1" style="font-size:12px"><b>'+esc(opName(n))+'</b>'
+      +' <span class="text-muted">· '+esc(trName(n.transport))+'</span>'
+      +'<div class="text-muted" style="font-size:11px">'+esc(ago(n.seen_at))
+      +(n.mccmnc?' · <code>'+esc(n.mccmnc)+'</code>':'')+(n.asn?' · <code>AS'+esc(n.asn)+'</code>':'')+'</div></div>';
+  }).join('');
+}
 
 function devCell(devs){
   if(!devs||!devs.length)return '<span class="text-muted">—</span>';
@@ -118818,10 +118856,55 @@ function renderList(d){
     }).join('')||'<span class="text-muted">—</span>';
     return '<tr><td><code>'+esc(x.email)+'</code>'+bannedTag(x.banned)
       +'<div class="text-muted" style="font-size:11px">#'+x.user_id+'</div></td>'
-      +'<td class="text-center"><b>'+x.device_count+'</b></td><td>'+devs+'</td></tr>';
+      +'<td class="text-center"><b>'+x.device_count+'</b></td><td>'+devs+'</td>'
+      +'<td>'+netCell(x.networks)+'</td></tr>';
   }).join('');
-  return table('<th>کاربر</th><th>تعداد</th><th>دستگاه‌ها</th>',body)
+  return table('<th>کاربر</th><th>تعداد</th><th>دستگاه‌ها</th><th>اینترنت فعلی</th>',body)
     +'<div class="text-muted mt-2" style="font-size:12px">'+(d.total||0)+' اکانت</div>';
+}
+
+/* ---------- operators: who is on which network now --------------------- */
+function renderNetworks(d){
+  var sum=d.summary||[],rows=d.data||[];
+  var hours=[[1,'یک ساعت'],[24,'۲۴ ساعت'],[168,'یک هفته'],[720,'یک ماه']].map(function(h){
+    return '<option value="'+h[0]+'"'+(state.hours===h[0]?' selected':'')+'>'+h[1]+'</option>';
+  }).join('');
+  var head=note('اپراتوری که اپ هر دستگاه را روی آن تشخیص داده است: روی داده همراه از سیم‌کارت، روی وای‌فای از نشانی خط. '
+      +'شناسهٔ هر اپراتور همان نام بخش آن در قسمت <code>operators</code> فایل پیکربندی است.')
+    +'<div class="mb-3 d-flex" style="gap:8px;align-items:center;flex-wrap:wrap">'
+    +'<span class="text-muted" style="font-size:12px">گزارش‌های</span>'
+    +'<select id="devid-hours" class="ant-input" style="max-width:140px">'+hours+'</select>'
+    +'<span class="text-muted" style="font-size:12px">اخیر</span>'
+    +(state.op?'<button class="ant-btn ant-btn-sm devid-op" data-op="">همهٔ اپراتورها</button>':'')+'</div>';
+  if(!sum.length)return head+empty('در این بازه گزارشی از اپ نرسیده است.');
+  var totalDev=sum.reduce(function(a,x){return a+x.devices},0)||1;
+  var sumBody=sum.map(function(x){
+    var key=x.operator||'unknown';
+    var pct=Math.round(x.devices*100/totalDev);
+    return '<tr'+(state.op===key?' style="background:#e6f7ff"':'')+'>'
+      +'<td><a href="javascript:void 0" class="devid-op" data-op="'+esc(key)+'"><b>'+esc(opName(x))+'</b></a>'
+      +(x.operator?' <code style="font-size:11px">'+esc(x.operator)+'</code>':'')+'</td>'
+      +'<td>'+esc(trName(x.transport))+'</td>'
+      +'<td class="text-center"><b>'+x.users.toLocaleString('fa-IR')+'</b></td>'
+      +'<td class="text-center">'+x.devices.toLocaleString('fa-IR')+' <span class="text-muted" style="font-size:11px">('+pct.toLocaleString('fa-IR')+'٪)</span></td></tr>';
+  }).join('');
+  var listBody=rows.map(function(x){
+    return '<tr><td><code>'+esc(x.email)+'</code>'+bannedTag(x.banned)
+      +'<div class="text-muted" style="font-size:11px">#'+x.user_id+(x.device?' · <code>'+esc(x.device.slice(0,8))+'…</code>':'')+'</div></td>'
+      +'<td><b>'+esc(opName(x))+'</b>'+(x.asn?' <code style="font-size:11px">AS'+esc(x.asn)+'</code>':'')
+      +(x.mccmnc?' <code style="font-size:11px">'+esc(x.mccmnc)+'</code>':'')+'</td>'
+      +'<td>'+esc(trName(x.transport))+'</td>'
+      +'<td style="font-size:12px">'+esc(ago(x.changed_at))+'</td>'
+      +'<td style="font-size:12px">'+esc(ago(x.seen_at))+'</td></tr>';
+  }).join('');
+  return head
+    +table('<th>اپراتور</th><th>نوع اتصال</th><th>کاربران</th><th>دستگاه‌ها</th>',sumBody)
+    +'<h4 class="mt-4 mb-2" style="font-size:14px">'+(state.op?esc(opName({operator:state.op==='unknown'?null:state.op,
+        name:(sum.filter(function(x){return (x.operator||'unknown')===state.op})[0]||{}).name})):'آخرین گزارش‌ها')+'</h4>'
+    +(rows.length?table('<th>کاربر</th><th>اپراتور</th><th>نوع</th><th>روی این شبکه از</th><th>آخرین گزارش</th>',listBody)
+      :empty('موردی نیست.'))
+    +'<div class="text-muted mt-2" style="font-size:12px">'+(d.total||0).toLocaleString('fa-IR')+' دستگاه'
+    +(d.total>rows.length?' (فقط '+rows.length.toLocaleString('fa-IR')+' مورد آخر نمایش داده شده)':'')+'</div>';
 }
 
 /* ---------- history, and the undo ------------------------------------- */
@@ -118858,7 +118941,7 @@ function shell(inner){
   return '<div class="block block-rounded">'
     +'<div class="block-header block-header-default"><h3 class="block-title">شناسهٔ دستگاه‌ها</h3></div>'
     +'<div class="block-content">'
-    +'<div class="mb-3">'+btn('shared','دستگاه مشترک')+btn('list','همهٔ اکانت‌ها')+btn('bans','تاریخچه')+'</div>'
+    +'<div class="mb-3">'+btn('shared','دستگاه مشترک')+btn('list','همهٔ اکانت‌ها')+btn('net','اپراتورها')+btn('bans','تاریخچه')+'</div>'
     +'<div class="mb-3 d-flex" style="gap:8px;flex-wrap:wrap">'
       +'<input id="devid-q" class="ant-input" style="max-width:420px" placeholder="ایمیل، یا هش ۶۴ حرفی، یا kind:hash">'
       +'<button id="devid-go" class="ant-btn ant-btn-primary">جست‌وجو</button></div>'
@@ -118920,6 +119003,12 @@ function wire(){
 
   wireRevert();
 
+  var hs=document.getElementById('devid-hours');
+  if(hs)hs.onchange=function(){state.hours=parseInt(hs.value,10)||24;load();};
+  [].forEach.call(document.querySelectorAll('.devid-op'),function(b){
+    b.onclick=function(){var v=b.getAttribute('data-op')||'';state.op=state.op===v?'':v;load();};
+  });
+
   var go=document.getElementById('devid-go'),q=document.getElementById('devid-q');
   function run(){
     var v=(q&&q.value||'').trim();
@@ -118957,10 +119046,13 @@ function load(){
   if(!mc)return;
   var url=state.tab==='shared'?(API+'/shared')
         :state.tab==='bans'?(API+'/bans')
+        :state.tab==='net'?(API+'/networks?pageSize=100&hours='+state.hours
+            +(state.op?'&operator='+encodeURIComponent(state.op):''))
         :(API+'/fetch?pageSize=50');
   j(url).then(function(r){
     if(!r||!r.data){mc.innerHTML=dvWrap('<div class="text-danger text-center p-5">'+esc((r&&r.message)||'خطا در بارگذاری')+'</div>');return;}
-    var inner=state.tab==='shared'?renderShared(r):state.tab==='bans'?renderBans(r):renderList(r);
+    var inner=state.tab==='shared'?renderShared(r):state.tab==='bans'?renderBans(r)
+        :state.tab==='net'?renderNetworks(r):renderList(r);
     mc.innerHTML=dvWrap(shell(inner));
     wire();
   }).catch(function(e){mc.innerHTML=dvWrap('<div class="text-danger text-center p-5">'+esc(e.message)+'</div>')});
@@ -118997,6 +119089,6 @@ new MutationObserver(function(){
 }).observe(document.body,{childList:true,subtree:true});
 window.addEventListener('hashchange',function(){setTimeout(inject,120);setTimeout(inject,400);});
 setTimeout(inject,900);
-console.log('\u{1F4F1} Device Identity Admin v2.0');
+console.log('\u{1F4F1} Device Identity Admin v2.1');
 })();
 /*__DEVID_END__*/
