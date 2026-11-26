@@ -1,5 +1,18 @@
 # AI work log and handoff
 
+## Active handoff - 2026-11-26 - Codex - WebMan CI fixture configuration corrected
+
+Both initial runs (baef044,609895c) failed fixture startup in PHP8.1/8.2.
+The second run's new stdout diagnostics prove Adapterman refused to initialize
+because the fixture used the default PHP ini instead of the repository's
+cli-php.ini (required native HTTP/session functions were not disabled).
+Correction is test-only: default to the existing application cli-php.ini while
+retaining PHP_INI override and startup stdout diagnostics. No runtime source,
+dependency or ini content change. Fresh portable default-ini invocation on the
+actual PHP8.1 server PASS both lifecycle tests; GitHub rerun is still pending.
+These previous failures must not be relabeled as passed. Live runtime remains
+the independently verified e651562d patch. No new service restart.
+
 ## Active handoff - 2026-11-26 - Codex - WebMan CI startup failure under investigation
 
 PR53 initial commit baef044: both PHP matrix jobs FAILED in the new isolated

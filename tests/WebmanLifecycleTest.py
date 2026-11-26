@@ -70,9 +70,8 @@ Worker::runAll();
     path = ROOT / (case + '.php')
     path.write_text(php)
     log = (ROOT / (case + '.stdout.log')).open('wb')
-    php_args = [PHP]
-    if os.environ.get('PHP_INI'):
-        php_args += ['-c', os.environ['PHP_INI']]
+    # Adapterman requires its native HTTP/session functions disabled, as in production.
+    php_args = [PHP, '-c', os.environ.get('PHP_INI', str(APP / 'cli-php.ini'))]
     proc = subprocess.Popen(php_args + [str(path), 'start'],
                             cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
     try:
