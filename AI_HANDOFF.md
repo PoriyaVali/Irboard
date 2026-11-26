@@ -1,5 +1,15 @@
 # AI work log and handoff
 
+## Active handoff - 2026-11-26 - Codex - WebMan CI startup failure under investigation
+
+PR53 initial commit baef044: both PHP matrix jobs FAILED in the new isolated
+fixture startup (no child observed within5s); installer/schema jobs passed.
+This is NOT a CI pass. Live server remains on the independently verified patch
+and is healthy. Added fixture stdout to startup errors so CI can report the
+actual startup reason; no production implementation change. Do not merge this
+branch while validation is failing. New isolated portable tests passed on the
+actual PHP8.1 server; GitHub startup difference is not diagnosed yet.
+
 ## Active handoff - 2026-11-26 - Codex - WebMan restart lifecycle repaired
 
 Owner requested fixing the production WebMan restart. The inherited deployment

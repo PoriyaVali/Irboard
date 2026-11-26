@@ -77,9 +77,10 @@ Worker::runAll();
                             cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
     try:
         wait_for(lambda: children(proc.pid))
-    except BaseException:
+    except BaseException as exc:
         cleanup(proc, log)
-        raise
+        details = (ROOT / (case + '.stdout.log')).read_text(errors='replace')
+        raise AssertionError(f'Fixture startup failed: {exc}\n{details}') from exc
     return proc, port, log
 
 
