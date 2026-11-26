@@ -140,6 +140,9 @@ def graceful(source, label):
         time.sleep(0.1)
         conn = connect(port)
         send(conn)
+        # A completed TCP handshake alone does not mean the child accepted it.
+        # Peek at response bytes to confirm acceptance without consuming the body.
+        assert conn.recv(1, socket.MSG_PEEK), 'fixture did not begin responding'
         os.kill(proc.pid, signal.SIGQUIT)
         time.sleep(0.3)
         assert proc.poll() is None, 'worker exited with active connection'

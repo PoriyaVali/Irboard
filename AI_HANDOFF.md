@@ -1,5 +1,17 @@
 # AI work log and handoff
 
+## Active handoff - 2026-11-26 - Codex - WebMan CI passed; fixture shutdown synchronization
+
+CI45848870556 for ce1df6d passed ALL4 jobs (PHP8.1,PHP8.2,installer,schema), with
+no failed step. Production implementation remains the same tested e651562d file.
+Pre-merge review identified a valid P2 race in the test: TCP connect/send did
+not prove that the child accepted the socket before SIGQUIT. Fixed test-only:
+peek one response byte using MSG_PEEK before signaling; this confirms serving
+has begun without consuming the pending response being tested. Fresh actual
+PHP8.1 default-ini regression PASS both cases. No production change/restart.
+Review finding: PR53 discussion_r4710367941. New head CI must be checked before
+merge; the previous all-green run is recorded as previous, not as a new run.
+
 ## Active handoff - 2026-11-26 - Codex - WebMan CI fixture configuration corrected
 
 Both initial runs (baef044,609895c) failed fixture startup in PHP8.1/8.2.
