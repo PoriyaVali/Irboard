@@ -212,6 +212,7 @@ class AdminRoute
             $router->get ('/device-identity/fetch', 'V1\\Admin\\DeviceIdentityAdminController@fetch');
             $router->get ('/device-identity/shared', 'V1\\Admin\\DeviceIdentityAdminController@shared');
             $router->get ('/device-identity/lookup', 'V1\\Admin\\DeviceIdentityAdminController@lookup');
+            $router->get ('/device-identity/networks', 'V1\\Admin\\DeviceIdentityAdminController@networks');
             // Phase 2, and deliberately POST: these change accounts. `ban` takes
             // an explicit list of user ids rather than a hash, so one shared
             // hash can never ban people the admin did not look at.

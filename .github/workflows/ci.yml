@@ -829,8 +829,8 @@ jobs:
       - name: Purchased gifts and money-path regressions
         run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'CustomPlanGiftOrderTest|CustomPlanAdminTest|CustomPlanOrderTest|PurchasedGiftOrderTest|OrderMoneyFlowTest|AdminOrderStatsTest|CardReceiptTest|Card2CardCheckoutTest|TelegramMenuNavigationTest|TelegramCustomerExperienceTest|TelegramBotFixesTest|TelegramBotFilesTest|TelegramBotCredentialsTest|ExchangeRateTest'
 
-      - name: Staff reach only their own customers; a banned device stays banned
-        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'StaffScopeTest|DeviceBanTest'
+      - name: Staff reach only their own customers; a banned device stays banned; admins see each device's network
+        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'StaffScopeTest|DeviceBanTest|UserNetworkTest'
 
       - name: Run tests (informational)
         continue-on-error: true

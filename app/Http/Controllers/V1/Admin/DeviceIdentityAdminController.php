@@ -5,6 +5,7 @@ namespace App\Http\Controllers\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\AuthService;
+use App\Services\UserNetworkService;
 use App\Utils\Helper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -111,7 +112,8 @@ class DeviceIdentityAdminController extends Controller
             ->forPage($current, $pageSize)
             ->get(['id', 'email', 'device_count', 'device_ids', 'banned', 'plan_id', 'expired_at']);
 
-        $data = $rows->map(function ($r) {
+        $networks = UserNetworkService::forUsers($rows->pluck('id')->all());
+        $data = $rows->map(function ($r) use ($networks) {
             return [
                 'user_id'      => (int)$r->id,
                 'email'        => (string)$r->email,
@@ -119,6 +121,8 @@ class DeviceIdentityAdminController extends Controller
                 'banned'       => (bool)$r->banned,
                 'expired_at'   => $r->expired_at === null ? null : (int)$r->expired_at,
                 'devices'      => $this->devices($r->device_ids),
+                // The network each device is on now (UserNetworkService).
+                'networks'     => $networks[(int)$r->id] ?? [],
             ];
         });
 
@@ -233,6 +237,7 @@ class DeviceIdentityAdminController extends Controller
                         'banned'       => (bool)$row->banned,
                         'device_count' => (int)$row->device_count,
                         'devices'      => $this->devices($row->device_ids),
+                        'networks'     => UserNetworkService::forUsers([(int)$row->id])[(int)$row->id] ?? [],
                     ]],
                 ],
             ]);
@@ -273,12 +278,99 @@ class DeviceIdentityAdminController extends Controller
             ];
         }
 
+        $networks = UserNetworkService::forUsers(array_column($accounts, 'user_id'));
+        foreach ($accounts as &$account) {
+            $account['networks'] = $networks[$account['user_id']] ?? [];
+        }
+        unset($account);
+
         return response([
             'data' => [
                 'mode'     => $isPair ? 'pair' : 'hash',
                 'query'    => $q,
                 'accounts' => $accounts,
             ],
+        ]);
+    }
+
+    /**
+     * Who is on which network: the operators the app reported (X-Network,
+     * see UserNetworkService) over the last `hours` (1 to 720, default 24).
+     *
+     *  - `summary`: one row per transport and operator, with how many devices
+     *    and accounts are on it - the picture behind the per-operator
+     *    settings in the app-config document.
+     *  - `data`/`total`: the devices themselves, newest report first, paged
+     *    like the other lists (`current`, `pageSize`), filtered by
+     *    `operator` (an id, `as<number>`, or `unknown`), `transport`, and an
+     *    email `search`.
+     */
+    public function networks(Request $request)
+    {
+        $hours = (int)$request->input('hours') ?: 24;
+        $hours = max(1, min(720, $hours));
+        $since = time() - $hours * 3600;
+        $current  = (int)$request->input('current') ?: 1;
+        $pageSize = (int)$request->input('pageSize') >= 10 ? min(200, (int)$request->input('pageSize')) : 50;
+
+        try {
+            $summary = DB::table('v2_user_network')
+                ->where('seen_at', '>=', $since)
+                ->groupBy('transport', 'operator')
+                ->orderByRaw('COUNT(*) DESC')
+                ->get([
+                    'transport', 'operator',
+                    DB::raw('COUNT(*) AS devices'),
+                    DB::raw('COUNT(DISTINCT user_id) AS users'),
+                    DB::raw('MAX(name) AS name'),
+                    DB::raw('MAX(asn) AS asn'),
+                ])
+                ->map(function ($r) {
+                    return [
+                        'transport' => (string)$r->transport,
+                        'operator'  => $r->operator === null ? null : (string)$r->operator,
+                        'name'      => $r->name === null ? null : (string)$r->name,
+                        'asn'       => $r->asn === null ? null : (int)$r->asn,
+                        'devices'   => (int)$r->devices,
+                        'users'     => (int)$r->users,
+                    ];
+                })->values();
+
+            $builder = DB::table('v2_user_network AS n')
+                ->join('v2_user AS u', 'u.id', '=', 'n.user_id')
+                ->where('n.seen_at', '>=', $since);
+            $operator = strtolower(trim((string)$request->input('operator', '')));
+            if ($operator === 'unknown') {
+                $builder->whereNull('n.operator');
+            } elseif ($operator !== '' && preg_match('/^[a-z][a-z0-9_-]{0,31}$/', $operator)) {
+                $builder->where('n.operator', $operator);
+            }
+            $transport = strtolower(trim((string)$request->input('transport', '')));
+            if (in_array($transport, UserNetworkService::TRANSPORTS, true)) {
+                $builder->where('n.transport', $transport);
+            }
+            $search = trim((string)$request->input('search', ''));
+            if ($search !== '') {
+                $builder->where('u.email', 'like', "%{$search}%");
+            }
+            $total = (clone $builder)->count();
+            $rows = $builder
+                ->orderByDesc('n.seen_at')
+                ->forPage($current, $pageSize)
+                ->get(['n.*', 'u.email', 'u.banned']);
+        } catch (\Throwable $e) {
+            Log::warning('user networks not read', ['error' => $e->getMessage()]);
+            abort(500, 'جدول اپراتورها هنوز ساخته نشده است؛ php artisan v2board:update را اجرا کنید');
+        }
+
+        return response([
+            'data' => $rows->map(function ($r) {
+                return ['user_id' => (int)$r->user_id, 'email' => (string)$r->email, 'banned' => (bool)$r->banned]
+                    + UserNetworkService::present($r);
+            })->values(),
+            'total'   => $total,
+            'summary' => $summary,
+            'hours'   => $hours,
         ]);
     }
 
