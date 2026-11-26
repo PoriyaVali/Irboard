@@ -250,7 +250,23 @@ $manager->onWorkerStart = function($w) use ($workers, $dir) {
 $http->onMessage = function($conn, $req) {
     static $c = 0;
     $conn->send(run());
-    if (memory_get_usage(true) > MAX_MEMORY_MB * 1024 * 1024 || ++$c > MAX_REQUEST) Worker::stopSelf();
+    if (memory_get_usage(true) > MAX_MEMORY_MB * 1024 * 1024 || ++$c > MAX_REQUEST) {
+        // In an HTTP child, stopAll() drains pending output and exits only this
+        // process; the master replaces it. Workerman 5 has no stopSelf() API.
+        Worker::stopAll();
+    }
+};
+
+// Workerman's graceful shutdown waits for a destructor-based connection count.
+// Adapterman can retain already-closed connection objects. The live connection
+// registry removes closed sockets immediately, so finish only after it is empty.
+$http->onWorkerStop = static function ($worker) {
+    if (!Worker::getGracefulStop()) return;
+    Timer::add(0.1, static function () {
+        if (\Workerman\Connection\TcpConnection::$connections === []) {
+            exit(0);
+        }
+    });
 };
 
 Worker::$pidFile = $dir . '/workerman.webman.php.pid';

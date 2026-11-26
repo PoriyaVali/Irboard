@@ -289,6 +289,12 @@ jobs:
         # composer.lock has drifted from composer.json.
         run: composer install --no-interaction --prefer-dist --no-progress
 
+      - name: WebMan drains connections and recycles workers
+        timeout-minutes: 2
+        run: |
+          php -l webman.php
+          python3 tests/WebmanLifecycleTest.py
+
       - name: Dependency security advisories
         continue-on-error: true
         run: |
