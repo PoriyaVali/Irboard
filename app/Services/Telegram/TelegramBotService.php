@@ -793,7 +793,12 @@ class TelegramBotService
         return (string)($snapshot['name'] ?? 'محصول');
     }
 
-    /** What a paid product order delivered, for its buyer; secrets behind a spoiler. */
+    /**
+     * What a paid product order delivered, for its buyer. Secret fields are
+     * never sent here: Telegram does not allow code inside a spoiler, and a
+     * long detail is paginated as plain text, which would drop the spoiler.
+     * The app shows them, hidden until tapped.
+     */
     private function productDeliveryText(Order $order): string
     {
         $view = ProductOrderService::enabled() ? ProductOrderService::deliveryView($order) : null;
@@ -802,9 +807,10 @@ class TelegramBotService
         }
         $text = "📦 <b>اطلاعات خرید</b>\n";
         foreach ($view['fields'] as $field) {
-            $value = '<code>' . BotView::escape((string)$field['value']) . '</code>';
-            if (!empty($field['secret'])) $value = '<tg-spoiler>' . $value . '</tg-spoiler>';
-            $text .= BotView::escape((string)$field['label']) . ': ' . $value . "\n";
+            $label = BotView::escape((string)$field['label']);
+            $text .= !empty($field['secret'])
+                ? "🔒 {$label}: در اپلیکیشن، بخش «سفارش‌ها»\n"
+                : $label . ': <code>' . BotView::escape((string)$field['value']) . "</code>\n";
         }
         if (!empty($view['note'])) $text .= "\n" . BotView::escape((string)$view['note']) . "\n";
         return $text;

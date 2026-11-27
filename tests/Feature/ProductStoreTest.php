@@ -281,7 +281,7 @@ class ProductStoreTest extends TestCase
         $this->assertStringNotContainsString('کیف پول شما شارژ شد', $html);
 
         // The Telegram bot: named after the product, delivered fields shown,
-        // the secret behind a spoiler, no "services" button.
+        // no secret, no "services" button.
         $this->createInstallTables(['v2_bot_texts']);
         config(['v2board.telegram_bot_token' => 'fake-token', 'v2board.app_name' => 'Irboard', 'v2board.try_out_plan_id' => 0]);
         $sent = [];
@@ -306,7 +306,9 @@ class ProductStoreTest extends TestCase
         [$detail, $markup] = $tap('order_view_' . $order->trade_no);
         $this->assertStringContainsString('عنوان: US Apple ID', $detail);
         $this->assertStringContainsString('<code>a@example.com</code>', $detail);
-        $this->assertStringContainsString('<tg-spoiler><code>pw1</code></tg-spoiler>', $detail);
+        // A secret never goes through Telegram (pagination would strip a spoiler).
+        $this->assertStringNotContainsString('pw1', $detail);
+        $this->assertStringContainsString('🔒 Password', $detail);
         $this->assertStringNotContainsString('nav_services', $markup);
     }
 
