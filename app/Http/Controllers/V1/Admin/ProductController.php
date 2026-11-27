@@ -169,33 +169,41 @@ class ProductController extends Controller
     public function itemUpdate(Request $request)
     {
         $this->ready();
-        $item = ProductItem::find((int)$request->input('id'));
-        if (!$item) abort(404, 'واحد یافت نشد');
-        if (in_array((int)$item->status, [ProductItem::RESERVED, ProductItem::SOLD], true)) {
-            abort(422, 'این واحد فروخته یا رزرو شده است و تغییر نمی‌کند');
-        }
-        if ($request->has('data')) {
-            $product = Product::find($item->product_id);
-            $clean = ProductOrderService::cleanData(ProductOrderService::normalizeFields($product->fields ?? []), $request->input('data'));
-            if (!$clean) abort(422, 'حداقل یکی از فیلدها را پر کنید');
-            $item->data = ProductOrderService::seal($clean);
-        }
-        if ($request->has('withdrawn')) {
-            $item->status = $request->boolean('withdrawn') ? ProductItem::WITHDRAWN : ProductItem::AVAILABLE;
-        }
-        $item->save();
+        // Under the same row lock a purchase takes to reserve a unit, so a
+        // unit cannot be changed after a buyer has reserved it.
+        DB::transaction(function () use ($request) {
+            $item = ProductItem::lockForUpdate()->find((int)$request->input('id'));
+            if (!$item) abort(404, 'واحد یافت نشد');
+            if (in_array((int)$item->status, [ProductItem::RESERVED, ProductItem::SOLD], true)) {
+                abort(422, 'این واحد فروخته یا رزرو شده است و تغییر نمی‌کند');
+            }
+            if ($request->has('data')) {
+                $product = Product::find($item->product_id);
+                $clean = ProductOrderService::cleanData(ProductOrderService::normalizeFields($product->fields ?? []), $request->input('data'));
+                if (!$clean) abort(422, 'حداقل یکی از فیلدها را پر کنید');
+                $item->data = ProductOrderService::seal($clean);
+            }
+            if ($request->has('withdrawn')) {
+                $item->status = $request->boolean('withdrawn') ? ProductItem::WITHDRAWN : ProductItem::AVAILABLE;
+            }
+            $item->save();
+        });
         return response(['data' => true]);
     }
 
     public function itemDrop(Request $request)
     {
         $this->ready();
-        $item = ProductItem::find((int)$request->input('id'));
-        if (!$item) abort(404, 'واحد یافت نشد');
-        if (in_array((int)$item->status, [ProductItem::RESERVED, ProductItem::SOLD], true)) {
+        $id = (int)$request->input('id');
+        // One statement that checks and deletes: a unit reserved in between
+        // is not touched.
+        $deleted = ProductItem::where('id', $id)
+            ->whereIn('status', [ProductItem::AVAILABLE, ProductItem::WITHDRAWN])
+            ->delete();
+        if (!$deleted) {
+            if (!ProductItem::where('id', $id)->exists()) abort(404, 'واحد یافت نشد');
             abort(422, 'واحد فروخته یا رزروشده حذف نمی‌شود');
         }
-        $item->delete();
         return response(['data' => true]);
     }
 

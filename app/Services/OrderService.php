@@ -291,7 +291,9 @@ class OrderService
         $remainingTrafficRatio = $notUsedTraffic / $nowUserTraffic;
         $result = $remainingTrafficRatio * $paidTotalAmount;
         $order->surplus_amount = max($result, 0);
-        $orderModel = Order::where('user_id', $user->id)->where('type', '!=', 8)->where('period', '!=', 'reset_price')->where('status', 3);
+        // A digital product is not subscription time: never credited, never offset.
+        $orderModel = Order::where('user_id', $user->id)->where('type', '!=', 8)->where('period', '!=', 'reset_price')
+            ->where('period', '!=', ProductOrderService::PERIOD)->where('status', 3);
         CustomPlanService::constrainSurplus($orderModel, (int)$user->id);
         $order->surplus_order_ids = array_column($orderModel->get()->toArray(), 'id');
     }
@@ -303,6 +305,7 @@ class OrderService
             ->where('period', '!=', 'reset_price')
             ->where('period', '!=', 'onetime_price')
             ->where('period', '!=', 'deposit')
+            ->where('period', '!=', ProductOrderService::PERIOD)
             ->where('status', 3);
         // Total-quota tailored entitlements are not calendar-month credits.
         // Keep older panels working before the additive schema is installed.
@@ -314,7 +317,9 @@ class OrderService
         $orderMonthSum = 0;
         $lastValidateAt = null;
         foreach ($orders as $item) {
-            $period = self::STR_TO_TIME[$item['period']];
+            // Only calendar periods carry months; anything else is not credit.
+            $period = self::STR_TO_TIME[$item['period']] ?? null;
+            if (!$period) continue;
             $orderEndTime = strtotime("+{$period} month", $item['created_at']);
             if ($orderEndTime < time()) continue;
             $lastValidateAt = $item['created_at'] > $lastValidateAt ? $item['created_at'] : $lastValidateAt;

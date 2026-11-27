@@ -292,28 +292,33 @@ class ProductOrderService
             $delivery->product_id = (int)$order->product_id;
             $delivery->status = ProductDelivery::WAITING;
 
-            if ($product && $product->delivery === Product::DELIVERY_UNLIMITED) {
+            // The mode the order was sold under: an admin may switch the
+            // product to another mode between ordering and payment.
+            $snapshot = json_decode((string)$order->product_snapshot, true) ?: [];
+            $mode = $snapshot['delivery'] ?? ($product->delivery ?? null);
+            // A unit this order reserved is the buyer's whatever the mode is
+            // now; after a late payment on a cancelled stock order, any unit
+            // still on the shelf.
+            $item = ProductItem::where('order_id', $order->id)->where('status', ProductItem::RESERVED)->lockForUpdate()->first();
+            if (!$item && $product && $mode === Product::DELIVERY_STOCK) {
+                $item = ProductItem::where('product_id', $product->id)->where('status', ProductItem::AVAILABLE)
+                    ->orderBy('id')->lockForUpdate()->first();
+            }
+            if ($item) {
+                $item->status = ProductItem::SOLD;
+                $item->order_id = $order->id;
+                $item->sold_at = time();
+                $item->save();
+                $delivery->item_id = $item->id;
+                $delivery->data = $item->data;
+                $delivery->status = ProductDelivery::DELIVERED;
+                $delivery->delivered_at = time();
+            } elseif ($product && $mode === Product::DELIVERY_UNLIMITED && $product->content) {
                 $delivery->data = $product->content;
                 $delivery->status = ProductDelivery::DELIVERED;
                 $delivery->delivered_at = time();
-            } elseif ($product && $product->delivery === Product::DELIVERY_STOCK) {
-                // The unit this order reserved; after a late payment on a
-                // cancelled order, any unit still on the shelf.
-                $item = ProductItem::where('order_id', $order->id)->where('status', ProductItem::RESERVED)->lockForUpdate()->first()
-                    ?? ProductItem::where('product_id', $product->id)->where('status', ProductItem::AVAILABLE)
-                        ->orderBy('id')->lockForUpdate()->first();
-                if ($item) {
-                    $item->status = ProductItem::SOLD;
-                    $item->order_id = $order->id;
-                    $item->sold_at = time();
-                    $item->save();
-                    $delivery->item_id = $item->id;
-                    $delivery->data = $item->data;
-                    $delivery->status = ProductDelivery::DELIVERED;
-                    $delivery->delivered_at = time();
-                }
-                // No unit left: the order waits for the admin, like a manual one.
             }
+            // Otherwise the order waits for the admin, like a manual one.
             $delivery->save();
             $fresh->status = 3;
             $fresh->save();

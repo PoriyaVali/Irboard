@@ -6,6 +6,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductDelivery;
 use App\Models\ProductItem;
+use App\Models\User;
 use App\Services\OrderService;
 use App\Services\ProductOrderService;
 use Illuminate\Support\Facades\Cache;
@@ -212,6 +213,56 @@ class ProductStoreTest extends TestCase
         $this->withHeaders($this->auth($admin))->postJson($this->admin('drop'), ['id' => $product->id])->assertOk();
         $this->assertNotNull(Product::find($product->id));
         $this->assertFalse((bool)Product::find($product->id)->show);
+    }
+
+    public function testAReservedUnitIsDeliveredEvenIfTheModeChangedBeforePayment()
+    {
+        $product = $this->product();
+        $this->import($product, "a@example.com|pw1|2000-01-01");
+        $user = $this->makeUser();
+        $order = $this->buy($user, $product);
+        // The admin switches the product to made-to-order before the payment lands.
+        $admin = $this->makeUser(['is_admin' => 1]);
+        $this->withHeaders($this->auth($admin))->postJson($this->admin('save'), [
+            'id' => $product->id, 'name' => 'US Apple ID', 'price' => 250000, 'delivery' => 'manual',
+            'fields' => self::FIELDS, 'show' => true,
+        ])->assertOk();
+        $order = $this->pay($order);
+        $this->assertSame(ProductItem::SOLD, (int)ProductItem::first()->status);
+        $view = $this->withHeaders($this->auth($user))->getJson('/api/v1/user/product/delivery?trade_no=' . $order->trade_no)
+            ->json('data.delivery');
+        $this->assertSame('delivered', $view['status']);
+        $this->assertSame('a@example.com', $view['fields'][0]['value']);
+    }
+
+    public function testAReservedUnitCannotBeDeletedOrEdited()
+    {
+        $product = $this->product();
+        $this->import($product, "a@example.com|pw1|2000-01-01");
+        $this->buy($this->makeUser(), $product);
+        $item = ProductItem::first();
+        $admin = $this->makeUser(['is_admin' => 1]);
+        $this->withHeaders($this->auth($admin))->postJson($this->admin('itemDrop'), ['id' => $item->id])->assertStatus(422);
+        $this->withHeaders($this->auth($admin))->postJson($this->admin('itemUpdate'), ['id' => $item->id, 'withdrawn' => true])->assertStatus(422);
+        $this->withHeaders($this->auth($admin))->postJson($this->admin('itemDrop'), ['id' => 999999])->assertStatus(404);
+        $this->assertSame(ProductItem::RESERVED, (int)ProductItem::find($item->id)->status);
+    }
+
+    public function testAProductPurchaseIsNeverSubscriptionCredit()
+    {
+        $product = $this->product(['delivery' => 'manual', 'name' => 'VPS', 'fields' => [['key' => 'ip', 'label' => 'IP']]]);
+        $user = $this->makeUser(['expired_at' => time() + 30 * 86400, 'transfer_enable' => 107374182400]);
+        $paid = $this->pay($this->buy($user, $product));
+        $this->assertSame(3, (int)$paid->status);
+        $service = new OrderService(new Order());
+        foreach (['getSurplusValueByPeriod', 'getSurplusValueByOneTime'] as $method) {
+            $change = new Order();
+            $change->surplus_order_ids = null;
+            $call = new \ReflectionMethod(OrderService::class, $method);
+            $call->setAccessible(true);
+            $call->invoke($service, User::find($user->id), $change);
+            $this->assertNotContains((int)$paid->id, (array)$change->surplus_order_ids, $method);
+        }
     }
 
     public function testFieldsAreCleaned()
