@@ -81,6 +81,10 @@ class OrderService
             CustomPlanService::fulfil($order);
             return;
         }
+        if (ProductOrderService::isProduct($order)) {
+            ProductOrderService::fulfil($order);
+            return;
+        }
         $this->user = User::find($order->user_id);
         if ($order->type == 9) {
             DB::beginTransaction();
@@ -449,6 +453,8 @@ class OrderService
                 return false;
             }
             GiftOrderService::restoreCancelledCoupon($fresh);
+            // A product order's reserved unit goes back on the shelf.
+            ProductOrderService::release($fresh);
             if ($fresh->balance_amount) {
                 $userService = new UserService();
                 if (!$userService->addBalance($fresh->user_id, (int)$fresh->balance_amount)) {

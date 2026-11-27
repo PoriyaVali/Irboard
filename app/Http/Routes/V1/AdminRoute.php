@@ -193,6 +193,16 @@ class AdminRoute
             $router->post('/order/paid', 'V1\\Admin\\OrderController@paid');
             $router->post('/order/cancel', 'V1\\Admin\\OrderController@cancel');
             $router->post('/order/detail', 'V1\\Admin\\OrderController@detail');
+            // Digital goods (ProductOrderService)
+            $router->get ('/product/fetch', 'V1\\Admin\\ProductController@fetch');
+            $router->post('/product/save', 'V1\\Admin\\ProductController@save');
+            $router->post('/product/drop', 'V1\\Admin\\ProductController@drop');
+            $router->get ('/product/items', 'V1\\Admin\\ProductController@items');
+            $router->post('/product/import', 'V1\\Admin\\ProductController@import');
+            $router->post('/product/item/update', 'V1\\Admin\\ProductController@itemUpdate');
+            $router->post('/product/item/drop', 'V1\\Admin\\ProductController@itemDrop');
+            $router->get ('/product/deliveries', 'V1\\Admin\\ProductController@deliveries');
+            $router->post('/product/deliver', 'V1\\Admin\\ProductController@deliver');
             // User
             $router->get ('/user/fetch', 'V1\\Admin\\UserController@fetch');
             $router->post('/user/update', 'V1\\Admin\\UserController@update');

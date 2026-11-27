@@ -38,6 +38,11 @@ class UserRoute
             $router->get ('/order/fetch', 'V1\\User\\OrderController@fetch');
             $router->get ('/order/getPaymentMethod', 'V1\\User\\OrderController@getPaymentMethod');
             $router->post('/order/cancel', 'V1\\User\\OrderController@cancel');
+            // Digital goods (ProductOrderService)
+            $router->get ('/product/fetch', 'V1\\User\\ProductController@fetch');
+            $router->post('/product/order', 'V1\\User\\ProductController@order');
+            $router->get ('/product/purchases', 'V1\\User\\ProductController@purchases');
+            $router->get ('/product/delivery', 'V1\\User\\ProductController@delivery');
             // Plan
             $router->get ('/plan/fetch', 'V1\\User\\PlanController@fetch');
             $router->get ('/plan/custom', 'V1\\User\\CustomPlanController@catalogue');
