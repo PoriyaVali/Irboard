@@ -33,9 +33,18 @@ class AppStoreController extends Controller
         $app = $request->only(['id', 'name', 'description', 'icon', 'version', 'size', 'downloadUrl', 'order']);
         $catId = trim((string)$request->input('category', ''));
         $app['name'] = trim((string)($app['name'] ?? ''));
-        // An id is only a handle: made from the name when the form leaves it out.
-        if (empty($app['id'])) {
-            $app['id'] = trim(preg_replace('/[^a-z0-9]+/', '-', strtolower($app['name'])), '-') ?: ('app-' . time());
+        // A new app (the form sends no id) gets an id of its own, never one
+        // already in use: the same app added for a second platform is a
+        // second entry, not a move of the first.
+        $isNew = empty($app['id']);
+        if ($isNew) {
+            $base = trim(preg_replace('/[^a-z0-9]+/', '-', strtolower($app['name'] . '-' . $catId)), '-') ?: 'app';
+            $taken = [];
+            foreach ($data['categories'] as $cat) {
+                foreach ($cat['apps'] ?? [] as $a) $taken[(string)($a['id'] ?? '')] = true;
+            }
+            $app['id'] = $base;
+            for ($n = 2; isset($taken[$app['id']]); $n++) $app['id'] = $base . '-' . $n;
         }
 
         if ($app['name'] === '' || $catId === '' || !preg_match('/^[A-Za-z0-9_-]{1,64}$/', $catId)) {
@@ -45,8 +54,9 @@ class AppStoreController extends Controller
             abort(422, 'نشانی دانلود معتبر نیست');
         }
 
-        // Moved to another category: out of the old one, so it is not listed twice.
-        foreach ($data['categories'] as $i => $cat) {
+        // An edited app moved to another category: out of the old one, so it
+        // is not listed twice.
+        foreach ($isNew ? [] : $data['categories'] as $i => $cat) {
             if (($cat['id'] ?? null) === $catId) continue;
             $data['categories'][$i]['apps'] = array_values(array_filter($cat['apps'] ?? [], fn ($a) => ($a['id'] ?? null) !== $app['id']));
         }

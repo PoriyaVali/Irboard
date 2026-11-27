@@ -106,15 +106,19 @@ class CommController extends Controller
         // The store tab shows what the admin "Store" page manages - the same
         // banners and apps as the website. The file's own `store` section is
         // only a fallback for a panel that has not entered any.
-        $catalog = StoreCatalog::forApp();
-        if ($catalog !== []) {
-            $document['store'] = $catalog;
+        if (StoreCatalog::configured()) {
+            $catalog = StoreCatalog::forApp();
+            if ($catalog !== []) {
+                $document['store'] = $catalog;
+            } else {
+                unset($document['store']);
+            }
         }
 
         return response()
             ->json($document, 200, [], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)
             ->header('Cache-Control', 'public, max-age=300')
-            ->setEtag(md5($path . $mtime . '|' . StoreCatalog::version()));
+            ->setEtag(md5($path . $mtime . '|' . StoreCatalog::revision()));
     }
 
     /**

@@ -73,7 +73,7 @@ class StoreCatalogTest extends TestCase
         $site = $this->withHeaders($this->user())->getJson('/api/v1/user/appstore/list')->assertOk()->json('data');
         $this->assertSame(['Apple ID'], array_column($site['banners'], 'title'));
         $this->assertSame('product:7', $site['banners'][0]['link']);
-        $this->assertSame('doctor-mobile', $site['categories'][0]['apps'][0]['id']);
+        $this->assertSame('doctor-mobile-android', $site['categories'][0]['apps'][0]['id']);
 
         $doc = $this->get('/api/v1/guest/comm/appConfig');
         $this->assertNotSame($before, $doc->headers->get('ETag'), 'a changed store must not be served as the cached document');
@@ -113,5 +113,42 @@ class StoreCatalogTest extends TestCase
         // (the shipped file has none either), rather than an empty one.
         $this->assertArrayNotHasKey('store', $this->get('/api/v1/guest/comm/appConfig')->json());
         $this->assertSame([], StoreCatalog::forApp());
+    }
+
+    public function testTheSameAppAddedForTwoPlatformsKeepsBoth()
+    {
+        $admin = $this->admin();
+        foreach (['android', 'windows', 'windows'] as $platform) {
+            $this->withHeaders($admin)->postJson($this->route('saveApp'), ['category' => $platform, 'name' => 'Hiddify', 'downloadUrl' => 'https://example.com/' . $platform])->assertOk();
+        }
+        $ids = [];
+        foreach (StoreCatalog::load()['categories'] as $cat) {
+            foreach ($cat['apps'] as $a) $ids[] = $cat['id'] . '/' . $a['id'];
+        }
+        sort($ids);
+        $this->assertSame(['android/hiddify-android', 'windows/hiddify-windows', 'windows/hiddify-windows-2'], $ids);
+    }
+
+    public function testEverythingSwitchedOffIsAnEmptyStoreNotTheOldOne()
+    {
+        $custom = base_path('resources/rules/custom.dm-app.json');
+        $this->assertFileDoesNotExist($custom, 'a custom file would be overwritten by this test');
+        file_put_contents($custom, '{"version": 1, "settings": {}, "store": {"banners": [{"image": "https://example.com/old.jpg"}]}}');
+        try {
+            // Nothing entered on the Store page yet: the file's section applies.
+            $this->assertSame('https://example.com/old.jpg', $this->get('/api/v1/guest/comm/appConfig')->json('store.banners.0.image'));
+            $this->withHeaders($this->admin())->postJson($this->route('saveBanner'), ['title' => 'Off', 'enabled' => false])->assertOk();
+            $this->assertArrayNotHasKey('store', $this->get('/api/v1/guest/comm/appConfig')->json());
+        } finally {
+            @unlink($custom);
+        }
+    }
+
+    public function testEverySaveChangesTheDocumentEtagEvenWithinASecond()
+    {
+        StoreCatalog::save(['banners' => [['id' => 1, 'title' => 'A', 'enabled' => true]], 'categories' => []]);
+        $first = $this->get('/api/v1/guest/comm/appConfig')->headers->get('ETag');
+        StoreCatalog::save(['banners' => [['id' => 1, 'title' => 'B', 'enabled' => true]], 'categories' => []]);
+        $this->assertNotSame($first, $this->get('/api/v1/guest/comm/appConfig')->headers->get('ETag'));
     }
 }

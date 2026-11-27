@@ -41,11 +41,26 @@ class StoreCatalog
         clearstatcache(true, $file);
     }
 
-    /** When the list last changed, so a cached document knows it is stale. */
-    public static function version(): int
+    /**
+     * A digest of the stored list, so a cached document knows it is stale.
+     * The contents, not the file time: two saves within one second share a
+     * modification time but not their contents.
+     */
+    public static function revision(): string
     {
         $file = self::file();
-        return is_file($file) ? (int)filemtime($file) : 0;
+        return is_file($file) ? (string)md5_file($file) : '';
+    }
+
+    /**
+     * Whether the admin has entered anything at all, visible or not. Once
+     * they have, the list is the store - even with every banner switched off
+     * - and the config file's old `store` section no longer applies.
+     */
+    public static function configured(): bool
+    {
+        $data = self::load();
+        return $data['banners'] !== [] || $data['categories'] !== [];
     }
 
     public static function https($value): ?string
