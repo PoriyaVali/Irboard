@@ -265,6 +265,53 @@ class ProductStoreTest extends TestCase
         }
     }
 
+    public function testTheBotAndTheResultPageNameAProductForWhatItIs()
+    {
+        $product = $this->product();
+        $this->import($product, "a@example.com|pw1|2000-01-01");
+        $user = $this->makeUser(['telegram_id' => 7301]);
+        $order = $this->pay($this->buy($user, $product));
+
+        // The gateway's result page: a purchase, not a wallet top-up.
+        $controller = new \App\Http\Controllers\V1\Guest\PaymentController();
+        $render = new \ReflectionMethod($controller, 'renderAppResult');
+        $render->setAccessible(true);
+        $html = $render->invoke($controller, true, '', $order)->getContent();
+        $this->assertStringContainsString('خرید شما ثبت شد', $html);
+        $this->assertStringNotContainsString('کیف پول شما شارژ شد', $html);
+
+        // The Telegram bot: named after the product, delivered fields shown,
+        // no secret, no "services" button.
+        $this->createInstallTables(['v2_bot_texts']);
+        config(['v2board.telegram_bot_token' => 'fake-token', 'v2board.app_name' => 'Irboard', 'v2board.try_out_plan_id' => 0]);
+        $sent = [];
+        Http::fake(function (\Illuminate\Http\Client\Request $request) use (&$sent) {
+            $sent[] = $request;
+            if (str_contains($request->url(), '/getChatMember')) return Http::response(['ok' => true, 'result' => ['status' => 'member']]);
+            return Http::response(['ok' => true, 'result' => ['message_id' => 10]]);
+        });
+        $tap = function (string $data) use ($user, &$sent) {
+            $sent = [];
+            (new \App\Services\Telegram\TelegramBotService())->handleWebhook(['callback_query' => [
+                'id' => 'cb', 'data' => $data, 'from' => ['id' => 7301],
+                'message' => ['chat' => ['id' => 7301, 'type' => 'private'], 'message_id' => 10],
+            ]]);
+            $messages = array_values(array_filter($sent, fn ($r) => preg_match('~/(sendMessage|editMessageText)$~', $r->url())));
+            return [implode("\n", array_map(fn ($r) => $r->data()['text'] ?? '', $messages)),
+                end($messages) ? (string)(end($messages)->data()['reply_markup'] ?? '') : ''];
+        };
+        [$list] = $tap('orders_page_1');
+        $this->assertStringContainsString('🛍 US Apple ID', $list);
+        $this->assertStringNotContainsString('خرید اشتراک', $list);
+        [$detail, $markup] = $tap('order_view_' . $order->trade_no);
+        $this->assertStringContainsString('عنوان: US Apple ID', $detail);
+        $this->assertStringContainsString('<code>a@example.com</code>', $detail);
+        // A secret never goes through Telegram (pagination would strip a spoiler).
+        $this->assertStringNotContainsString('pw1', $detail);
+        $this->assertStringContainsString('🔒 Password', $detail);
+        $this->assertStringNotContainsString('nav_services', $markup);
+    }
+
     public function testFieldsAreCleaned()
     {
         $fields = ProductOrderService::normalizeFields([

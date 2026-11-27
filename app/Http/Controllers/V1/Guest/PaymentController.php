@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\User;
 use App\Services\OrderService;
+use App\Services\ProductOrderService;
 use App\Services\PaymentService;
 use App\Services\TelegramService;
 use Illuminate\Http\Request;
@@ -355,8 +356,8 @@ class PaymentController extends Controller
             $title = 'پرداخت موفق';
             $icon = '✅';
             $color = '#28a745';
-            $desc = (int)$order->status === 4 ? 'پرداخت سفارش لغوشده به کیف پول شما برگشت.' : ($order->is_gift ? 'کد هدیه پس از تأیید پرداخت در سفارش‌های شما قابل مشاهده و کپی است.' : (!$order->plan_id ? 'کیف پول شما شارژ شد!'
-                : (OrderService::isReserved($order) ? 'بسته شما رزرو شد و بعد از تمام شدن اشتراک فعلی، خودکار فعال می‌شود.' : 'اشتراک شما فعال شد!')));
+            $desc = (int)$order->status === 4 ? 'پرداخت سفارش لغوشده به کیف پول شما برگشت.' : ($order->is_gift ? 'کد هدیه پس از تأیید پرداخت در سفارش‌های شما قابل مشاهده و کپی است.' : (ProductOrderService::isProduct($order) ? 'خرید شما ثبت شد؛ اطلاعات آن در «سفارش‌ها» قابل مشاهده است.' : (!$order->plan_id ? 'کیف پول شما شارژ شد!'
+                : (OrderService::isReserved($order) ? 'بسته شما رزرو شد و بعد از تمام شدن اشتراک فعلی، خودکار فعال می‌شود.' : 'اشتراک شما فعال شد!'))));
         } else {
             $title = 'پرداخت ناموفق';
             $icon = '❌';
@@ -405,8 +406,8 @@ h1{color:' . $color . ';margin-bottom:10px}
             $title = 'پرداخت موفق';
             $icon = '✅';
             $color = '#28a745';
-            $desc = (int)$order->status === 4 ? 'پرداخت سفارش لغوشده به کیف پول شما برگشت.' : ($order->is_gift ? 'کد هدیه پس از تأیید پرداخت در سفارش‌های شما قابل مشاهده و کپی است.' : (!$order->plan_id ? 'کیف پول شما شارژ شد!'
-                : (OrderService::isReserved($order) ? 'بسته شما رزرو شد و بعد از تمام شدن اشتراک فعلی، خودکار فعال می‌شود.' : 'اشتراک شما فعال شد!')));
+            $desc = (int)$order->status === 4 ? 'پرداخت سفارش لغوشده به کیف پول شما برگشت.' : ($order->is_gift ? 'کد هدیه پس از تأیید پرداخت در سفارش‌های شما قابل مشاهده و کپی است.' : (ProductOrderService::isProduct($order) ? 'خرید شما ثبت شد؛ اطلاعات آن در «سفارش‌ها» قابل مشاهده است.' : (!$order->plan_id ? 'کیف پول شما شارژ شد!'
+                : (OrderService::isReserved($order) ? 'بسته شما رزرو شد و بعد از تمام شدن اشتراک فعلی، خودکار فعال می‌شود.' : 'اشتراک شما فعال شد!'))));
         } else {
             $title = 'پرداخت ناموفق';
             $icon = '❌';
