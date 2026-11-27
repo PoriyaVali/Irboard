@@ -58,3 +58,12 @@ name them after the product, and `/order/detail` includes `delivery`.
 | POST | `/product/item/drop` | Delete a unit still on the shelf |
 | GET | `/product/deliveries` | Paid product orders; `status=0` for those waiting |
 | POST | `/product/deliver` | `id`, `data` (by field key), `note`: deliver a waiting order |
+
+## Web admin
+
+The "محصولات دیجیتال" page (`#/products`) is added to both admin bundles by
+`scripts/patch_admin_products.py` (fenced and idempotent; CI runs it with
+`--check`). It lists products with their stock, edits them with a field editor
+and presets (Apple ID, gift card, virtual and dedicated server, file), imports
+stock in bulk, shows and withdraws units, and delivers waiting orders.
+
