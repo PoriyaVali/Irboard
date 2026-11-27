@@ -1712,3 +1712,61 @@ CREATE TABLE IF NOT EXISTS `v2_user_network` (
   KEY `idx_seen` (`seen_at`),
   KEY `idx_operator` (`operator`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='the network each device of an account is on';
+
+-- Digital goods in the store (Apple IDs, gift cards, servers, ...): products,
+-- their stock and what each paid order delivered. app/Services/ProductOrderService.php.
+ALTER TABLE `v2_order` ADD COLUMN `product_id` int(11) DEFAULT NULL;
+ALTER TABLE `v2_order` ADD COLUMN `product_snapshot` text DEFAULT NULL;
+
+CREATE TABLE IF NOT EXISTS `v2_product` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(255) NOT NULL,
+  `category` varchar(64) DEFAULT NULL COMMENT 'free text the store groups by, e.g. apple-id, gift-card, vps',
+  `description` text DEFAULT NULL,
+  `image` varchar(512) DEFAULT NULL COMMENT 'https picture for the store card',
+  `price` int(11) NOT NULL COMMENT 'toman, like plan prices',
+  `delivery` varchar(16) NOT NULL DEFAULT 'stock' COMMENT 'stock: one unit per order from v2_product_item; manual: the admin fills it in; unlimited: the same content for every buyer',
+  `fields` text NOT NULL COMMENT 'JSON list of {key,label,type,secret} the units of this product carry',
+  `content` text DEFAULT NULL COMMENT 'unlimited delivery only: the encrypted JSON every buyer receives',
+  `per_user_limit` int(11) DEFAULT NULL COMMENT 'how many one account may buy; null for no limit',
+  `low_stock` int(11) NOT NULL DEFAULT '3' COMMENT 'admins are warned at or below this many units',
+  `show` tinyint(1) NOT NULL DEFAULT '0',
+  `sort` int(11) NOT NULL DEFAULT '0',
+  `created_at` int(11) NOT NULL,
+  `updated_at` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_show_sort` (`show`,`sort`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='digital goods sold in the store';
+
+CREATE TABLE IF NOT EXISTS `v2_product_item` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `product_id` int(11) NOT NULL,
+  `data` text NOT NULL COMMENT 'encrypted JSON of the product fields for this unit',
+  `status` tinyint(1) NOT NULL DEFAULT '0' COMMENT '0 available, 1 reserved by an unpaid order, 2 sold, 3 withdrawn',
+  `order_id` int(11) DEFAULT NULL COMMENT 'the order holding or owning this unit',
+  `reserved_at` int(11) DEFAULT NULL,
+  `sold_at` int(11) DEFAULT NULL,
+  `created_at` int(11) NOT NULL,
+  `updated_at` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_product_status` (`product_id`,`status`),
+  KEY `idx_order` (`order_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='sellable units of stock-delivered products';
+
+CREATE TABLE IF NOT EXISTS `v2_product_delivery` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `order_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `product_id` int(11) NOT NULL,
+  `item_id` int(11) DEFAULT NULL,
+  `status` tinyint(1) NOT NULL DEFAULT '0' COMMENT '0 waiting for the admin, 1 delivered',
+  `data` text DEFAULT NULL COMMENT 'encrypted JSON the buyer sees',
+  `note` text DEFAULT NULL COMMENT 'from the admin to the buyer',
+  `delivered_at` int(11) DEFAULT NULL,
+  `created_at` int(11) NOT NULL,
+  `updated_at` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `order_id` (`order_id`),
+  KEY `idx_user` (`user_id`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='what a paid product order delivered';

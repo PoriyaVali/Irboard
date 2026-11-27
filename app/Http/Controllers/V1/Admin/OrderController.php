@@ -66,6 +66,13 @@ class OrderController extends Controller
             ->get();
         $plan = Plan::get();
         for ($i = 0; $i < count($res); $i++) {
+            if (\App\Services\ProductOrderService::isProduct($res[$i])) {
+                // A product order has no plan: its name is the product's.
+                $snapshot = json_decode((string)$res[$i]->product_snapshot, true) ?: [];
+                $res[$i]['plan_name'] = '🛍 ' . ($snapshot['name'] ?? ('#' . $res[$i]->product_id));
+                $res[$i]['is_product'] = true;
+                continue;
+            }
             for ($k = 0; $k < count($plan); $k++) {
                 if ($plan[$k]['id'] == $res[$i]['plan_id']) {
                     $res[$i]['plan_name'] = $plan[$k]['name'];

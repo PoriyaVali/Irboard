@@ -789,6 +789,7 @@ jobs:
           python3 scripts/patch_admin_smartbot_credentials.py --check
           python3 scripts/patch_admin_subscribe_serve_ips.py --check
           python3 scripts/patch_admin_card_receipt.py --check
+          python3 scripts/patch_admin_products.py --check
           node --check public/assets/admin/umi.js
           node --check public/assets/admin/umi-fa.js
           node --check scripts/admin_tailored_pricing.js
@@ -833,7 +834,7 @@ jobs:
         run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter NodeApiContractTest
 
       - name: Purchased gifts and money-path regressions
-        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'CustomPlanGiftOrderTest|CustomPlanAdminTest|CustomPlanOrderTest|PurchasedGiftOrderTest|OrderMoneyFlowTest|AdminOrderStatsTest|CardReceiptTest|Card2CardCheckoutTest|TelegramMenuNavigationTest|TelegramCustomerExperienceTest|TelegramBotFixesTest|TelegramBotFilesTest|TelegramBotCredentialsTest|ExchangeRateTest'
+        run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'ProductStoreTest|CustomPlanGiftOrderTest|CustomPlanAdminTest|CustomPlanOrderTest|PurchasedGiftOrderTest|OrderMoneyFlowTest|AdminOrderStatsTest|CardReceiptTest|Card2CardCheckoutTest|TelegramMenuNavigationTest|TelegramCustomerExperienceTest|TelegramBotFixesTest|TelegramBotFilesTest|TelegramBotCredentialsTest|ExchangeRateTest'
 
       - name: Staff reach only their own customers; a banned device stays banned; admins see each device's network
         run: vendor/bin/phpunit --no-coverage --fail-on-warning --fail-on-risky --filter 'StaffScopeTest|DeviceBanTest|UserNetworkTest'

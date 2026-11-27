@@ -12,6 +12,7 @@ use App\Services\CouponService;
 use App\Services\GiftOrderService;
 use App\Services\CustomPlanService;
 use App\Services\OrderService;
+use App\Services\ProductOrderService;
 use App\Services\PaymentService;
 use App\Services\PlanService;
 use App\Services\UserService;
@@ -34,6 +35,8 @@ class OrderController extends Controller
         for ($i = 0; $i < count($order); $i++) {
             CustomPlanService::present($order[$i]);
             if ($order[$i]->is_custom) continue;
+            ProductOrderService::present($order[$i]);
+            if ($order[$i]->is_product) continue;
             // بررسی اینکه آیا این سفارش شارژ کیف پول است
             if ($order[$i]['plan_id'] == 0) {
                 $order[$i]['plan'] = [
@@ -68,6 +71,12 @@ class OrderController extends Controller
         GiftOrderService::present($order);
         CustomPlanService::present($order);
         if ($order->is_custom) return response(['data' => $order]);
+        ProductOrderService::present($order);
+        if ($order->is_product) {
+            // What it delivered, for the buyer only (this query is theirs).
+            $order->setAttribute('delivery', ProductOrderService::deliveryView($order));
+            return response(['data' => $order]);
+        }
         if ($order->plan_id == 0) {
             $order['plan'] = [
                 'id' => 0,
