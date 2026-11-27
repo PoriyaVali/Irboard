@@ -143,7 +143,9 @@ class ProductOrderService
                 // (a note with a `|` in it).
                 if (count($parts) > count($fields) && $fields) {
                     $last = $fields[count($fields) - 1]['key'];
-                    $data[$last] = implode('|', array_slice($parts, count($fields) - 1));
+                    $rest = array_slice($parts, count($fields) - 1);
+                    // Only separators left (`|||`) is no value at all.
+                    $data[$last] = trim(implode('', $rest)) === '' ? '' : implode('|', $rest);
                 }
                 $data = self::cleanData($fields, $data);
             }
