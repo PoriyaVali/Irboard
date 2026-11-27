@@ -1,7 +1,21 @@
-# Digital products
+# The store and digital products
 
-Sell anything besides subscriptions: Apple IDs, gift cards, virtual or
-dedicated servers, files. Code: `app/Services/ProductOrderService.php`.
+The store shows three things, on the website and in the app's store tab
+alike, all managed on one admin page (**Store**, `#/store`):
+
+- **banners**, each leading to a product, a category of products, a web
+  address or a page of the site;
+- **digital products**: anything besides subscriptions (Apple IDs, gift
+  cards, virtual or dedicated servers, files). Code:
+  `app/Services/ProductOrderService.php`;
+- **apps** to download, by platform.
+
+Banners and apps are kept by `app/Services/StoreCatalog.php` in
+`storage/appstore/apps.json`. The website reads them from
+`/user/appstore/list`; the app receives the same list as `store` in its
+config document (`guest/comm/appConfig`), whose ETag follows the list. The
+config file's own `store` section is only used while the Store page has
+nothing in it.
 
 ## Concepts
 
@@ -61,9 +75,25 @@ name them after the product, and `/order/detail` includes `delivery`.
 
 ## Web admin
 
-The "محصولات دیجیتال" page (`#/products`) is added to both admin bundles by
+The "فروشگاه" page (`#/store`) is added to both admin bundles by
 `scripts/patch_admin_products.py` (fenced and idempotent; CI runs it with
-`--check`). It lists products with their stock, edits them with a field editor
-and presets (Apple ID, gift card, virtual and dedicated server, file), imports
-stock in bulk, shows and withdraws units, and delivers waiting orders.
+`--check`). It replaces the earlier "app store" menu entry, and the old
+`#/products` and `#/app-store` addresses lead to it. Tabs:
+
+- products with their stock: a field editor and presets (Apple ID, gift card,
+  virtual and dedicated server, file), bulk stock import, units;
+- orders waiting to be delivered, and delivered ones;
+- banners: title, colour, optional https image, and where a click leads
+  (`product:12`, `category:apple-id`, an https address or `#/...`);
+- apps by platform (android, windows, ios, macos, linux).
+
+## Store admin API (secure path)
+
+| Method | Path | |
+|---|---|---|
+| GET | `/appstore/list` | Banners and app categories |
+| POST | `/appstore/save-banner` | `id` to update; `title` or `image` required; invalid `link` is refused |
+| POST | `/appstore/delete-banner` | `id` |
+| POST | `/appstore/save-app` | `category`, `name`, `downloadUrl` (`id` made from the name if left out); moving to another category removes it from the old one |
+| POST | `/appstore/delete-app` | `category`, `app_id`; an emptied category is removed |
 
