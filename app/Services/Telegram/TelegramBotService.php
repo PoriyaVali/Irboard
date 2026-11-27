@@ -11,6 +11,7 @@ use App\Models\BotSetting;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use App\Services\ProductOrderService;
 use App\Services\Telegram\TelegramOrderService;
 
 class TelegramBotService
@@ -733,7 +734,8 @@ class TelegramBotService
         $text = "🧾 <b>سفارش‌های من</b>\n\nبرای جزئیات، ادامهٔ پرداخت یا پیگیری رسید، یک سفارش را انتخاب کنید.\n";
         $buttons = [];
         foreach ($orders as $order) {
-            $title = $order->period === 'deposit' ? 'شارژ کیف پول' : 'خرید اشتراک';
+            $title = $order->period === 'deposit' ? 'شارژ کیف پول'
+                : (ProductOrderService::isProduct($order) ? '🛍 ' . BotView::escape($this->productName($order)) : 'خرید اشتراک');
             $text .= "\n<b>#{$order->id} · {$title}</b>\n" . $this->orderStatus($order);
             $text .= "\n" . BotView::money($order->total_amount) . '  ·  ' . $this->jalaliDate($order->created_at, 'Y/m/d') . "\n";
             $buttons[] = [['text' => "جزئیات سفارش #{$order->id}", 'callback_data' => 'order_view_' . $order->trade_no]];
@@ -753,7 +755,8 @@ class TelegramBotService
             return;
         }
         $plan = $order->plan_id ? Plan::find($order->plan_id) : null;
-        $name = $order->period === 'deposit' ? 'شارژ کیف پول' : ($plan ? $plan->name : 'اشتراک');
+        $isProduct = ProductOrderService::isProduct($order);
+        $name = $order->period === 'deposit' ? 'شارژ کیف پول' : ($isProduct ? $this->productName($order) : ($plan ? $plan->name : 'اشتراک'));
         $period = BotView::PERIODS[preg_replace('/_price$/', '', $order->period)] ?? '';
         $text = "🧾 <b>سفارش #{$order->id}</b>\n\n" . $this->orderStatus($order) . "\n";
         $text .= 'شناسهٔ پیگیری: <code>' . BotView::escape($order->trade_no) . "</code>\n";
@@ -772,6 +775,8 @@ class TelegramBotService
         } elseif ((int) $order->status === 0) {
             $buttons[] = [['text' => '💳 ادامهٔ پرداخت', 'callback_data' => 'coupon_no_' . $tradeNo]];
             $buttons[] = [['text' => '✖️ لغو سفارش', 'callback_data' => 'cancel_order_' . $tradeNo]];
+        } elseif ((int) $order->status === 3 && $isProduct) {
+            $text .= "\n" . $this->productDeliveryText($order);
         } elseif ((int) $order->status === 3 && $order->period !== 'deposit') {
             $buttons[] = [['text' => '📦 سرویس‌ها و بسته‌های رزرو', 'callback_data' => 'nav_services']];
         }
@@ -779,6 +784,30 @@ class TelegramBotService
         $buttons[] = [['text' => '📞 پشتیبانی', 'callback_data' => 'support_menu'], ['text' => '🧾 همهٔ سفارش‌ها', 'callback_data' => 'orders_page_1']];
         $buttons[] = BotView::home();
         $this->sendMessage($chatId, $text, null, $buttons, 'HTML');
+    }
+
+    /** A product order's name, from what was sold. */
+    private function productName(Order $order): string
+    {
+        $snapshot = json_decode((string)$order->product_snapshot, true) ?: [];
+        return (string)($snapshot['name'] ?? 'محصول');
+    }
+
+    /** What a paid product order delivered, for its buyer; secrets behind a spoiler. */
+    private function productDeliveryText(Order $order): string
+    {
+        $view = ProductOrderService::enabled() ? ProductOrderService::deliveryView($order) : null;
+        if (!$view || $view['status'] !== 'delivered') {
+            return "⏳ پرداخت شده و در حال آماده‌سازی است؛ به‌محض آماده شدن، اطلاعات همین‌جا و در اپلیکیشن نمایش داده می‌شود.";
+        }
+        $text = "📦 <b>اطلاعات خرید</b>\n";
+        foreach ($view['fields'] as $field) {
+            $value = '<code>' . BotView::escape((string)$field['value']) . '</code>';
+            if (!empty($field['secret'])) $value = '<tg-spoiler>' . $value . '</tg-spoiler>';
+            $text .= BotView::escape((string)$field['label']) . ': ' . $value . "\n";
+        }
+        if (!empty($view['note'])) $text .= "\n" . BotView::escape((string)$view['note']) . "\n";
+        return $text;
     }
 
     protected function closeTicket(int $chatId, int $ticketId, bool $confirmed): void
@@ -1982,7 +2011,9 @@ class TelegramBotService
                     return ['error' => "❌ سفارش یافت نشد یا دیگر در انتظار پرداخت نیست.", 'reset' => true];
                 }
                 if (!$order->plan_id) {
-                    return ['error' => "❌ کد تخفیف برای شارژ کیف پول قابل استفاده نیست.", 'reset' => true];
+                    return ['error' => ProductOrderService::isProduct($order)
+                        ? "❌ کد تخفیف برای این سفارش قابل استفاده نیست."
+                        : "❌ کد تخفیف برای شارژ کیف پول قابل استفاده نیست.", 'reset' => true];
                 }
                 if ($order->is_gift) {
                     return ['error' => __('Discount codes cannot be used to buy gifts'), 'reset' => true];
