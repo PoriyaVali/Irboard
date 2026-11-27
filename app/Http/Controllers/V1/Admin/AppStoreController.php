@@ -2,27 +2,24 @@
 namespace App\Http\Controllers\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\StoreCatalog;
 use Illuminate\Http\Request;
 
+/**
+ * The store's banners and apps, edited on the admin "Store" page next to the
+ * digital products. Stored by StoreCatalog; the website and the app both read
+ * them from there.
+ */
 class AppStoreController extends Controller
 {
-    private function getDataFile()
-    {
-        return base_path('storage/appstore/apps.json');
-    }
-
     private function loadData()
     {
-        $file = $this->getDataFile();
-        if (!file_exists($file)) return ['banners' => [], 'categories' => []];
-        return json_decode(file_get_contents($file), true) ?: ['banners' => [], 'categories' => []];
+        return StoreCatalog::load();
     }
 
     private function saveData($data)
     {
-        $file = $this->getDataFile();
-        @mkdir(dirname($file), 0755, true);
-        file_put_contents($file, json_encode($data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), LOCK_EX);
+        StoreCatalog::save($data);
     }
 
     public function list(Request $request)
@@ -34,11 +31,36 @@ class AppStoreController extends Controller
     {
         $data = $this->loadData();
         $app = $request->only(['id', 'name', 'description', 'icon', 'version', 'size', 'downloadUrl', 'order']);
-        $catId = $request->input('category');
-
-        if (empty($app['id']) || empty($app['name']) || empty($catId)) {
-            abort(500, 'فیلدهای ضروری را پر کنید');
+        $catId = trim((string)$request->input('category', ''));
+        $app['name'] = trim((string)($app['name'] ?? ''));
+        // A new app (the form sends no id) gets an id of its own, never one
+        // already in use: the same app added for a second platform is a
+        // second entry, not a move of the first.
+        $isNew = empty($app['id']);
+        if ($isNew) {
+            $base = trim(preg_replace('/[^a-z0-9]+/', '-', strtolower($app['name'] . '-' . $catId)), '-') ?: 'app';
+            $taken = [];
+            foreach ($data['categories'] as $cat) {
+                foreach ($cat['apps'] ?? [] as $a) $taken[(string)($a['id'] ?? '')] = true;
+            }
+            $app['id'] = $base;
+            for ($n = 2; isset($taken[$app['id']]); $n++) $app['id'] = $base . '-' . $n;
         }
+
+        if ($app['name'] === '' || $catId === '' || !preg_match('/^[A-Za-z0-9_-]{1,64}$/', $catId)) {
+            abort(422, 'نام و دستهٔ برنامه را وارد کنید');
+        }
+        if (!empty($app['downloadUrl']) && !preg_match('#^https?://\S+$#i', $app['downloadUrl'])) {
+            abort(422, 'نشانی دانلود معتبر نیست');
+        }
+
+        // An edited app moved to another category: out of the old one, so it
+        // is not listed twice.
+        foreach ($isNew ? [] : $data['categories'] as $i => $cat) {
+            if (($cat['id'] ?? null) === $catId) continue;
+            $data['categories'][$i]['apps'] = array_values(array_filter($cat['apps'] ?? [], fn ($a) => ($a['id'] ?? null) !== $app['id']));
+        }
+        $data['categories'] = self::withoutEmpty($data['categories']);
 
         // پیدا کردن یا ساخت دسته
         $catIndex = -1;
@@ -88,6 +110,8 @@ class AppStoreController extends Controller
                 break;
             }
         }
+        // An empty category would be an empty tab in the store.
+        $data['categories'] = self::withoutEmpty($data['categories']);
 
         $this->saveData($data);
         return response(['data' => true]);
@@ -96,10 +120,10 @@ class AppStoreController extends Controller
     public function saveBanner(Request $request)
     {
         $data = $this->loadData();
-        $banner = $request->only(['id', 'title', 'description', 'badge', 'gradient', 'color', 'link', 'enabled']);
-        $banner['enabled'] = (bool)($banner['enabled'] ?? true);
+        $banner = StoreCatalog::banner($request->only(['id', 'title', 'description', 'badge', 'gradient', 'color', 'image', 'link', 'enabled']));
 
-        if (empty($banner['title'])) abort(500, 'عنوان بنر الزامی است');
+        if (empty($banner['title']) && empty($banner['image'])) abort(422, 'عنوان یا تصویر بنر را وارد کنید');
+        if ($request->filled('link') && !isset($banner['link'])) abort(422, 'لینک بنر معتبر نیست');
 
         if (empty($banner['id'])) {
             $banner['id'] = time();
@@ -126,5 +150,10 @@ class AppStoreController extends Controller
         }));
         $this->saveData($data);
         return response(['data' => true]);
+    }
+
+    private static function withoutEmpty(array $categories): array
+    {
+        return array_values(array_filter($categories, fn ($c) => !empty($c['apps'])));
     }
 }

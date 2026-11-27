@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
-"""Add the digital products page to the web admin.
+"""Add the Store page to the web admin: one place for everything the store shows.
 
-Products (Apple IDs, gift cards, servers, ...) are sold through the app and
-the store: see app/Services/ProductOrderService.php and
-docs/digital-products.md. This adds to both prebuilt admin bundles:
+The store (website and app) shows banners, digital products (Apple IDs, gift
+cards, servers, ...: app/Services/ProductOrderService.php) and apps to
+download (app/Services/StoreCatalog.php). See docs/digital-products.md.
+This adds to both prebuilt admin bundles:
 
-  * a "Digital products" menu entry and its /products route (the shared
-    placeholder component, like the other injected pages);
-  * the page: products with their stock, a create/edit form with a field
-    editor and ready-made presets, bulk stock import, the units of a
-    product, and the orders waiting to be delivered by hand.
+  * the "Store" menu entry and its /store route (the shared placeholder
+    component, like the other injected pages). The earlier "app store" menu
+    entry is turned into it, so there is one entry; old /products and
+    /app-store addresses lead to the new page;
+  * the page, in tabs: products with their stock (create/edit form with a
+    field editor and presets, bulk stock import, units), orders waiting to be
+    delivered by hand and delivered ones, banners (title, colour, image, and
+    where they lead: a product, a category, a web address or a panel page),
+    and apps to download by platform.
 
 Everything the API returns goes into the page through textContent or an
 escaping helper, never as markup. All other bytes, including local operator
@@ -46,17 +51,30 @@ ROUTE_ANCHOR = (
 )
 
 MENU = (
-    '/*__DPR_MENU_START__*/, {title: "محصولات دیجیتال", type: "item", href: "/products", '
+    '/*__DPR_MENU_START__*/, {title: "فروشگاه", type: "item", href: "/store", '
     'icon: o.a.createElement("i", {className: "nav-main-link-icon si si-bag"})}/*__DPR_MENU_END__*/'
 )
 ROUTE = (
-    '/*__DPR_ROUTE_START__*/, {path: "/products", exact: !0, component: n("pi3A").default}/*__DPR_ROUTE_END__*/'
+    '/*__DPR_ROUTE_START__*/, {path: "/store", exact: !0, component: n("pi3A").default}/*__DPR_ROUTE_END__*/'
+)
+# The earlier app-store page's menu entry. Where a bundle has it, it becomes
+# the Store entry (and no second entry is added); otherwise MENU is added.
+OLD_MENU = (
+    'title: "مدیریت فروشگاه اپ",\n'
+    '                        type: "item",\n'
+    '                        href: "/app-store",'
+)
+OLD_MENU_AS_STORE = (
+    'title: /*__DPR_STORE_MENU__*/"فروشگاه",\n'
+    '                        type: "item",\n'
+    '                        href: "/store",'
 )
 
 PAGE = r"""/*__DPR_PAGE_START__*/
 ;(function(){
-var injected=false,tab="products",products=[];
+var injected=false,tab="products",products=[],catalog=null;
 function api(){return "/api/v1/"+window.settings.secure_path+"/product/"}
+function sapi(){return "/api/v1/"+window.settings.secure_path+"/appstore/"}
 function tok(){return localStorage.getItem("authorization")||""}
 function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function money(v){return Number(v||0).toLocaleString("fa-IR")+" تومان"}
@@ -78,20 +96,28 @@ document.head.appendChild(s)}
 function modal(title){var o=document.createElement("div");o.className="dpr-modal";var b=document.createElement("div");b.className="dpr-box";var h=document.createElement("h4");h.textContent=title;b.appendChild(h);o.appendChild(b);o.onclick=function(e){if(e.target===o)o.remove()};document.body.appendChild(o);return {o:o,b:b}}
 function note(el,msg,ok){var p=document.createElement("div");p.style.cssText="padding:8px;border-radius:7px;margin:8px 0;font-size:13px;background:"+(ok?"#e7f7ec;color:#1e7b3a":"#fdecea;color:#a33");p.textContent=msg;el.appendChild(p);setTimeout(function(){p.remove()},6000)}
 
+// Old addresses of the two pages this one replaced.
+function onStore(){
+ var h=location.hash||"";
+ if(/^#\/(products|app-store)(\b|$)/.test(h)){location.hash="#/store";return false}
+ return /^#\/store(\b|$)/.test(h);
+}
+var NEW_LABEL={products:"+ محصول جدید",banners:"+ بنر جدید",apps:"+ برنامهٔ جدید"};
 function inject(){
- if(injected||!location.hash.includes("/products"))return;
+ if(injected||!onStore())return;
  var area=document.getElementById("main-container");if(!area)return;
  injected=true;css();area.innerHTML="";
  var box=document.createElement("div");box.className="block block-rounded dpr";box.style.marginTop="20px";
- box.innerHTML='<div class="block-header block-header-default" style="background:linear-gradient(135deg,#6c5ce7,#a855f7);border-radius:5px 5px 0 0"><h3 class="block-title" style="color:#fff">🛍 محصولات دیجیتال</h3><button class="dpr-btn g" id="dprNew" type="button">+ محصول جدید</button></div><div class="block-content"><div class="dpr-tabs" id="dprTabs"><div class="dpr-tab" data-t="products">محصولات</div><div class="dpr-tab" data-t="waiting">منتظر تحویل</div><div class="dpr-tab" data-t="delivered">تحویل‌شده</div></div><div id="dprBody"></div></div>';
+ box.innerHTML='<div class="block-header block-header-default" style="background:linear-gradient(135deg,#6c5ce7,#a855f7);border-radius:5px 5px 0 0"><h3 class="block-title" style="color:#fff">🛍 فروشگاه</h3><button class="dpr-btn g" id="dprNew" type="button">+ محصول جدید</button></div><div class="block-content"><div style="font-size:12px;color:#888;margin-bottom:8px">هرچه این‌جا تعریف شود، هم در سایت و هم در تب «فروشگاه» اپلیکیشن نمایش داده می‌شود.</div><div class="dpr-tabs" id="dprTabs"><div class="dpr-tab" data-t="products">محصولات</div><div class="dpr-tab" data-t="waiting">منتظر تحویل</div><div class="dpr-tab" data-t="delivered">تحویل‌شده</div><div class="dpr-tab" data-t="banners">بنرها</div><div class="dpr-tab" data-t="apps">برنامه‌ها</div></div><div id="dprBody"></div></div>';
  area.appendChild(box);
- document.getElementById("dprNew").onclick=function(){editProduct(null)};
+ document.getElementById("dprNew").onclick=function(){if(tab==="banners")editBanner(null);else if(tab==="apps")editApp(null);else editProduct(null)};
  Array.prototype.forEach.call(document.querySelectorAll("#dprTabs .dpr-tab"),function(t){t.onclick=function(){tab=t.dataset.t;show()}});
  show();
 }
 function show(){
  Array.prototype.forEach.call(document.querySelectorAll("#dprTabs .dpr-tab"),function(t){t.classList.toggle("on",t.dataset.t===tab)});
- if(tab==="products")listProducts();else listDeliveries(tab==="waiting"?0:1);
+ var nb=document.getElementById("dprNew");if(nb){nb.style.display=NEW_LABEL[tab]?"":"none";nb.textContent=NEW_LABEL[tab]||""}
+ if(tab==="products")listProducts();else if(tab==="banners")listBanners();else if(tab==="apps")listApps();else listDeliveries(tab==="waiting"?0:1);
 }
 function body(){return document.getElementById("dprBody")}
 
@@ -148,7 +174,7 @@ function editProduct(p){
   var fields=readFields(F),content={};Array.prototype.forEach.call(form.querySelectorAll("#dpUC input"),function(i){content[i.dataset.k]=i.value});
   var bodyData={name:form.querySelector("#dpN").value,category:form.querySelector("#dpC").value,price:form.querySelector("#dpP").value,delivery:D.value,image:form.querySelector("#dpI").value,description:form.querySelector("#dpX").value,show:form.querySelector("#dpV").checked,sort:form.querySelector("#dpS").value||0,per_user_limit:form.querySelector("#dpL").value,low_stock:form.querySelector("#dpW").value||0,fields:fields,content:content};
   if(p)bodyData.id=p.id;sv.disabled=true;
-  post("save",bodyData).then(function(){m.o.remove();listProducts()}).catch(function(err){sv.disabled=false;note(b,err.message,false)});
+  post("save",bodyData).then(function(){m.o.remove();products=[];listProducts()}).catch(function(err){sv.disabled=false;note(b,err.message,false)});
  };
  act.appendChild(sv);act.appendChild(cn);b.appendChild(act);
 }
@@ -213,10 +239,106 @@ function deliver(d){
  b.appendChild(sv);
 }
 
-new MutationObserver(function(){if(location.hash.includes("/products")){inject()}else{injected=false}}).observe(document.body,{childList:true,subtree:true});
+
+// ── Banners and apps (StoreCatalog) ─────────────────────────────────────────
+function sget(path){return fetch(sapi()+path,{headers:{"Authorization":tok()}}).then(function(r){return r.json()})}
+function spost(path,body){return fetch(sapi()+path,{method:"POST",headers:{"Authorization":tok(),"Content-Type":"application/json"},body:JSON.stringify(body)}).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j&&j.message||"خطا");return j})})}
+function loadCatalog(){return sget("list").then(function(j){catalog=j.data||{banners:[],categories:[]};return catalog})}
+function loadProducts(){return products.length?Promise.resolve(products):get("fetch").then(function(j){products=j.data||[];return products}).catch(function(){return []})}
+var LINKS={"":"بدون لینک",product:"خرید یک محصول",category:"محصولات یک دسته",url:"نشانی وب (https)",page:"صفحه‌ای از سایت"};
+function linkKind(l){l=String(l||"");if(/^product:/.test(l))return "product";if(/^category:/.test(l))return "category";if(/^#?\//.test(l))return "page";return l?"url":""}
+function linkText(l){var k=linkKind(l);if(!k)return "بدون لینک";if(k==="product"){var id=+l.split(":")[1];var p=products.find(function(x){return +x.id===id});return "خرید: "+(p?p.name:"محصول #"+id)}if(k==="category")return "دستهٔ "+l.split(":")[1];return l}
+function listBanners(){
+ var el=body();if(!el)return;el.innerHTML='<div class="dpr-empty">در حال بارگذاری…</div>';
+ Promise.all([loadCatalog(),loadProducts()]).then(function(){
+  var list=catalog.banners||[];el.innerHTML="";
+  if(!list.length){el.innerHTML='<div class="dpr-empty">بنری نیست. با «بنر جدید» یکی بسازید؛ می‌تواند مستقیم به خرید یک محصول برود.</div>';return}
+  list.forEach(function(bn){
+   var c=document.createElement("div");c.className="dpr-card";
+   var sw=document.createElement("div");sw.style.cssText="height:54px;border-radius:8px;margin-bottom:8px;display:flex;align-items:center;padding:0 12px;color:#fff;font-weight:700;background:"+(/^#[0-9a-f]{6}$/i.test(bn.color||"")?bn.color:"#6366f1");
+   if(bn.image){sw.style.backgroundImage="url(\""+String(bn.image).replace(/["\\]/g,"")+"\")";sw.style.backgroundSize="cover"}
+   sw.textContent=bn.title||"";c.appendChild(sw);
+   var r=document.createElement("div");r.className="dpr-row";var a=document.createElement("span");a.textContent="مقصد";var b2=document.createElement("span");b2.textContent=linkText(bn.link);r.appendChild(a);r.appendChild(b2);c.appendChild(r);
+   if(bn.enabled===false){var off=document.createElement("span");off.className="dpr-chip off";off.textContent="غیرفعال";c.appendChild(off)}
+   var e=document.createElement("button");e.className="dpr-btn";e.type="button";e.textContent="ویرایش";e.onclick=function(){editBanner(bn)};
+   var d=document.createElement("button");d.className="dpr-btn r";d.type="button";d.textContent="حذف";d.onclick=function(){if(!confirm("این بنر حذف شود؟"))return;spost("delete-banner",{id:bn.id}).then(listBanners).catch(function(err){alert(err.message)})};
+   var act=document.createElement("div");act.style.marginTop="6px";act.appendChild(e);act.appendChild(d);c.appendChild(act);el.appendChild(c);
+  });
+ }).catch(function(){el.innerHTML='<div class="dpr-empty">دریافت ناموفق بود</div>'});
+}
+function editBanner(bn){
+ loadProducts().then(function(){
+ var m=modal(bn?"ویرایش بنر":"بنر جدید"),b=m.b;
+ var f=document.createElement("div");
+ f.innerHTML='<div class="dpr-grid"><div><label>عنوان</label><input id="bnT"></div><div><label>برچسب کوچک (مثلاً «جدید»)</label><input id="bnB"></div><div><label>رنگ</label><input id="bnC" type="color" style="height:36px"></div><div><label>تصویر (https، اختیاری)</label><input id="bnI" style="direction:ltr"></div></div><label>توضیح</label><input id="bnD"><label>با کلیک روی بنر</label><select id="bnK"></select><div id="bnV"></div><label><input type="checkbox" id="bnE" style="width:auto"> فعال</label>';
+ b.appendChild(f);
+ var K=f.querySelector("#bnK");Object.keys(LINKS).forEach(function(k){var o=document.createElement("option");o.value=k;o.textContent=LINKS[k];K.appendChild(o)});
+ var V=f.querySelector("#bnV"),link=bn&&bn.link||"";
+ function valueInput(){
+  V.innerHTML="";var k=K.value;if(!k)return;
+  if(k==="product"){var sel=document.createElement("select");sel.id="bnVal";products.forEach(function(p){var o=document.createElement("option");o.value="product:"+p.id;o.textContent=p.name+" ("+money(p.price)+")";sel.appendChild(o)});if(!products.length){var o=document.createElement("option");o.value="";o.textContent="اول یک محصول بسازید";sel.appendChild(o)}if(linkKind(link)==="product")sel.value=link;V.appendChild(sel);return}
+  var i=document.createElement("input");i.id="bnVal";i.style.direction="ltr";
+  i.placeholder=k==="category"?"apple-id":k==="url"?"https://...":"#/dashboard/store";
+  i.value=linkKind(link)===k?(k==="category"?link.slice(9):link):"";V.appendChild(i);
+ }
+ f.querySelector("#bnT").value=bn&&bn.title||"";f.querySelector("#bnB").value=bn&&bn.badge||"";f.querySelector("#bnC").value=bn&&/^#[0-9a-f]{6}$/i.test(bn.color||"")?bn.color:"#6366f1";
+ f.querySelector("#bnI").value=bn&&bn.image||"";f.querySelector("#bnD").value=bn&&bn.description||"";f.querySelector("#bnE").checked=!bn||bn.enabled!==false;
+ K.value=linkKind(link);K.onchange=valueInput;valueInput();
+ var sv=document.createElement("button");sv.className="dpr-btn g";sv.type="button";sv.textContent="ذخیره";sv.style.marginTop="12px";
+ sv.onclick=function(){
+  var k=K.value,v=(f.querySelector("#bnVal")||{}).value||"";
+  var l=!k?"":k==="category"?(v?"category:"+v.trim():""):v.trim();
+  var data={title:f.querySelector("#bnT").value,badge:f.querySelector("#bnB").value,color:f.querySelector("#bnC").value,image:f.querySelector("#bnI").value,description:f.querySelector("#bnD").value,link:l,enabled:f.querySelector("#bnE").checked};
+  if(bn&&bn.id)data.id=bn.id;sv.disabled=true;
+  spost("save-banner",data).then(function(){m.o.remove();listBanners()}).catch(function(err){sv.disabled=false;note(b,err.message,false)});
+ };
+ b.appendChild(sv);
+ });
+}
+var PLATFORM={android:"🤖 اندروید",windows:"💻 ویندوز",ios:"🍎 iOS",macos:"🖥️ مک",linux:"🐧 لینوکس"};
+function listApps(){
+ var el=body();if(!el)return;el.innerHTML='<div class="dpr-empty">در حال بارگذاری…</div>';
+ loadCatalog().then(function(){
+  var cats=catalog.categories||[];el.innerHTML="";
+  if(!cats.length){el.innerHTML='<div class="dpr-empty">برنامه‌ای نیست. با «برنامهٔ جدید» اضافه کنید.</div>';return}
+  cats.forEach(function(cat){
+   var h=document.createElement("h5");h.style.margin="12px 0 6px";h.textContent=(PLATFORM[cat.id]||((cat.icon||"📦")+" "+(cat.title||cat.id)));el.appendChild(h);
+   (cat.apps||[]).forEach(function(app){
+    var c=document.createElement("div");c.className="dpr-card";
+    var hd=document.createElement("div");hd.className="dpr-head";var t=document.createElement("b");t.textContent=app.name||app.id;hd.appendChild(t);
+    var v=document.createElement("span");v.style.fontSize="12px";v.textContent=[app.version?"v"+app.version:"",app.size||""].filter(Boolean).join(" · ");hd.appendChild(v);c.appendChild(hd);
+    if(app.description){var d=document.createElement("div");d.style.cssText="font-size:12px;color:#666";d.textContent=app.description;c.appendChild(d)}
+    var u=document.createElement("div");u.className="dpr-mono";u.textContent=app.downloadUrl||"";c.appendChild(u);
+    var e=document.createElement("button");e.className="dpr-btn";e.type="button";e.textContent="ویرایش";e.onclick=function(){editApp(app,cat)};
+    var x=document.createElement("button");x.className="dpr-btn r";x.type="button";x.textContent="حذف";x.onclick=function(){if(!confirm("«"+(app.name||app.id)+"» حذف شود؟"))return;spost("delete-app",{category:cat.id,app_id:app.id}).then(listApps).catch(function(err){alert(err.message)})};
+    var act=document.createElement("div");act.style.marginTop="6px";act.appendChild(e);act.appendChild(x);c.appendChild(act);el.appendChild(c);
+   });
+  });
+ }).catch(function(){el.innerHTML='<div class="dpr-empty">دریافت ناموفق بود</div>'});
+}
+function editApp(app,cat){
+ var m=modal(app?"ویرایش برنامه":"برنامهٔ جدید"),b=m.b;
+ var f=document.createElement("div");
+ f.innerHTML='<div class="dpr-grid"><div><label>سیستم‌عامل</label><select id="apC"></select></div><div><label>نام</label><input id="apN"></div><div><label>نسخه</label><input id="apV" style="direction:ltr"></div><div><label>حجم (مثلاً 38 MB)</label><input id="apS" style="direction:ltr"></div><div><label>آیکون (https)</label><input id="apI" style="direction:ltr"></div><div><label>ترتیب</label><input id="apO" type="number" style="direction:ltr"></div></div><label>لینک دانلود</label><input id="apU" style="direction:ltr"><label>توضیح</label><input id="apD">';
+ b.appendChild(f);
+ var C=f.querySelector("#apC");Object.keys(PLATFORM).forEach(function(k){var o=document.createElement("option");o.value=k;o.textContent=PLATFORM[k];C.appendChild(o)});
+ if(cat&&!PLATFORM[cat.id]){var o=document.createElement("option");o.value=cat.id;o.textContent=cat.title||cat.id;C.appendChild(o)}
+ C.value=cat?cat.id:"android";
+ f.querySelector("#apN").value=app&&app.name||"";f.querySelector("#apV").value=app&&app.version||"";f.querySelector("#apS").value=app&&app.size||"";
+ f.querySelector("#apI").value=app&&app.icon||"";f.querySelector("#apO").value=app&&app.order||"";f.querySelector("#apU").value=app&&app.downloadUrl||"";f.querySelector("#apD").value=app&&app.description||"";
+ var sv=document.createElement("button");sv.className="dpr-btn g";sv.type="button";sv.textContent="ذخیره";sv.style.marginTop="12px";
+ sv.onclick=function(){
+  var data={category:C.value,category_title:C.options[C.selectedIndex].textContent,name:f.querySelector("#apN").value,version:f.querySelector("#apV").value,size:f.querySelector("#apS").value,icon:f.querySelector("#apI").value,order:f.querySelector("#apO").value||null,downloadUrl:f.querySelector("#apU").value,description:f.querySelector("#apD").value};
+  if(app&&app.id)data.id=app.id;sv.disabled=true;
+  spost("save-app",data).then(function(){m.o.remove();listApps()}).catch(function(err){sv.disabled=false;note(b,err.message,false)});
+ };
+ b.appendChild(sv);
+}
+
+new MutationObserver(function(){if(onStore()){inject()}else{injected=false}}).observe(document.body,{childList:true,subtree:true});
 window.addEventListener("hashchange",function(){injected=false;setTimeout(inject,120)});
 setTimeout(inject,600);
-console.log("\u{1F6CD} Digital Products Admin v1");
+console.log("\u{1F6CD} Store Admin v2");
 })();
 /*__DPR_PAGE_END__*/
 """
@@ -264,7 +386,11 @@ def patch(source: str) -> str:
     for anchor, name in ((MENU_ANCHOR, "menu"), (ROUTE_ANCHOR, "route")):
         if base.count(anchor) != 1:
             raise PatchError(f"{name} anchor occurs {base.count(anchor)} times; expected exactly one")
-    base = base.replace(MENU_ANCHOR, MENU_ANCHOR + MENU, 1)
+    if base.count(OLD_MENU) + base.count(OLD_MENU_AS_STORE) > 1:
+        raise PatchError("the app-store menu entry occurs more than once")
+    base = base.replace(OLD_MENU, OLD_MENU_AS_STORE, 1)
+    if OLD_MENU_AS_STORE not in base:
+        base = base.replace(MENU_ANCHOR, MENU_ANCHOR + MENU, 1)
     return base.replace(ROUTE_ANCHOR, ROUTE_ANCHOR + ROUTE, 1)
 
 
@@ -295,7 +421,7 @@ def main() -> int:
     for bundle, original, output in planned:
         changed = original != output
         if args.check and changed:
-            print(f"{bundle}: digital products page missing or out of date", file=sys.stderr)
+            print(f"{bundle}: store page missing or out of date", file=sys.stderr)
             return 1
         if changed and not args.check:
             bundle.write_bytes(output)
